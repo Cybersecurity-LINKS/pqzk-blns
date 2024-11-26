@@ -1,0 +1,16 @@
+#ifndef BLNS_RANDOM_H
+#define BLNS_RANDOM_H
+
+#include "params.h"
+#include "Utils.h"
+
+
+void NTRU_TrapGen(ZZ_pX& a1, mat_L& B);
+
+void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c);
+void GSampler(vec_ZZ& s, vec_ZZX& w, const ZZ_pX h, const vec_ZZ_pX a, const mat_L& B, const RR sigma, const ZZ_pX d);
+
+ZZ   ZSampler(const RR sigma, const RR c);
+ZZX  polySampler(const RR sigma);
+
+#endif
