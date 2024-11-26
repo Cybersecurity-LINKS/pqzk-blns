@@ -22,4 +22,4 @@ make
 
 ## Acknowledgements
 Work done in collaboration with the Cryptography and Number Theory research group ([CrypTO](https://crypto.polito.it/)) at the Politecnico di Torino,
-in the frame of the [QUBIP](https://qubip.eu/) project.
+in the framework of the [QUBIP](https://qubip.eu/) project.
