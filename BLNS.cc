@@ -30,7 +30,7 @@ int main()
     mat_L           isk; 
     IPK_STRUCT      ipk;
     float           diff;
-    clock_t         t1, t2;  
+    clock_t         tstart, t1, t2;  
     string          inputStr;     
     Vec<string>     attrs, attrs_prime;
     mat_ZZ_p        B_f;    
@@ -53,7 +53,8 @@ int main()
         cout << "\n- Issuer.KeyGen \n"; 
                
         // Issuer.KeyGen (i.e. AnonCreds.Init in [BLNS23])
-        t1 = clock();
+        tstart = clock();
+        t1 = tstart;
         I_KeyGen(ipk, isk);                
         t2 = clock();
 
@@ -146,6 +147,10 @@ int main()
         diff = ((float)t2 - (float)t1)/(float)CLOCKS_PER_SEC;    
         cout << "CPU time: " << diff << " seconds" << endl;
         //==============================================================================
+
+        cout << "\n=====================================================================\n";
+        diff = ((float)t2 - (float)tstart)/(float)CLOCKS_PER_SEC;    
+        cout << "TOT time: " << diff << " seconds" << endl;
     }
 
     return 0;

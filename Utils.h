@@ -13,6 +13,7 @@ const ZZX   phi_hat =      Phi_hat();
 
 void        GS_Ortho(      mat_RR& Bt, vec_RR& Norms2, const mat_L& B );
 void        MGS_Ortho(     mat_RR& Bt, vec_RR& Norms2, const mat_L& B );
+void        OGS_Ortho(     mat_D&  Bt, vec_D&  Norms2, const mat_L& B ); 
 
 void        rot(           mat_L& M, const ZZX& f ); 
 mat_ZZ_p    rot_T(         const ZZ_pX& f );    
@@ -36,5 +37,8 @@ ZZ_pX       Compute_f(     const mat_ZZ_p& B_f, const ZZ& x );
 ZZ          Norm2(         const vec_ZZ&  v );
 ZZ          Norm2X(        const vec_ZZX& v, const unsigned int d );
 RR          Norm2R(        const vec_RR&  v );
+double      Norm2D(        const vec_D&   v );
+
+double      InnerProdD(    const vec_D& a, const vec_D& b );
 
 #endif

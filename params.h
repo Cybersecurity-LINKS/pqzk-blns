@@ -16,6 +16,8 @@
 using namespace std;
 using namespace NTL;
 
+typedef Vec<double> vec_D;
+typedef Mat<double> mat_D; 
 typedef Mat<long>   mat_L; 
 
 

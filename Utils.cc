@@ -116,6 +116,111 @@ void MGS_Ortho(mat_RR& Bt, vec_RR& Norms2, const mat_L& B)
 
 
 //==============================================================================
+// OGS_Ortho - Optimized Gram-Schmidt Orthogonalization function.
+//             For an input matrix              B      ∈ Z^(2d×2d) 
+//             it returns the matrix            Bt     ∈ R^(2d×2d)
+//             and the vector of squared norms  Norms2 ∈ R^(2d)
+//==============================================================================
+// NOTE: optimized version with double instead of RR,
+//       based on Chapter 4 in https://tprest.github.io/pdf/pub/thesis-thomas-prest.pdf
+void OGS_Ortho(mat_D& Bt, vec_D& Norms2, const mat_L& B)
+{
+    long    i, k;  
+    double  Ck, Dk, CDk;
+    vec_D   v, v1;
+
+    Bt.SetDims(2*d0, 2*d0);
+    v.SetLength(2*d0);
+    v1.SetLength(2*d0);
+    Norms2.SetLength(2*d0);
+    
+    Bt[0] = conv<vec_D>(B[0]);
+   
+    for(i=0; i<d0-1; i++)
+    {    
+        v[i]    = Bt[0][i+1];
+        v[i+d0] = Bt[0][i+1+d0];
+    }
+
+    v[d0-1]   = -Bt[0][0];
+    v[2*d0-1] = -Bt[0][d0];
+
+    v1 = v;
+
+    Ck = InnerProdD(v1, Bt[0]);
+    Dk = Norm2D(v1);
+    Norms2[0] = Dk;
+
+    for(k=1; k<d0; k++)
+    {
+        CDk = Ck/Dk;
+        Bt[k][0]  = -Bt[k-1][d0-1]   + CDk*v[d0-1];
+        Bt[k][d0] = -Bt[k-1][2*d0-1] + CDk*v[2*d0-1];
+        
+        for(i=1; i<d0; i++)
+        {
+            Bt[k][i]    = Bt[k-1][i-1]    - CDk*v[i-1];
+            Bt[k][i+d0] = Bt[k-1][i+d0-1] - CDk*v[i+d0-1];
+        }
+
+        for(i=0; i<2*d0; i++)
+        {
+            v[i] -= CDk*Bt[k-1][i];
+        }
+        
+        Dk = Dk - Ck*CDk;
+        Ck = InnerProdD(v1, Bt[k]); 
+        Norms2[k] = Dk;
+    }
+
+    for(i=0; i<d0; i++)
+    {    
+        Bt[d0][d0+i] =  Bt[d0-1][d0-1-i]*q0/Dk;
+        Bt[d0][i]    = -Bt[d0-1][2*d0-1-i]*q0/Dk;
+    }
+
+    for(i=0; i<d0-1; i++)
+    {
+        v[i]    = Bt[d0][i+1];
+        v[i+d0] = Bt[d0][i+1+d0];
+    }
+
+    v[d0-1]   = -Bt[d0][0];
+    v[2*d0-1] = -Bt[d0][d0];
+    
+    v1 = v;
+   
+    Ck = InnerProdD(v1, Bt[d0]);
+    Dk = Norm2D(Bt[d0]);
+    Norms2[d0] = Dk;
+
+    for(k=d0+1; k<2*d0; k++)
+    {
+        CDk = Ck/Dk;
+        Bt[k][0]  = -Bt[k-1][d0-1]   + CDk*v[d0-1];
+        Bt[k][d0] = -Bt[k-1][2*d0-1] + CDk*v[2*d0-1];
+        
+        for(i=1; i<d0; i++)
+        {
+            Bt[k][i]    = Bt[k-1][i-1]    - CDk*v[i-1];
+            Bt[k][i+d0] = Bt[k-1][i+d0-1] - CDk*v[i+d0-1];
+        }
+        
+        for(i=0; i<2*d0; i++)
+        {
+            v[i] -= CDk*Bt[k-1][i];
+        }
+        
+        Dk = Dk - Ck*CDk;
+        Ck = InnerProdD(v1, Bt[k]); 
+        Norms2[k] = Dk;  
+    }
+
+    // return Bt ← (b˜_1, ..., b˜_n)
+}
+
+
+//==============================================================================
 // rot(f) - Returns anticircular matrix associated to polynomial f and integer d
 // 
 // NOTE: A_N(f) matrix as in Definition 1, page 28 of [DLP], 
@@ -598,4 +703,45 @@ RR  Norm2R(const vec_RR& v)
     }   
 
     return norm2;
+}
+
+
+//=================================================================================
+// Computes the squared norm of a vector v of doubles.
+//=================================================================================
+double  Norm2D(const vec_D& v)
+{
+    long    i;
+    double  norm2;
+
+    norm2 = 0;
+
+    for(i=0; i<(v.length()); i++)
+    {
+        norm2 += v[i] * v[i];
+    }   
+
+    return norm2;
+}
+
+
+//=================================================================================
+// Computes the inner product of two vectors a & b of doubles.
+//=================================================================================
+double  InnerProdD(const vec_D& a, const vec_D& b)
+{
+    long    i, len;
+    double      prod;
+
+    len = a.length();
+    assert(len == b.length());
+
+    prod = 0;
+    
+    for(i=0; i<len; i++)
+    {
+        prod += a[i] * b[i];
+    }   
+
+    return prod;
 }

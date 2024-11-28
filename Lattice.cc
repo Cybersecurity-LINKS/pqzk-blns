@@ -256,12 +256,14 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
 //
 // NOTE: Algorithm 1 Gaussian Sampler(B, sigma, c) at pag. 13 in [DLP14]
 //       Dimension n in [DLP14] corresponds to 2*d0 in [BLNS23]
+// NOTE: Optimized version, with OGS_Ortho & all double instead of RR.
 //==============================================================================
 void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
 {
     long    i, valid;
-    mat_RR  Bt;
-    vec_RR  Norms2;
+    mat_D   Bt;
+    vec_D   Norms2;
+    RR      norm2;
     vec_ZZ  ci, zibi;
     RR      cpi, spi;
     ZZ      zi;
@@ -269,10 +271,11 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
     const ZZ thres_s = sqr( ZZ(sigma0) ) * ZZ(2*d0);     
 
     zibi.SetLength(2*d0);
-    
+
     // 1. (b˜_1, ..., b˜_(2d)) ← GramSchmidt.Orthogonalization(B),   b˜_i ∈ R^(2d)
     // GS_Ortho(Bt, Norms2, B);         
-    MGS_Ortho(Bt, Norms2, B);
+    // MGS_Ortho(Bt, Norms2, B);
+    OGS_Ortho(Bt, Norms2, B);
 
 
     // NOTE: loop to find a valid s = c - v  (i.e. small norm, see Holder.VerCred2, row 5)
@@ -292,10 +295,11 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
         for(i=(2*d0-1); i>=0; i--)    
         {
             // 5. c′_i ← ⟨c_i, b˜_i⟩ / ∥b˜_i∥^2,   c′_i ∈ R
-            cpi = (conv<vec_RR>( ci ) * Bt[i]) / Norms2[i];
+            norm2 = conv<RR>( Norms2[i] );
+            cpi   = conv<RR>( InnerProdD( conv<vec_D>(ci), Bt[i] ) ) / norm2;
 
             // 6. σ′_i ← σ / ∥b˜_i∥,   σ′_i ∈ R
-            spi = sigma / sqrt(Norms2[i]);
+            spi = sigma / sqrt(norm2);
 
             // 7. z_i ← ZSampler(σ′_i, c′_i),   z_i ∈ Z
             zi = ZSampler(spi, cpi); 
