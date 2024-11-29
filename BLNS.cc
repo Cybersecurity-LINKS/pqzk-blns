@@ -49,8 +49,8 @@ int main()
     {
         cout << "\n#####################################################################" << endl;
         cout << "  ITERATION: " << iter << " of " << N << endl;
-                        
-
+        cout << "#####################################################################" << endl;
+        
         cout << "\n- Issuer.KeyGen    (key generation)" << endl;        
         I_KeyGen(ipk, isk);            
 

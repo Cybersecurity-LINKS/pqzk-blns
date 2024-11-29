@@ -478,11 +478,7 @@ PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, co
             }
         }
 
-        // 22. coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)   
-        // coeffs_s1 = CoeffsHat(s_1, m1);        
-        // NOTE: coeffs_s1 is identical to s0 (after Coeffs^-1 and Coeff)
-                    
-        // 23. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)   
+        // 22. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)   
         coeffs_y3 = CoeffsHat(y_3, n256);
         
         // Convert also R_goth ∈ {-1, 0, 1}^(256 x m_1 x d_hat) 
@@ -494,7 +490,7 @@ PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, co
             coeffs_R_goth[i] = CoeffsHat( conv<vec_ZZX>( R_goth[i] ), m1);
         }
                 
-        // 24.  z_3 = y_3 + R_goth*s_1,   z_3 ∈ Z^(256)   
+        // 23.  z_3 = y_3 + R_goth*s,   z_3 ∈ Z^(256)   
         coeffs_R_goth_mult_s1.SetLength(256);
         z_3.SetLength(256);
         // NOTE: This equation is performed in Z not in polynomials, needing Coeffs() transformation of y_3, R_goth, and s_1
@@ -507,7 +503,7 @@ PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, co
             z_3[i] = coeffs_y3[i] + coeffs_R_goth_mult_s1[i];
         }
         
-        // 25. b3 ← Rej (z_3, R_goth * s 1, s3_goth, M_3),    b3 ∈ {0, 1}
+        // 24. b3 ← Rej (z_3, R_goth * s, s3_goth, M_3),    b3 ∈ {0, 1}
         b3 = Rej_v_ZZ(z_3, coeffs_R_goth_mult_s1, s3_goth, M_3);
         
         // NOTE: if b3 == 0, continue the while loop (skip next rows until 53, then go to row 7)
@@ -517,12 +513,12 @@ PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, co
             continue;
         }
         
-        // 26. a2 ← z_3,   a2 ∈ Z^256    
+        // 25. a2 ← z_3,   a2 ∈ Z^256    
         ss.str("");    ss.clear();
         ss << z_3;
         a_2 = ss.str();
 
-        // 27. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat     
+        // 26. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat     
         ss.str("");    ss.clear();
         ss << 2 << crs << P << u0 << B_goth2 << a_1 << a_2;    
         gamma  = HCom2(ss.str());
@@ -545,10 +541,10 @@ PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, co
         }
 
 
-        // 28. for i ∈ [τ] do
+        // 27. for i ∈ [τ] do
         for(i=0; i<tau0; i++) 
         {
-            // 29. Compute h_i,   h_i ∈ R^_(q_hat)
+            // 28. Compute h_i,   h_i ∈ R^_(q_hat)
             h[i].SetLength(d_hat);
             
             acc = g[i];
@@ -565,7 +561,7 @@ PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, co
             
             acc += gamma[i][256+d0] * h_part3;
                     
-            // 30. h ← (h_1, . . . , h_τ),   h ∈ R^^(tau)_(q_hat)
+            // 29. h ← (h_1, . . . , h_τ),   h ∈ R^^(tau)_(q_hat)
             h[i] = acc;
         }
 
