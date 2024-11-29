@@ -54,9 +54,9 @@ cd ../..
 
 # Download & Build
 ```sh
-wget https://github.com/Cybersecurity-LINKS/blns/archive/refs/heads/dev.zip -O ./BLNS.zip
+wget https://github.com/Cybersecurity-LINKS/blns/archive/refs/heads/main.zip -O ./BLNS.zip
 unzip ./BLNS.zip
-cd  blns-dev
+cd  blns-main
 
 clear && make clean
 
