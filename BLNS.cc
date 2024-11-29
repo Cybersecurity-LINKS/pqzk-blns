@@ -26,131 +26,90 @@ int main()
 {
     ZZ_p::init(q1);
     
-    long            i;
-    mat_L           isk; 
+    mat_L           isk;
     IPK_STRUCT      ipk;
-    float           diff;
-    clock_t         tstart, t1, t2;  
-    string          inputStr;     
+    string          randomSeed;
     Vec<string>     attrs, attrs_prime;
-    mat_ZZ_p        B_f;    
-    ZZ_pX           u;   
+    mat_ZZ_p        B_f;
+    ZZ_pX           u;
     vec_ZZ          s;
     vec_ZZX         w;
-    ZZ              x;  
-    CRS_Data2       crs; 
+    ZZ              x;
+    CRS_Data2       crs;
     PROOF_Com       Pi;
-    STATE_STRUCT    state; 
-    CRED_STRUCT     cred;    
-    VP_STRUCT       VP;        
-    int             result; 
+    STATE_STRUCT    state;
+    CRED_STRUCT     cred;
+    VP_STRUCT       VP;
+    int             iter, N, i, valid;
+        
+
+    N = 10;  // Number of iterations, for demonstration purposes
     
-    {             
-        cout << "\n=====================================================================\n";
-        cout << " ISSUING PROTOCOL";
-        cout << "\n=====================================================================\n";
+    for(iter=1; iter<=N; iter++)
+    {
+        cout << "\n#####################################################################" << endl;
+        cout << "  ITERATION: " << iter << " of " << N << endl;
+                        
+
+        cout << "\n- Issuer.KeyGen    (key generation)" << endl;        
+        I_KeyGen(ipk, isk);            
+
+
+        cout << "\n- Holder.Init      (initialize common random string and matrices)" << endl;
         
-        cout << "\n- Issuer.KeyGen \n"; 
-               
-        // Issuer.KeyGen (i.e. AnonCreds.Init in [BLNS23])
-        tstart = clock();
-        t1 = tstart;
-        I_KeyGen(ipk, isk);                
-        t2 = clock();
+        randomSeed = to_string( RandomBnd(12345678) ); 
+        cout << "  seed = " << randomSeed << endl; 
 
-        diff = ((float)t2 - (float)t1)/(float)CLOCKS_PER_SEC;    
-        cout << "CPU time: " << diff << " seconds" << endl;
+        H_Init(crs, attrs, randomSeed);
 
-        //============================================================================== 
-        cout << "\n- Holder.Init \n";      
-        
-        inputStr = to_string( RandomBnd(12345) ); 
-        cout << "inputStr = " << inputStr << endl;   
-
-        // Initialize the public randomly chosen matrix B_f ∈ Z^(nd×t)_q, with n = 1
+        // Initialize a random matrix B_f ∈ Z^(d×t)_q
         B_f = random_mat_ZZ_p(d0, t0);
-        // cout << " B_f = \n" << B_f << endl;  
-       
-        t1 = clock();
-        H_Init(crs, attrs, inputStr);                        
-        t2 = clock();
-    
-        diff = ((float)t2 - (float)t1)/(float)CLOCKS_PER_SEC;    
-        cout << "CPU time: " << diff << " seconds" << endl;
 
-        //============================================================================== 
-        cout << "\n- Holder.VerCred1 \n";
-    
-        t1 = clock();
-        H_VerCred1(u, Pi, state, crs, ipk, attrs);                        
-        t2 = clock();
-   
-        diff = ((float)t2 - (float)t1)/(float)CLOCKS_PER_SEC;    
-        cout << "CPU time: " << diff << " seconds" << endl;
+        
+        cout << "\n=====================================================================" << endl;
+        cout << "  ISSUING PROTOCOL" << endl;
+        cout << "=====================================================================" << endl;
+     
+        cout << "\n- Holder.VerCred1  (prove knowledge of undisclosed attributes)" << endl;
+        H_VerCred1(u, Pi, state, crs, ipk, attrs);
 
-        //==============================================================================
-        cout << "\n- Issuer.VerCred \n";
-
-        // attrs′ ← (attrs_{idx_pub} | {0}_{idx_hid})
+        // Select disclosed attributes, fill with zeros hidden attributes 
         attrs_prime = attrs;
-
-        // NOTE: select disclosed attributes, fill with zeros for each i ∈ idx_hid 
+        
         for(i=0; i<idx_hid; i++)
         {
             attrs_prime[i] = "0"; // Zero padding
         }
         // cout << "  attrs  = " << attrs << endl;
         // cout << "  attrs' = " << attrs_prime << endl;
-        
-        t1 = clock();
+   
+
+        cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
         I_VerCred(s, w, x, crs, B_f, ipk, isk, attrs_prime, u, Pi);
-        t2 = clock();
-        
-        diff = ((float)t2 - (float)t1)/(float)CLOCKS_PER_SEC;    
-        cout << "CPU time: " << diff << " seconds" << endl;
+ 
 
-        //==============================================================================
-        cout << "\n- Holder.VerCred2 \n";
-
-        t1 = clock();
+        cout << "\n- Holder.VerCred2  (unblind signature and store credential)" << endl;
         H_VerCred2(cred, ipk, B_f, s, w, x, state);
-        t2 = clock();
 
         assert(cred.valid);
-
-        diff = ((float)t2 - (float)t1)/(float)CLOCKS_PER_SEC;    
-        cout << "CPU time: " << diff << " seconds" << endl;
         
         
-        cout << "\n=====================================================================\n";
-        cout << " PRESENTATION PROTOCOL";
-        cout << "\n=====================================================================\n";
+        cout << "\n=====================================================================" << endl;
+        cout << "  PRESENTATION PROTOCOL" << endl;
+        cout << "=====================================================================" << endl;
 
-        cout << "\n- Holder.VerPres \n";
-
-        t1 = clock();
+        cout << "\n- Holder.VerPres   (prove knowledge of signature and attributes)" << endl;
         H_VerPres(VP, cred, crs, ipk, B_f, attrs);
-        t2 = clock();
 
-        diff = ((float)t2 - (float)t1)/(float)CLOCKS_PER_SEC;    
-        cout << "CPU time: " << diff << " seconds" << endl;
 
-        //==============================================================================        
-        cout << "\n- Verifier.Verify \n";
-
-        t1 = clock();
-        result = V_Verify(VP, crs, B_f);
-        t2 = clock();
-        
-        assert(result == 1);
-   
-        diff = ((float)t2 - (float)t1)/(float)CLOCKS_PER_SEC;    
-        cout << "CPU time: " << diff << " seconds" << endl;
-        //==============================================================================
-
-        cout << "\n=====================================================================\n";
-        diff = ((float)t2 - (float)tstart)/(float)CLOCKS_PER_SEC;    
-        cout << "TOT time: " << diff << " seconds" << endl;
+        cout << "\n- Verifier.Verify  (verify proof and authorize)" << endl;
+        valid = V_Verify(VP, crs, B_f);
+                
+        if (valid)
+        {
+            cout << "  OK!" << endl;
+        }   
+        assert(valid == 1);
     }
 
     return 0;

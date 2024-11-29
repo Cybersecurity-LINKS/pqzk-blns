@@ -2,7 +2,7 @@
 
 
 //==============================================================================
-// H_Init  -    Initialization of Holder_VerCred1 function with test inputs
+// H_Init  -    Initialization of common random string and matrices 
 // 
 // Input:
 // - inputStr:  string containing the input message (initial seed)

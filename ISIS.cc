@@ -438,7 +438,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
        
         // 11. Increment idx
         idx = idx + 1;
-        cout << "idx = " << idx << endl;
+        // cout << "idx = " << idx << endl;
         
         // 12. Random generation of s_2 ∈ R^^(m2)
         s_2.SetLength(m2);
@@ -2046,7 +2046,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         return 0;
     }
     
-    cout << "# Verify_ISIS: OK!" << endl;
+    // cout << "# Verify_ISIS: OK!" << endl;
 
     // 26. else, return 1
     return 1;

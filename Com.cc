@@ -283,7 +283,7 @@ PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, co
     
         // 9. Increment idx
         idx = idx + 1;
-        cout << "idx = " << idx << endl;
+        // cout << "idx = " << idx << endl;
         
         // 10. Random generation of s_2 ∈ R^^(m2)
         s_2.SetLength(m2);
@@ -1610,6 +1610,8 @@ int  Verify_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, const Z
         cout << "Fifth condition failed!" << endl; 
         return 0; 
     }
+
+    // cout << "# Verify_Com: OK!" << endl;
 
 
     // 22. else, return 1
