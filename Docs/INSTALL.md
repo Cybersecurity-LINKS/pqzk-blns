@@ -4,6 +4,9 @@ The following dependencies must be installed:
 - [GMP](https://gmplib.org/) 6.2.0
 - [NTL](https://libntl.org/) 11.5.1
 
+NOTE: It may work with greater (or lesser) versions.
+Tested with Ubuntu 22.04.
+
 ## OpenSSL
 For simplicity, the following commands download and install OpenSSL in ```$HOME/openssl-3.3.0``` folder:
 ```sh
@@ -11,10 +14,11 @@ wget https://www.openssl.org/source/openssl-3.3.0.tar.gz
 tar xf openssl-3.3.0.tar.gz
 cd openssl-3.3.0
 ./Configure --release --prefix=$HOME/openssl-3.3.0 -Wl,--enable-new-dtags,-rpath,'$(LIBRPATH)'
-
 make -j10
 make test -j10
 make install -j10
+
+cd ..
 ```
 
 Once OpenSSL is correctly installed, the command
@@ -35,7 +39,7 @@ make
 make check
 sudo make install
 
-cd ../..
+cd ..
 ```
 
 ## NTL
@@ -49,7 +53,7 @@ make
 make check
 sudo make install
 
-cd ../..
+cd ..
 ```
 
 # Download & Build
@@ -62,8 +66,6 @@ clear && make clean
 
 make -j10 && ./BLNS
 ```
-
-NOTE: Tested with Ubuntu 22.04
 
 ## Additional information
 OpenSSL
