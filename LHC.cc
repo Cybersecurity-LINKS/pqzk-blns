@@ -99,9 +99,9 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int index, const Mat<z
         for(j=0; j<n; j++)
         {
             // acc_1 += A_i[i,j] * e_i,1[j]
-            acc_1 += ((conv<ZZX>(A_i[i][j]) * e_1[j]) % (phi_hat)); 
+            acc_1 += ModPhi_hat(conv<ZZX>(A_i[i][j]) * e_1[j]); 
             // acc_2 += B_i[i,j] * e_i,1[j]
-            acc_2 += ((conv<ZZX>(B_i[i][j]) * e_1[j]) % (phi_hat));
+            acc_2 += ModPhi_hat(conv<ZZX>(B_i[i][j]) * e_1[j]);
         }      
         
         t_1[i] = conv<zz_pX>( p_bar * (acc_1 + e_2[i]) );
@@ -153,9 +153,9 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int index, const Mat<z
         for(j=0; j<n; j++)
         {
             // acc_1 += A_i[i,j] * f_i,1[j]
-            acc_1 += ((conv<ZZX>(A_i[i][j]) * f_1[j]) % (phi_hat)); 
+            acc_1 += ModPhi_hat(conv<ZZX>(A_i[i][j]) * f_1[j]); 
             // acc_2 += B_i[i,j] * f_i,1[j]
-            acc_2 += ((conv<ZZX>(B_i[i][j]) * f_1[j]) % (phi_hat));
+            acc_2 += ModPhi_hat(conv<ZZX>(B_i[i][j]) * f_1[j]);
         }      
         
         w_1[i] = conv<zz_pX>( p_bar * (acc_1 + f_2[i]) );
@@ -461,12 +461,12 @@ Vec<vec_ZZX> LHC_Open(const int index, const ZZX c, const Vec<vec_ZZX>& st)
     // Compute z_i
     for(i=0; i<n; i++)
     {
-        z_1[i] = f_1[i] + (c * e_1[i]) % (phi_hat);
+        z_1[i] = f_1[i] + ModPhi_hat(c * e_1[i]);
     }
      for(i=0; i<m; i++)
     {
-        z_2[i] = f_2[i] + (c * e_2[i]) % (phi_hat);
-        z_3[i] = f_3[i] + (c * e_3[i]) % (phi_hat);
+        z_2[i] = f_2[i] + ModPhi_hat(c * e_2[i]);
+        z_3[i] = f_3[i] + ModPhi_hat(c * e_3[i]);
     }
     
     // Initialize v, z, to be passed to Rej  
@@ -483,17 +483,17 @@ Vec<vec_ZZX> LHC_Open(const int index, const ZZX c, const Vec<vec_ZZX>& st)
         if (i < n)  // filling first n positions
         {
             z[i] = z_1[i];
-            v[i] = (c * e_1[i]) % (phi_hat);
+            v[i] = ModPhi_hat(c * e_1[i]);
         }
         else if (i < (n + m)) // filling m positions starting from the n-th 
         {
             z[i] = z_2[i-n];
-            v[i] = (c * e_2[i-n]) % (phi_hat);
+            v[i] = ModPhi_hat(c * e_2[i-n]);
         }
         else // filling last m positions
         {
         z[i] = z_3[i-n-m];
-        v[i] = (c * e_3[i-n-m]) % (phi_hat);
+        v[i] = ModPhi_hat(c * e_3[i-n-m]);
         }        
     }
     
@@ -537,8 +537,6 @@ int LHC_Verify(const int index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, co
 {
     zz_pPush push(q1_hat); 
     // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat)) 
-    
-    const zz_pX phi_hat2 = conv<zz_pX>(phi_hat);   
     
     int         i, j, m, n, flag;
     RR          alpha_i, s_goth, thres;
@@ -659,13 +657,13 @@ int LHC_Verify(const int index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, co
         for(j=0; j<n; j++)
         {
             // acc_1 += A_i[i,j] * z_i,1[j]
-            acc_1 += ( conv<ZZX>(A_i[i][j]) * z_1[j] ) % (phi_hat); 
+            acc_1 += ModPhi_hat( conv<ZZX>(A_i[i][j]) * z_1[j] ); 
             // acc_2 += B_i[i,j] * z_i,1[j]
-            acc_2 += ( conv<ZZX>(B_i[i][j]) * z_1[j] ) % (phi_hat);
+            acc_2 += ModPhi_hat( conv<ZZX>(B_i[i][j]) * z_1[j] );
         }      
         
-        z_a[i] = ( c_mod * t_1[i] ) % (phi_hat2) + w_1[i] - conv<zz_pX>(p_bar * (acc_1 + z_2[i]));
-        z_b[i] = ( c_mod * t_2[i] ) % (phi_hat2) + w_2[i] - conv<zz_pX>(p_bar * (acc_2 + z_3[i]));     
+        z_a[i] = ModPhi_hat_q( c_mod * t_1[i] ) + w_1[i] - conv<zz_pX>(p_bar * (acc_1 + z_2[i]));
+        z_b[i] = ModPhi_hat_q( c_mod * t_2[i] ) + w_2[i] - conv<zz_pX>(p_bar * (acc_2 + z_3[i]));     
         // NOTE: modulo q_hat on all coefficients (zz_pX)
     }
     

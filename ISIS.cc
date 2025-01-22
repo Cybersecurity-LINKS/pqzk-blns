@@ -209,7 +209,6 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
     mat_zz_p      B_f = conv<mat_zz_p>(B0);
     
     // Initialise constants
-    const zz_pX         phi_hat2    = conv<zz_pX>(phi_hat);
     const unsigned int  n           = n_ISIS;
     const unsigned int  m1          = m1_ISIS;
     const unsigned int  m2          = m2_ISIS;
@@ -471,12 +470,12 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
             for(j=0; j<m1; j++)
             {
-                acc += ( A_1[i][j] * s_1_mod[j] ) % (phi_hat2); 
+                acc += ModPhi_hat_q( A_1[i][j] * s_1_mod[j] );
             }        
 
             for(j=0; j<m2; j++)
             {
-                acc += ( A_2[i][j] * s_2_mod[j] ) % (phi_hat2); 
+                acc += ModPhi_hat_q( A_2[i][j] * s_2_mod[j] ); 
             }            
 
             t_A[i] = acc;
@@ -548,12 +547,12 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
             for(j=0; j<m1; j++)
             {
-                acc += ( A_1[i][j] * conv<zz_pX>( y_1[j] ) ) % (phi_hat2);
+                acc += ModPhi_hat_q( A_1[i][j] * conv<zz_pX>( y_1[j] ) );
             }        
 
             for(j=0; j<m2; j++)
             {
-                acc += ( A_2[i][j] * conv<zz_pX>( y_2[j] ) ) % (phi_hat2);
+                acc += ModPhi_hat_q( A_2[i][j] * conv<zz_pX>( y_2[j] ) );
             }                
 
             w[i] = acc;
@@ -574,7 +573,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
             for(j=0; j<m2; j++)        
             {
-                acc += ( B_y[i][j] * s_2_mod[j] ) % (phi_hat2);
+                acc += ModPhi_hat_q( B_y[i][j] * s_2_mod[j] );
             }
                 
             acc += conv<zz_pX>( y_3[i] );
@@ -597,7 +596,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
             for(j=0; j<m2; j++)        
             {
-                acc += ( B_g[i][j] * s_2_mod[j] ) % (phi_hat2);
+                acc += ModPhi_hat_q( B_g[i][j] * s_2_mod[j] );
             }
                 
             acc += g[i];
@@ -858,7 +857,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
             for(j=0; j<m2; j++)        
             {
-                acc += ( B[i][j] * conv<zz_pX>( y_2[j] ) ) % (phi_hat2);
+                acc += ModPhi_hat_q( B[i][j] * conv<zz_pX>( y_2[j] ) );
             }           
             
             tmp_vec[i] = acc;
@@ -988,7 +987,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
             for(k=0; k<((m2d+d_hat)/d_hat); k++)        
             {
                 // Fill d_1 by accumulating mu[i]*(...sums...) 
-                d_1[k] += ( mu[i] * acc_vec[k]) % (phi_hat2); 
+                d_1[k] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
             }               
         }
 
@@ -1025,7 +1024,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
             for(k=0; k<((idxhlrd+d_hat)/d_hat); k++)        
             {
                 // Fill d_1 by accumulating mu[i]*(...sums...) 
-                d_1[k + ((m2d+d_hat)/d_hat)] += ( mu[i] * acc_vec[k]) % (phi_hat2); 
+                d_1[k + ((m2d+d_hat)/d_hat)] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
             }               
         }
 
@@ -1067,7 +1066,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
             for(k=0; k<(t_d_hat); k++)        
             {
                 // Fill d_1 by accumulating mu[i]*(...sums...) 
-                d_1[k + ((m2d+d_hat)/d_hat + (idxhlrd+d_hat)/d_hat)] += ( mu[i] * acc_vec[k]) % (phi_hat2); 
+                d_1[k + ((m2d+d_hat)/d_hat + (idxhlrd+d_hat)/d_hat)] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
             }               
         }
 
@@ -1098,7 +1097,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
             for(k=0; k<n256; k++)        
             {
                 // Fill d_1 by accumulating mu[i]*(...sums...) 
-                d_1[k + (2*m1)] += ( mu[i] * acc_vec[k]) % (phi_hat2);             
+                d_1[k + (2*m1)] += ModPhi_hat_q( mu[i] * acc_vec[k]);             
             }
         } 
         
@@ -1132,7 +1131,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
         //     sums += gamma[i][256+d0] * B_goth_s2_p + gamma[i][256+d0+1] * B_goth_r2_p;
         
-        //     d_0 = d_0 - ( mu[i] * ( sums + h[i] )) % (phi_hat2);
+        //     d_0 = d_0 - ModPhi_hat_q( mu[i] * ( sums + h[i] ));
         // }
 
         
@@ -1219,14 +1218,14 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
         for(i=0; i<m1; i++)
         {
             z_1[i].SetLength(d_hat);
-            c_s1[i] = ( c * s_1[i] ) % (phi_hat);
+            c_s1[i] = ModPhi_hat( c * s_1[i] );
             z_1[i]  = y_1[i] + c_s1[i]; 
         }
             
         for(i=0; i<m2; i++)
         {
             z_2[i].SetLength(d_hat);
-            c_s2[i] = ( c * s_2[i] ) % (phi_hat);
+            c_s2[i] = ModPhi_hat( c * s_2[i] );
             z_2[i]  = y_2[i] + c_s2[i]; 
         }
             
@@ -1333,7 +1332,6 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
     mat_zz_p      B_f = conv<mat_zz_p>(B0);
 
     // Initialise constants
-    const zz_pX         phi_hat2    = conv<zz_pX>(phi_hat);
     const unsigned int  n           = n_ISIS;
     const unsigned int  m1          = m1_ISIS;
     const unsigned int  m2          = m2_ISIS;
@@ -1508,12 +1506,12 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         clear(acc);
 
         // c*t_B
-        acc = ( c * t_B[i] ) % (phi_hat2);
+        acc = ModPhi_hat_q( c * t_B[i] );
 
         // − B*z_2
         for(j=0; j<m2; j++)        
         {
-            acc += (- B[i][j] * z_2_mod[j] ) % (phi_hat2);
+            acc += ModPhi_hat_q(- B[i][j] * z_2_mod[j] );
         }           
         
         tmp_vec[i] = acc;
@@ -1770,7 +1768,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         for(k=0; k<((m2d+d_hat)/d_hat); k++)        
         {
             // Fill d_1 by accumulating mu[i]*(...sums...) 
-            d_1[k] += ( mu[i] * acc_vec[k]) % (phi_hat2); 
+            d_1[k] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
         }               
     }
 
@@ -1807,7 +1805,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         for(k=0; k<((idxhlrd+d_hat)/d_hat); k++)        
         {
             // Fill d_1 by accumulating mu[i]*(...sums...) 
-            d_1[k + ((m2d+d_hat)/d_hat)] += ( mu[i] * acc_vec[k]) % (phi_hat2); 
+            d_1[k + ((m2d+d_hat)/d_hat)] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
         }               
     }
 
@@ -1849,7 +1847,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         for(k=0; k<(t_d_hat); k++)        
         {
             // Fill d_1 by accumulating mu[i]*(...sums...) 
-            d_1[k + ((m2d+d_hat)/d_hat + (idxhlrd+d_hat)/d_hat)] += ( mu[i] * acc_vec[k]) % (phi_hat2); 
+            d_1[k + ((m2d+d_hat)/d_hat + (idxhlrd+d_hat)/d_hat)] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
         }               
     }
 
@@ -1880,7 +1878,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         for(k=0; k<n256; k++)        
         {
             // Fill d_1 by accumulating mu[i]*(...sums...) 
-            d_1[k + (2*m1)] += ( mu[i] * acc_vec[k]) % (phi_hat2);             
+            d_1[k + (2*m1)] += ModPhi_hat_q( mu[i] * acc_vec[k]);             
         }
     } 
     
@@ -1914,7 +1912,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
 
         sums += gamma[i][256+d0] * B_goth_s2_p + gamma[i][256+d0+1] * B_goth_r2_p;
     
-        d_0 = d_0 - ( mu[i] * ( sums + Pi.h[i] )) % (phi_hat2);
+        d_0 = d_0 - ModPhi_hat_q( mu[i] * ( sums + Pi.h[i] ));
     }
 
 
@@ -1975,19 +1973,19 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         
         for(j=0; j<m1; j++)
         {
-            acc += ( A_1[i][j] * z_1_mod[j] ) % (phi_hat2); 
+            acc += ModPhi_hat_q( A_1[i][j] * z_1_mod[j] ); 
         }        
 
         for(j=0; j<m2; j++)
         {
-            acc += ( A_2[i][j] * z_2_mod[j] ) % (phi_hat2); 
+            acc += ModPhi_hat_q( A_2[i][j] * z_2_mod[j] ); 
         }  
 
         // A_1*z_1 + A_2*z_2
         tmp_vec[i] = acc;
 
         // w + c*t_A 
-        tmp_vec2[i] = Pi.w[i] + ( c * Pi.t_A[i] ) % (phi_hat2);
+        tmp_vec2[i] = Pi.w[i] + ModPhi_hat_q( c * Pi.t_A[i] );
     }
 
     if (tmp_vec != tmp_vec2)
@@ -2027,17 +2025,17 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         // acc_vec[i] = 0;
         clear(acc_vec[i]);
 
-        acc_vec[i] = ( c * d_1[i] ) % (phi_hat2);
+        acc_vec[i] = ModPhi_hat_q( c * d_1[i] );
     }
 
     // Accumulate  (c * d_1^T) * z 
     acc += poly_mult_hat(acc_vec, z);   
     
     // 3rd addend (c^2 * d_0)
-    acc += ( c * c * d_0 ) % (phi_hat2);
+    acc += ModPhi_hat_q( ModPhi_hat_q( sqr(c) ) * d_0 );
       
     // 4rd addend −(c*t − b^T * z_2)
-    acc -= ( ( c * Pi.t ) % (phi_hat2) - poly_mult_hat(b, z_2_mod) );
+    acc -= ( ModPhi_hat_q( c * Pi.t ) - poly_mult_hat(b, z_2_mod) );
     
     if (acc != Pi.f0)
     {

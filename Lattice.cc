@@ -23,10 +23,9 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
     RR      gamma, gamma2;
     mat_L   A;
 
+    const ZZX   phi     = Phi();
     const RR max_gamma  = RR(1.17) * sqrt( RR(q0) );
-    const zz_pX  phi_q  = conv<zz_pX>(phi);
-
-
+    
     // 1. σ_f ← 1.17*√(q/2d),  σ_f ∈ R
     const RR sigma_f    = RR(1.17) * sqrt( RR(q0) / RR(2*d0) );
     
@@ -81,12 +80,12 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
         
         // Compute gamma2 = ∥(q*fr /(f*fr+g*gr)), (q*gr /(f*fr+g*gr))∥
         den.SetLength(d0);
-        den = (f * fr + g * gr) % (phi);
+        den = ModPhi(f * fr + g * gr);
         
         // inv_den = inv(den) % phi
         XGCD(res, inv_den, iphi, den, phi, 0);
-        a = (fr * inv_den) % (phi);
-        b = (gr * inv_den) % (phi);
+        a = ModPhi(fr * inv_den);
+        b = ModPhi(gr * inv_den);
         acc = 0;
         
         for(i=0; i<d0; i++)
@@ -167,10 +166,10 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
     while( deg(k) >= 0 )
     {
         // 18. k = [(F*fr + G*gr)/(f*fr + g*gr)] ∈ R
-        num = (F * fr + G * gr) % (phi);
+        num = ModPhi(F * fr + G * gr);
         // den = (f * fr + g * gr) % (phi);    
         // XGCD(res, inv_den, iphi, den, phi, 0);    
-        k = (num * inv_den) % (phi);
+        k = ModPhi(num * inv_den);
                 
         for(i=0; i<d0; i++)
         {
@@ -179,16 +178,16 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
         }
         
         // 19. F ← F − k*f,  F ∈ R
-        F = (F - k*f) % (phi);
+        F = ModPhi(F - k*f);
 
         // 20. G ← G − k*g,  G ∈ R
-        G = (G - k*g) % (phi);
+        G = ModPhi(G - k*g);
     }
           
     // 21. a1 ← g*f^(−1) mod q ∈ R_q   
     a1.SetLength(d0);
-    inv_f = InvMod(conv<zz_pX>(f), phi_q);
-    a1    = ( conv<zz_pX>(g) * inv_f ) % (phi_q);
+    inv_f = InvMod( conv<zz_pX>(f), conv<zz_pX>(phi) );
+    a1    = ModPhi_q( conv<zz_pX>(g) * inv_f );
 
     
     // 22. B ← [rot(g) −rot(f); 
@@ -273,8 +272,6 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
     zibi.SetLength(2*d0);
 
     // 1. (b˜_1, ..., b˜_(2d)) ← GramSchmidt.Orthogonalization(B),   b˜_i ∈ R^(2d)
-    // GS_Ortho(Bt, Norms2, B);         
-    // MGS_Ortho(Bt, Norms2, B);
     OGS_Ortho(Bt, Norms2, B);
 
 
@@ -367,7 +364,7 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX h, const vec_zz_pX a, const mat
             w[i] = polySampler(sigma);
 
             // 5. u ← u + w_i * a_i,   u ∈ R            
-            u += (( w[i] * conv<ZZX>( a[i]) ) % phi );
+            u += ModPhi( w[i] * conv<ZZX>( a[i]) );
         }
         // 6. w ← (w_1, ... , w_m),   w ∈ R^m 
         

@@ -14,104 +14,29 @@ ZZX Phi()
     return phi;
 }
 
-ZZX Phi_hat()
+
+//==============================================================================
+// ModPhi(_hat)(_q) - Fast algorithms to compute p % phi (or  p % phi_hat), 
+//                    without or with modulo q (or q_hat) on all coefficients
+//==============================================================================
+ZZX ModPhi(const ZZX& p)
 {
-    ZZX phi_hat;
-
-    phi_hat.SetLength(d_hat+1);
-    // phi_hat[0]     = 1;
-    SetCoeff(phi_hat, 0, 1);
-    // phi_hat[d_hat] = 1;
-    SetCoeff(phi_hat, d_hat, 1);
-
-    return phi_hat;
+    return (trunc(p, d0) - RightShift(p, d0));
 }
 
-
-//==============================================================================
-// GS_Ortho  - (Classical) GramSchmidt.Orthogonalization function.
-//             For an input matrix              B      ∈ Z^(2d×2d) 
-//             it returns the matrix            Bt     ∈ R^(2d×2d)
-//             and the vector of squared norms  Norms2 ∈ R^(2d)
-//==============================================================================
-// NOTE: Classical Gram-Schmidt algorithm is numerically UNSTABLE, 
-//       see https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process#Numerical_stability
-void GS_Ortho(mat_RR& Bt, vec_RR& Norms2, const mat_L& B)
+zz_pX ModPhi_q(const zz_pX& p)
 {
-    long    j, s;
-    vec_RR  Sum;
-
-    Bt.SetDims(2*d0, 2*d0);
-    Sum.SetLength(2*d0);
-    Norms2.SetLength(2*d0);
-        
-    // 1. b˜_1 ← b_1
-    Bt[0] = conv<vec_RR>(B[0]);
-
-    Norms2[0] = Norm2R(Bt[0]);
-
-    // 2. for j = 2 : n
-    for(j=1; j<(2*d0); j++)
-    {
-        // 3. b˜_j ← b_j − Sum_{s=1}^{j−1} ⟨b_j, b˜_s / ∥b˜_s∥^2 ⟩ * b˜_s
-        Bt[j] = conv<vec_RR>(B[j]);
-        
-        clear(Sum); // = 0
-
-        for(s=0; s<j; s++)
-        {
-            Sum +=  ((Bt[j] * Bt[s]) / Norms2[s]) * Bt[s];
-        }
-
-        Bt[j] -= Sum;
-
-        Norms2[j] = Norm2R(Bt[j]);
-    }
-
-    // 4. return Bt ← (b˜_1, ..., b˜_n)
+    return (trunc(p, d0) - RightShift(p, d0));
 }
 
-
-//==============================================================================
-// MGS_Ortho - Modified Gram-Schmidt Orthogonalization function.
-//             For an input matrix              B      ∈ Z^(2d×2d) 
-//             it returns the matrix            Bt     ∈ R^(2d×2d)
-//             and the vector of squared norms  Norms2 ∈ R^(2d)
-//==============================================================================
-// NOTE: implemented as in https://ocw.mit.edu/courses/18-335j-introduction-to-numerical-methods-spring-2019/be0cdadd9de56ff8d20d9a0c6d6d9206_MIT18_335JS19_lec9_reading.pdf
-void MGS_Ortho(mat_RR& Bt, vec_RR& Norms2, const mat_L& B)
+ZZX ModPhi_hat(const ZZX& p)
 {
-    long    i, j;    
-    RR      rii, rij;
-    vec_RR  qi;
+    return (trunc(p, d_hat) - RightShift(p, d_hat));
+}
 
-    Bt.SetDims(2*d0, 2*d0);
-    qi.SetLength(2*d0);
-    Norms2.SetLength(2*d0);
-
-    for(i=0; i<(2*d0); i++)
-    {
-        Bt[i] = conv<vec_RR>(B[i]);
-    }
-        
-    for(i=0; i<(2*d0); i++)
-    {
-        Norms2[i] = Norm2R(Bt[i]);
-        rii = sqrt(Norms2[i]);
-
-        for(j=0; j<(2*d0); j++)
-        {
-            qi[j] = Bt[i][j] / rii;
-        }
-
-        for(j=(i+1); j<(2*d0); j++)
-        {   
-            rij    = qi * Bt[j];
-            Bt[j] -= rij * qi;
-        }
-    }
-
-    // return Bt ← (b˜_1, ..., b˜_n)
+zz_pX ModPhi_hat_q(const zz_pX& p)
+{
+    return (trunc(p, d_hat) - RightShift(p, d_hat));
 }
 
 
@@ -523,7 +448,7 @@ vec_ZZX  CoeffsInvHatX(const vec_ZZ c, const unsigned int l)
 //==============================================================================
 // sigma_map(M, d) - This is the sigma automorphism that maps X --> X^(d-1),
 //                   for example sigma(2X^2 + 3X + 5) = -2X^{d-2} -3X^{d-1} + 5.   
-//                   Note that the result is mod d and mod phi_hat2 = (X^d + 1).
+//                   Note that the result is mod d and mod phi = (X^d + 1).
 //                   It takes as input a polynomial vector and its degree.
 //                   It outputs the result of the automorphism.
 //==============================================================================
@@ -558,8 +483,6 @@ vec_zz_pX  sigma_map(const vec_zz_pX& M, const unsigned int d)
 //=====================================================================================
 zz_pX  poly_mult(const vec_zz_pX& f, const vec_zz_pX& g)
 {
-    const zz_pX     phi_2 = conv<zz_pX>(phi);
-    
     unsigned int    i, len;
     zz_pX           h;
     
@@ -575,7 +498,7 @@ zz_pX  poly_mult(const vec_zz_pX& f, const vec_zz_pX& g)
 
     for(i=0; i<len; i++)
     {
-        h = h + (f[i] * g[i]) % (phi_2);        
+        h += ModPhi_q( f[i] * g[i]);
     }
 
     return h;   
@@ -587,8 +510,6 @@ zz_pX  poly_mult(const vec_zz_pX& f, const vec_zz_pX& g)
 //=====================================================================================
 zz_pX  poly_mult_hat(const vec_zz_pX& f, const vec_zz_pX& g)
 {
-    const zz_pX     phi_hat2 = conv<zz_pX>(phi_hat);
-    
     unsigned int    i, len;
     zz_pX           h;
     
@@ -604,7 +525,7 @@ zz_pX  poly_mult_hat(const vec_zz_pX& f, const vec_zz_pX& g)
 
     for(i=0; i<len; i++)
     {
-        h = h + (f[i] * g[i]) % (phi_hat2);        
+        h += ModPhi_hat_q( f[i] * g[i] );
     }
 
     return h;   

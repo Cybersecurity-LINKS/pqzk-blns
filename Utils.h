@@ -5,14 +5,12 @@
 
 
 ZZX         Phi();
-ZZX         Phi_hat();
 
-const ZZX   phi     =      Phi();
-const ZZX   phi_hat =      Phi_hat();
+ZZX         ModPhi(const ZZX& p);
+zz_pX       ModPhi_q(const zz_pX& p);
+ZZX         ModPhi_hat(const ZZX& p);
+zz_pX       ModPhi_hat_q(const zz_pX& p);
 
-
-void        GS_Ortho(      mat_RR& Bt, vec_RR& Norms2, const mat_L& B );
-void        MGS_Ortho(     mat_RR& Bt, vec_RR& Norms2, const mat_L& B );
 void        OGS_Ortho(     mat_D&  Bt, vec_D&  Norms2, const mat_L& B ); 
 
 void        rot(           mat_L& M, const ZZX& f ); 
