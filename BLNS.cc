@@ -41,6 +41,7 @@ int main()
     CRED_STRUCT     cred;
     VP_STRUCT       VP;
     int             iter, N, i, valid;
+    double          t1, t2, t3;  
         
 
     N = 10;  // Number of iterations, for demonstration purposes
@@ -51,10 +52,12 @@ int main()
         cout << "  ITERATION: " << iter << " of " << N << endl;
         cout << "#####################################################################" << endl;
         
-        cout << "\n- Issuer.KeyGen    (key generation)" << endl;        
-        I_KeyGen(ipk, isk);            
-
-
+        cout << "\n- Issuer.KeyGen    (key generation)" << endl;
+        t1 = GetWallTime();
+        I_KeyGen(ipk, isk);
+        t2 = GetWallTime();
+        cout << "  CPU time: " << (t2 - t1) << " s" << endl;
+        
         cout << "\n- Holder.Init      (initialize common random string and matrices)" << endl;
         
         randomSeed = to_string( RandomBnd(12345678) ); 
@@ -104,12 +107,16 @@ int main()
 
         cout << "\n- Verifier.Verify  (verify proof and authorize)" << endl;
         valid = V_Verify(VP, crs, B_f);
-                
+
         if (valid)
         {
             cout << "  OK!" << endl;
         }   
         assert(valid == 1);
+        
+        t3 = GetWallTime();
+        cout << "\n=====================================================================\n";
+        cout << "  TOT time: " << (t3 - t1) << " s (" << (t3 - t2) << " s)" << endl;
     }
 
     return 0;
