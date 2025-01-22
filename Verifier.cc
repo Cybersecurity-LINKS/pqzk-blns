@@ -12,17 +12,17 @@
 // Output:
 // -  1 or 0:        accept if π is valid, reject if the proof is invalid
 //==============================================================================
-int  V_Verify(const VP_STRUCT& VP, const CRS_Data2& crs, const mat_ZZ_p& B_f)
+int  V_Verify(const VP_STRUCT& VP, const CRS_Data2& crs, const mat_zz_p& B_f)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     
     unsigned int    i, j, k;
     int             out;
-    ZZ_pX           a1;
-    vec_ZZ_pX       a2, c0, c1, a; //mex;
+    zz_pX           a1;
+    vec_zz_pX       a2, c0, c1, a; //mex;
     vec_ZZ          m_i, coeffs_m;
-    mat_ZZ_p        A, P, C, C0, C1; 
-    vec_ZZ_p        coeffs_m_idx;
+    mat_zz_p        A, P, C, C0, C1; 
+    vec_zz_p        coeffs_m_idx;
     vec_ZZ          Bounds;
     ZZ              mul;
 
@@ -68,7 +68,7 @@ int  V_Verify(const VP_STRUCT& VP, const CRS_Data2& crs, const mat_ZZ_p& B_f)
     a.SetLength(m0+2);
     
     a[0].SetLength(d0);
-    a[0] = ZZ_pX(1);  
+    a[0] = zz_pX(1);  
        
     a[1] = a1;
 
@@ -147,7 +147,7 @@ int  V_Verify(const VP_STRUCT& VP, const CRS_Data2& crs, const mat_ZZ_p& B_f)
 
     for(i=0; i<(idx_pub*h0); i++)
     {
-        coeffs_m_idx[i] = conv<ZZ_p>(coeffs_m[(idx_hid*h0)+i]);
+        coeffs_m_idx[i] = conv<zz_p>(coeffs_m[(idx_hid*h0)+i]);
     }
 
 

@@ -11,11 +11,11 @@
 
 typedef struct
 {
-    vec_ZZ_pX       t_A, t_y, t_g, w;
-    Vec<vec_ZZ_pX>  com_1, com_2;
+    vec_zz_pX       t_A, t_y, t_g, w;
+    Vec<vec_zz_pX>  com_1, com_2;
     vec_ZZ          z_3;
-    vec_ZZ_pX       h;
-    ZZ_pX           t, f0;
+    vec_zz_pX       h;
+    zz_pX           t, f0;
     vec_ZZX         z_1,  z_2;
     Vec<vec_ZZX>    op_1, op_2;
     int             valid;

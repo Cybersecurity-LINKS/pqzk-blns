@@ -24,14 +24,14 @@
 //=====================================================================
 int main()
 {
-    ZZ_p::init(q1);
+    zz_p::init(q0); // Initialize modulus q
     
     mat_L           isk;
     IPK_STRUCT      ipk;
     string          randomSeed;
     Vec<string>     attrs, attrs_prime;
-    mat_ZZ_p        B_f;
-    ZZ_pX           u;
+    mat_zz_p        B_f;
+    zz_pX           u;
     vec_ZZ          s;
     vec_ZZX         w;
     ZZ              x;
@@ -66,7 +66,7 @@ int main()
         H_Init(crs, attrs, randomSeed);
 
         // Initialize a random matrix B_f ∈ Z^(d×t)_q
-        B_f = random_mat_ZZ_p(d0, t0);
+        B_f = random_mat_zz_p(d0, t0);
 
         
         cout << "\n=====================================================================" << endl;

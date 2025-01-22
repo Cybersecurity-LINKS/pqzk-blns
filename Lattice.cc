@@ -14,17 +14,17 @@
 // NOTE: Algorithm 2 Master Keygen(N, q) at pag. 15 in [DLP14]
 //       equivalent to algorithm NTRU.TrapGen(q, d) in [BLNS23]  
 //==============================================================================
-void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
+void NTRU_TrapGen(zz_pX& a1, mat_L& B)
 {
     long    i, j, valid;
     ZZX     f, g, F, G, fr, gr, num, den, inv_den, iphi, a, b, rho_f, rho_g, k;
-    ZZ_pX   inv_f;
+    zz_pX   inv_f;
     ZZ      acc, res, out, R_f, R_g, u, v;
     RR      gamma, gamma2;
     mat_L   A;
 
     const RR max_gamma  = RR(1.17) * sqrt( RR(q0) );
-    const ZZ_pX  phi_q  = conv<ZZ_pX>(phi);
+    const zz_pX  phi_q  = conv<zz_pX>(phi);
 
 
     // 1. σ_f ← 1.17*√(q/2d),  σ_f ∈ R
@@ -187,8 +187,8 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
           
     // 21. a1 ← g*f^(−1) mod q ∈ R_q   
     a1.SetLength(d0);
-    inv_f = InvMod(conv<ZZ_pX>(f), phi_q);
-    a1    = ( conv<ZZ_pX>(g) * inv_f ) % (phi_q);
+    inv_f = InvMod(conv<zz_pX>(f), phi_q);
+    a1    = ( conv<zz_pX>(g) * inv_f ) % (phi_q);
 
     
     // 22. B ← [rot(g) −rot(f); 
@@ -338,7 +338,7 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
 // - s:     short vector,       s ∈ Z^(2d)
 // - w:     polynomial vector,  w ∈ R^m
 //==============================================================================
-void GSampler(vec_ZZ& s, vec_ZZX& w, const ZZ_pX h, const vec_ZZ_pX a, const mat_L& B, const RR sigma, const ZZ_pX d)
+void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX h, const vec_zz_pX a, const mat_L& B, const RR sigma, const zz_pX d)
 {
     long            i, j, valid;  
     ZZX             u;

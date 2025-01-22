@@ -50,16 +50,16 @@ void H_Init(CRS_Data2& crs, Vec<string>& attrs, const string inputStr)
 // - u, Pi:         commitment u and proof π, corresponding to the structure ρ_1 
 // - state:         structure that contains the polynomial vectors m and r
 //==============================================================================
-void H_VerCred1(ZZ_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const CRS_Data2& crs, const IPK_STRUCT& ipk, const Vec<string>& attrs)
+void H_VerCred1(zz_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const CRS_Data2& crs, const IPK_STRUCT& ipk, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     
     unsigned int    i, j, k;
-    vec_ZZ_pX       c0, c1;
+    vec_zz_pX       c0, c1;
     vec_ZZX         mex, r;
     vec_ZZ          m_i, coeffs_m, coeffs_r, s;
-    mat_ZZ_p        P0, P1, P; 
-    vec_ZZ_p        u_vect, prod;
+    mat_zz_p        P0, P1, P; 
+    vec_zz_p        u_vect, prod;
     ZZ              range, B_goth2;
 
     const unsigned int  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
@@ -111,7 +111,7 @@ void H_VerCred1(ZZ_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const CRS_Data2& c
 
     // 5. u ← c0^T * m + c1^T * r ∈ R_q
     u.SetLength(d0);
-    u = poly_mult(c0, conv<vec_ZZ_pX>(mex)) + poly_mult(c1, conv<vec_ZZ_pX>(r));
+    u = poly_mult(c0, conv<vec_zz_pX>(mex)) + poly_mult(c1, conv<vec_zz_pX>(r));
     
 
     // 6. P ← [rot(c0^T)_(idx_hid) | rot(c1^T)],    P ∈ Z_q^(d × (|idx_hid|·h + ℓr·d))   
@@ -182,7 +182,7 @@ void H_VerCred1(ZZ_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const CRS_Data2& c
        for(i=0; i<(idx_pub*h0); i++)
         {     
             k = idx_hid*h0 + i;       
-            prod[j] += P0[j][k] * conv<ZZ_p>( coeffs_m[k] );
+            prod[j] += P0[j][k] * conv<zz_p>( coeffs_m[k] );
         }
     }
 
@@ -231,13 +231,13 @@ void H_VerCred1(ZZ_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const CRS_Data2& c
 // Outputs:
 // - cred = (s,r,x): triple that corresponds to the credential
 //==============================================================================
-void H_VerCred2(CRED_STRUCT& cred, const IPK_STRUCT& ipk, const mat_ZZ_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_STRUCT& state)
+void H_VerCred2(CRED_STRUCT& cred, const IPK_STRUCT& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_STRUCT& state)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
 
     unsigned int    i, j;
-    ZZ_pX           a1, left, right;
-    vec_ZZ_pX       a2, c0, c1, a;
+    zz_pX           a1, left, right;
+    vec_zz_pX       a2, c0, c1, a;
     vec_ZZX         m, r, s;
     ZZ              acc;
     RR              norm_s, norm_r, th_s, th_r;
@@ -287,7 +287,7 @@ void H_VerCred2(CRED_STRUCT& cred, const IPK_STRUCT& ipk, const mat_ZZ_p& B_f, c
     a.SetLength(m0+2);
     
     a[0].SetLength(d0);
-    a[0] = ZZ_pX(1); 
+    a[0] = zz_pX(1); 
 
     a[1] = a1;
 
@@ -297,11 +297,11 @@ void H_VerCred2(CRED_STRUCT& cred, const IPK_STRUCT& ipk, const mat_ZZ_p& B_f, c
     }
 
     // left ← [1|a1|a2^T] * s = a * s,   left ∈ R_q
-    left = poly_mult(a, conv<vec_ZZ_pX>(s) );
+    left = poly_mult(a, conv<vec_zz_pX>(s) );
     left.normalize();
 
     // right ← f(x) + c0^T * m + c1^T * r,   right ∈ R_q    
-    right = Compute_f(B_f, x) + poly_mult(c0, conv<vec_ZZ_pX>(m)) + poly_mult(c1, conv<vec_ZZ_pX>(r) );
+    right = Compute_f(B_f, x) + poly_mult(c0, conv<vec_zz_pX>(m)) + poly_mult(c1, conv<vec_zz_pX>(r) );
     right.normalize();
     
     cred.valid = 0;
@@ -362,18 +362,18 @@ void H_VerCred2(CRED_STRUCT& cred, const IPK_STRUCT& ipk, const mat_ZZ_p& B_f, c
 // Output:
 // - VP:             structure for the Verifiable Presentation
 //==============================================================================
-void H_VerPres(VP_STRUCT& VP, const CRED_STRUCT& cred, const CRS_Data2& crs, const IPK_STRUCT& ipk, const mat_ZZ_p& B_f, const Vec<string>& attrs)
+void H_VerPres(VP_STRUCT& VP, const CRED_STRUCT& cred, const CRS_Data2& crs, const IPK_STRUCT& ipk, const mat_zz_p& B_f, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     
     unsigned int    i, j, k;
-    ZZ_pX           a1;
-    vec_ZZ_pX       a2, c0, c1, a; 
+    zz_pX           a1;
+    vec_zz_pX       a2, c0, c1, a; 
     vec_ZZX         s, r; //mex
     ZZ              x, mul;   
     vec_ZZ          m_i, coeffs_m, coeffs_s, coeffs_r, r_vect, enc_x, coeffs_u;
-    vec_ZZ_p        coeffs_m_idx;
-    mat_ZZ_p        P, A, C0, C1, C; 
+    vec_zz_p        coeffs_m_idx;
+    mat_zz_p        P, A, C0, C1, C; 
     vec_ZZ          Bounds;
     Vec<vec_ZZ>     sig;
 
@@ -431,7 +431,7 @@ void H_VerPres(VP_STRUCT& VP, const CRED_STRUCT& cred, const CRS_Data2& crs, con
     a.SetLength(m0+2);
     
     a[0].SetLength(d0);
-    a[0] = ZZ_pX(1);  
+    a[0] = zz_pX(1);  
        
     a[1] = a1;
 
@@ -510,7 +510,7 @@ void H_VerPres(VP_STRUCT& VP, const CRED_STRUCT& cred, const CRS_Data2& crs, con
 
     for(i=0; i<(idx_pub*h0); i++)
     {
-        coeffs_m_idx[i] = conv<ZZ_p>(coeffs_m[(idx_hid*h0)+i]);
+        coeffs_m_idx[i] = conv<zz_p>(coeffs_m[(idx_hid*h0)+i]);
     }
 
 

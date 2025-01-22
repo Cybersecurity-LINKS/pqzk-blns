@@ -168,48 +168,48 @@ void  Preprocessing_ISIS(vec_ZZ& s1, vec_ZZ& r1, const vec_ZZ& s0, const ZZ B_go
 // Output:
 // -  Pi:           proof (π) structure 
 //==============================================================================
-PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const vec_ZZ_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const Vec<vec_ZZ>& w0)
+PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const Vec<vec_ZZ>& w0)
 {
-    ZZ_pPush push(conv<ZZ>(q2_hat)); 
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., ZZ_p::init(q2_hat))  
+    zz_pPush push(q2_hat); 
+    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))  
    
     unsigned int         idx, i, j, k;
     int                  rst, b1, b2, b3;
-    Mat<ZZ_pX>           A_1, A_2, B_y, B_g, B, D2; //D2_2_1
-    vec_ZZ_pX            b, s_1_mod, s_2_mod, t_A, g, w, t_y, t_g; //t_B;
-    vec_ZZ_pX            h, h_part1, h_part2;
-    vec_ZZ_pX            r_j, p_j, Beta_j, c_r_j, mu, m, s_hat, tmp_vec, y;
-    vec_ZZ_pX            sigma_s_1, d_1, acc_vec, D2_y;
+    Mat<zz_pX>           A_1, A_2, B_y, B_g, B, D2; //D2_2_1
+    vec_zz_pX            b, s_1_mod, s_2_mod, t_A, g, w, t_y, t_g; //t_B;
+    vec_zz_pX            h, h_part1, h_part2;
+    vec_zz_pX            r_j, p_j, Beta_j, c_r_j, mu, m, s_hat, tmp_vec, y;
+    vec_zz_pX            sigma_s_1, d_1, acc_vec, D2_y;
     vec_ZZX              z_1, z_2, c_s1, c_s2;
     vec_ZZX              s, r, u, y_1, y_2, y_3, s_1, s_2;
     ZZX                  c;
-    ZZ_pX                h_part3, h_part4, h_part5;
-    ZZ_pX                acc, delta_1, delta_2, delta_3, f1, f0, t; //d_0;
-    Vec<vec_ZZ_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
-    Vec<vec_ZZ_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
+    zz_pX                h_part3, h_part4, h_part5;
+    zz_pX                acc, delta_1, delta_2, delta_3, f1, f0, t; //d_0;
+    Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
+    Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
     string               a_1, a_2, a_3, a_4;     
     Mat<vec_ZZ>          R_goth, R_goth_0, R_goth_1;  
     Vec<Mat<vec_ZZ>>     R_goth2;  
     Vec<vec_ZZ>          coeffs_R_goth;
     vec_ZZ               s0, r0, u0, s1, r1, coeffs_s1, coeffs_y3, z_3, coeffs_R_goth_mult_s1;    
-    mat_ZZ_p             gamma, C_m, C_r;
-    vec_ZZ_p             ones;
-    vec_ZZ_pX            s_mod, r_mod,  u_mod, coeffs_ones, u_m_ones, sigma_u_m_ones, sigma_ones;
-    vec_ZZ_pX            sigma_s, sigma_r;
-    vec_ZZ_p             e_tmp, m_C;   
+    mat_zz_p             gamma, C_m, C_r;
+    vec_zz_p             ones;
+    vec_zz_pX            s_mod, r_mod,  u_mod, coeffs_ones, u_m_ones, sigma_u_m_ones, sigma_ones;
+    vec_zz_pX            sigma_s, sigma_r;
+    vec_zz_p             e_tmp, m_C;   
     RR                   alpha_i,     B_goth;
     ZZ                   B_goth_s2,   B_goth_r2;
-    ZZ_p                 B_goth_s2_p, B_goth_r2_p; //sums;
+    zz_p                 B_goth_s2_p, B_goth_r2_p; //sums;
     PROOF_ISIS           Pi;  
 
     // Convert input P, C, B_f to be modulo q2_hat
-    mat_ZZ_p      P   = conv<mat_ZZ_p>(P0);
-    mat_ZZ_p      C   = conv<mat_ZZ_p>(C0);    
-    mat_ZZ_p      B_f = conv<mat_ZZ_p>(B0);
+    mat_zz_p      P   = conv<mat_zz_p>(P0);
+    mat_zz_p      C   = conv<mat_zz_p>(C0);    
+    mat_zz_p      B_f = conv<mat_zz_p>(B0);
     
     // Initialise constants
-    const ZZ_pX         phi_hat2    = conv<ZZ_pX>(phi_hat);
+    const zz_pX         phi_hat2    = conv<zz_pX>(phi_hat);
     const unsigned int  n           = n_ISIS;
     const unsigned int  m1          = m1_ISIS;
     const unsigned int  m2          = m2_ISIS;
@@ -248,8 +248,8 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
     // B_goth = sqrt(B_goth_s^2 + B_goth_r^2 + t0)
     B_goth = sqrt( conv<RR>( B_goth_s2 + B_goth_r2 + t0 ) );
 
-    B_goth_s2_p = conv<ZZ_p>(B_goth_s2);
-    B_goth_r2_p = conv<ZZ_p>(B_goth_r2);
+    B_goth_s2_p = conv<zz_p>(B_goth_s2);
+    B_goth_r2_p = conv<zz_p>(B_goth_r2);
 
     // s1_goth = alpha_1*nu0*B_goth
     // s2_goth = alpha_2*nu0*sqrt(m2*d_hat)
@@ -274,15 +274,15 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
     
     // 6. s ← Coeffs^−1(s1)    
     s = CoeffsInvHatX(s1, (m2d+d_hat)/d_hat); // s     ∈ R^^(((m+2)·d+d_hat)/d_hat)
-    s_mod = conv<vec_ZZ_pX>( s );             // s_mod ∈ R^^(((m+2)·d+d_hat)/d_hat)_(q_hat)
+    s_mod = conv<vec_zz_pX>( s );             // s_mod ∈ R^^(((m+2)·d+d_hat)/d_hat)_(q_hat)
 
     //    r ← Coeffs^−1(r1)
     r = CoeffsInvHatX(r1, (idxhlrd+d_hat)/d_hat); // r     ∈ R^^((|idx_hid|·h + ℓr·d + d_hat)/d_hat)
-    r_mod = conv<vec_ZZ_pX>( r );                 // r_mod ∈ R^^((|idx_hid|·h + ℓr·d + d_hat)/d_hat)_(q_hat)
+    r_mod = conv<vec_zz_pX>( r );                 // r_mod ∈ R^^((|idx_hid|·h + ℓr·d + d_hat)/d_hat)_(q_hat)
 
     //    u ← Coeffs^−1(u0) 
     u = CoeffsInvHatX(u0, t_d_hat); // u     ∈ R^^(t/d_hat)
-    u_mod = conv<vec_ZZ_pX>( u );   // u_mod ∈ R^^(t/d_hat)_(q_hat) 
+    u_mod = conv<vec_zz_pX>( u );   // u_mod ∈ R^^(t/d_hat)_(q_hat) 
     
        
     // 7. Initialize rst ← 0,   rst ∈ Z, scalar
@@ -317,7 +317,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
         k++;      
     }
 
-    s_1_mod = conv<vec_ZZ_pX>( s_1 );
+    s_1_mod = conv<vec_zz_pX>( s_1 );
     // NOTE: modulo q_hat on all coefficients
 
 
@@ -454,7 +454,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
             }
         }
 
-        s_2_mod = conv<vec_ZZ_pX>( s_2 ); 
+        s_2_mod = conv<vec_zz_pX>( s_2 ); 
         // NOTE: modulo q_hat on all coefficients
 
 
@@ -528,7 +528,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
         for(i=0; i<tau0; i++)
         {
             g[i].SetLength(d_hat);
-            g[i] = random_ZZ_pX(d_hat);            
+            g[i] = random_zz_pX(d_hat);            
             g[i][0] = 0;        
             // NOTE: the constant term of g (x^0) must be zero 
         }
@@ -548,16 +548,16 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
             for(j=0; j<m1; j++)
             {
-                acc += ( A_1[i][j] * conv<ZZ_pX>( y_1[j] ) ) % (phi_hat2);
+                acc += ( A_1[i][j] * conv<zz_pX>( y_1[j] ) ) % (phi_hat2);
             }        
 
             for(j=0; j<m2; j++)
             {
-                acc += ( A_2[i][j] * conv<ZZ_pX>( y_2[j] ) ) % (phi_hat2);
+                acc += ( A_2[i][j] * conv<zz_pX>( y_2[j] ) ) % (phi_hat2);
             }                
 
             w[i] = acc;
-            // NOTE: modulo q_hat on all coefficients (ZZ_pX)
+            // NOTE: modulo q_hat on all coefficients (zz_pX)
         }
 
 
@@ -577,10 +577,10 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
                 acc += ( B_y[i][j] * s_2_mod[j] ) % (phi_hat2);
             }
                 
-            acc += conv<ZZ_pX>( y_3[i] );
+            acc += conv<zz_pX>( y_3[i] );
                     
             t_y[i] = acc;
-            // NOTE: modulo q_hat on all coefficients (ZZ_pX)
+            // NOTE: modulo q_hat on all coefficients (zz_pX)
         }
 
 
@@ -603,7 +603,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
             acc += g[i];
             
             t_g[i] = acc;
-            // NOTE: modulo q_hat on all coefficients (ZZ_pX)
+            // NOTE: modulo q_hat on all coefficients (zz_pX)
         }
 
 
@@ -697,7 +697,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
         for(j=0; j<256; j++)        
         {
-            r_j = CoeffsInvHat( conv<vec_ZZ_p>(coeffs_R_goth[j]), m1 );
+            r_j = CoeffsInvHat( conv<vec_zz_p>(coeffs_R_goth[j]), m1 );
             sigma_r_[j]   = sigma_map(r_j, d_hat);
 
             // NOTE: (r_s,j , r_r,j , r_u,j ) ← r_j  at row 42, where:   
@@ -725,7 +725,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
                 sigma_r_u_[j][k] = sigma_r_[j][k + (m2d+d_hat)/d_hat + (idxhlrd+d_hat)/d_hat];
             }
 
-            h_part1[j] = poly_mult_hat(sigma_r_[j], s_1_mod) + poly_mult_hat(sigma_e_[j], conv<vec_ZZ_pX>( y_3 )) + (conv<ZZ_p>( - z_3[j] ));
+            h_part1[j] = poly_mult_hat(sigma_r_[j], s_1_mod) + poly_mult_hat(sigma_e_[j], conv<vec_zz_pX>( y_3 )) + (conv<zz_p>( - z_3[j] ));
         }
 
        
@@ -786,7 +786,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
         {
             B[i]   = B_y[i];
             // t_B[i] = t_y[i];
-            m[i]   = conv<ZZ_pX>( y_3[i] );
+            m[i]   = conv<zz_pX>( y_3[i] );
         }
 
         for(i=n256; i<(n256 + tau0); i++) 
@@ -833,10 +833,10 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
         for(i=0; i<m1; i++) 
         {
-            y[i] = conv<ZZ_pX>( y_1[i] );        
+            y[i] = conv<zz_pX>( y_1[i] );        
         }
 
-        tmp_vec = sigma_map(conv<vec_ZZ_pX>(y_1), d_hat);
+        tmp_vec = sigma_map(conv<vec_zz_pX>(y_1), d_hat);
         k = 0;
 
         for(i=m1; i<(2*m1); i++) 
@@ -858,11 +858,11 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
             for(j=0; j<m2; j++)        
             {
-                acc += ( B[i][j] * conv<ZZ_pX>( y_2[j] ) ) % (phi_hat2);
+                acc += ( B[i][j] * conv<zz_pX>( y_2[j] ) ) % (phi_hat2);
             }           
             
             tmp_vec[i] = acc;
-            // NOTE: modulo q_hat on all coefficients (ZZ_pX)
+            // NOTE: modulo q_hat on all coefficients (zz_pX)
         }
         
         k = 0;
@@ -1122,7 +1122,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
             
         //     for(j=0; j<256; j++)
         //     {
-        //         sums += gamma[i][j] * conv<ZZ_p>(z_3[j]);
+        //         sums += gamma[i][j] * conv<zz_p>(z_3[j]);
         //     }
                         
         //     for(j=0; j<d0; j++)
@@ -1183,7 +1183,7 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
         f0.SetLength(d_hat);
         clear(f0);
         
-        f0 = poly_mult_hat(y, D2_y) + poly_mult_hat(b, conv<vec_ZZ_pX>(y_2));
+        f0 = poly_mult_hat(y, D2_y) + poly_mult_hat(b, conv<vec_zz_pX>(y_2));
         // NOTE: D2_y = (D2 * y) was already computed in row 45 (1st addend of f1) 
     
         
@@ -1302,38 +1302,38 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 // Output:
 // -  0 or 1:       reject or accept 
 //==============================================================================
-int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const vec_ZZ_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_ISIS& Pi)
+int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_ISIS& Pi)
 {
-    ZZ_pPush push(conv<ZZ>(q2_hat));
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., ZZ_p::init(q2_hat))  
+    zz_pPush push(q2_hat);
+    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))  
    
     unsigned int         i, j, k;
-    Mat<ZZ_pX>           A_1, A_2, B_y, B_g, B, D2; //D2_2_1
-    vec_ZZ_pX            b, t_B, z, d_1, acc_vec, coeffs_ones, sigma_ones;
-    vec_ZZ_pX            r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, z_1_mod, z_2_mod;
-    ZZ_pX                acc, delta_1, delta_2, delta_3, c, d_0;
-    Vec<vec_ZZ_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
-    Vec<vec_ZZ_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
+    Mat<zz_pX>           A_1, A_2, B_y, B_g, B, D2; //D2_2_1
+    vec_zz_pX            b, t_B, z, d_1, acc_vec, coeffs_ones, sigma_ones;
+    vec_zz_pX            r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, z_1_mod, z_2_mod;
+    zz_pX                acc, delta_1, delta_2, delta_3, c, d_0;
+    Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
+    Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
     string               a_1, a_2, a_3, a_4;     
     Mat<vec_ZZ>          R_goth, R_goth_0, R_goth_1;  
     Vec<Mat<vec_ZZ>>     R_goth2;  
     Vec<vec_ZZ>          coeffs_R_goth;
-    mat_ZZ_p             gamma, C_m, C_r;
-    vec_ZZ_p             ones, e_tmp, m_C;
+    mat_zz_p             gamma, C_m, C_r;
+    vec_zz_p             ones, e_tmp, m_C;
     RR                   B_goth;    
     ZZ                   B_goth_s2,   B_goth_r2;
-    ZZ_p                 B_goth_s2_p, B_goth_r2_p, sums;
+    zz_p                 B_goth_s2_p, B_goth_r2_p, sums;
     ZZ                   norm2_z1, norm2_z2, norm2_z3;  
     RR                   norm_z1,  norm_z2,  norm_z3;
 
     // Convert input P, C, B_f to be modulo q2_hat    
-    mat_ZZ_p      P  = conv<mat_ZZ_p>(P0);
-    mat_ZZ_p      C  = conv<mat_ZZ_p>(C0);    
-    mat_ZZ_p      B_f = conv<mat_ZZ_p>(B0);
+    mat_zz_p      P  = conv<mat_zz_p>(P0);
+    mat_zz_p      C  = conv<mat_zz_p>(C0);    
+    mat_zz_p      B_f = conv<mat_zz_p>(B0);
 
     // Initialise constants
-    const ZZ_pX         phi_hat2    = conv<ZZ_pX>(phi_hat);
+    const zz_pX         phi_hat2    = conv<zz_pX>(phi_hat);
     const unsigned int  n           = n_ISIS;
     const unsigned int  m1          = m1_ISIS;
     const unsigned int  m2          = m2_ISIS;
@@ -1351,8 +1351,8 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
     // B_goth = sqrt(B_goth_s^2 + B_goth_r^2 + t0)
     B_goth = sqrt( conv<RR>( B_goth_s2 + B_goth_r2 + t0 ) );
 
-    B_goth_s2_p = conv<ZZ_p>(B_goth_s2);
-    B_goth_r2_p = conv<ZZ_p>(B_goth_r2);
+    B_goth_s2_p = conv<zz_p>(B_goth_s2);
+    B_goth_r2_p = conv<zz_p>(B_goth_r2);
 
     // s1_goth = alpha_1*nu0*B_goth
     // s2_goth = alpha_2*nu0*sqrt(m2*d_hat)
@@ -1390,8 +1390,8 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
     }
     // NOTE: to save memory, proof values will be directly accessed as Pi.{name},
     //       apart z_1 and z_2, that are often used modulo q2_hat      
-    z_1_mod = conv<vec_ZZ_pX>( Pi.z_1 );
-    z_2_mod = conv<vec_ZZ_pX>( Pi.z_2 );
+    z_1_mod = conv<vec_zz_pX>( Pi.z_1 );
+    z_2_mod = conv<vec_zz_pX>( Pi.z_2 );
     
     // 6. a_1 ← (t_A, t_y, t_g, w) 
     ss.str("");    ss.clear();
@@ -1457,7 +1457,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
     // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)           
     ss.str("");    ss.clear();
     ss << 4 << crs << P << C << mex << B_f << Bounds << aux << a_1 << a_2 << a_3 << a_4;
-    c = conv<ZZ_pX>( HISIS4(ss.str()) );
+    c = conv<zz_pX>( HISIS4(ss.str()) );
     // NOTE: Verify_ISIS only uses c mod q_hat 
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
@@ -1517,7 +1517,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         }           
         
         tmp_vec[i] = acc;
-        // NOTE: modulo q_hat on all coefficients (ZZ_pX)
+        // NOTE: modulo q_hat on all coefficients (zz_pX)
     }
     
     k = 0;
@@ -1609,7 +1609,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
 
     for(j=0; j<256; j++)        
     {
-        r_j = CoeffsInvHat( conv<vec_ZZ_p>(coeffs_R_goth[j]), m1 );
+        r_j = CoeffsInvHat( conv<vec_zz_p>(coeffs_R_goth[j]), m1 );
         sigma_r_[j]   = sigma_map(r_j, d_hat);
         
         // NOTE: m1 = m1_ISIS = (((m+2)*d+d_hat)/d_hat) + (|idx_hid|·h + ℓr·d + d_hat)/d_hat + t/d_hat
@@ -1904,7 +1904,7 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
         
         for(j=0; j<256; j++)
         {
-            sums += gamma[i][j] * conv<ZZ_p>(Pi.z_3[j]);
+            sums += gamma[i][j] * conv<zz_p>(Pi.z_3[j]);
         }
                     
         for(j=0; j<d0; j++)

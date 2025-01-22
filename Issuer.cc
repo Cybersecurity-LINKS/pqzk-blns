@@ -28,7 +28,7 @@ void I_KeyGen(IPK_STRUCT& ipk, mat_L& isk)
 
     for(i=0; i<m0; i++)
     {
-        ipk.a2[i] = random_ZZ_pX(d0);
+        ipk.a2[i] = random_zz_pX(d0);
     }
 
     ipk.c0.SetLength(lm0);  
@@ -36,7 +36,7 @@ void I_KeyGen(IPK_STRUCT& ipk, mat_L& isk)
 
     for(i=0; i<lm0; i++)
     {
-        ipk.c0[i] = random_ZZ_pX(d0);
+        ipk.c0[i] = random_zz_pX(d0);
     }
 
     ipk.c1.SetLength(lr0);  
@@ -44,7 +44,7 @@ void I_KeyGen(IPK_STRUCT& ipk, mat_L& isk)
 
     for(i=0; i<lr0; i++)
     {
-        ipk.c1[i] = random_ZZ_pX(d0);
+        ipk.c1[i] = random_zz_pX(d0);
     }
           
     // Output Issuer Public Key and Issuer Secret Key
@@ -71,16 +71,16 @@ void I_KeyGen(IPK_STRUCT& ipk, mat_L& isk)
 // - x:             random integer, uniformly sampled from the set [N]
 //                  NOTE: (s_0, w, x) correspond to the structure ρ_2
 //==============================================================================
-void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const CRS_Data2& crs, const mat_ZZ_p& B_f, const IPK_STRUCT& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const ZZ_pX& u, const PROOF_Com& Pi)
+void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const CRS_Data2& crs, const mat_zz_p& B_f, const IPK_STRUCT& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, const PROOF_Com& Pi)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
         
     unsigned int    i, j, k, result;
-    ZZ_pX           a1, fx_u;
-    vec_ZZ_pX       a2, c0, c1; //mex_prime;
+    zz_pX           a1, fx_u;
+    vec_zz_pX       a2, c0, c1; //mex_prime;
     vec_ZZ          m_i, coeffs_m;
-    mat_ZZ_p        P0, P1, P; 
-    vec_ZZ_p        u_vect, prod;   
+    mat_zz_p        P0, P1, P; 
+    vec_zz_p        u_vect, prod;   
     ZZ              B_goth2;
     
     const unsigned int  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
@@ -168,7 +168,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const CRS_Data2& crs, const mat_Z
        for(i=0; i<(idx_pub*h0); i++)
         {     
             k = idx_hid*h0 + i;       
-            prod[j] += P0[j][k] * conv<ZZ_p>( coeffs_m[k] );
+            prod[j] += P0[j][k] * conv<zz_p>( coeffs_m[k] );
         }
     }
 

@@ -8,7 +8,7 @@
 #include <NTL/matrix.h>
 #include <NTL/ZZ.h>
 #include <NTL/ZZX.h>
-#include <NTL/ZZ_pX.h>
+#include <NTL/lzz_pX.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/RR.h>
 #include <NTL/mat_RR.h>

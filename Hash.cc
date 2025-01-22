@@ -114,7 +114,7 @@ EVP_MD_CTX* Hash_Init(const string inputStr)
 
 
 //==============================================================================
-// Hash_ZZ_pX - Generate a random polynomial using the Custom Hash function
+// Hash_zz_pX - Generate a random polynomial using the Custom Hash function
 // 
 // Inputs:
 // - mdctx:     digest context in OpenSSL
@@ -124,11 +124,11 @@ EVP_MD_CTX* Hash_Init(const string inputStr)
 // Output:
 // - out_poly:  random polynomial with n_coeffs coefficients (mod q_hat)
 //==============================================================================
-ZZ_pX Hash_ZZ_pX(EVP_MD_CTX *mdctx, const long n_coeffs, const size_t b_coeffs)
+zz_pX Hash_zz_pX(EVP_MD_CTX *mdctx, const long n_coeffs, const size_t b_coeffs)
 {    
     // NOTE: the current modulus (q_hat or q0) must already be set by the calling function
 
-    ZZ_pX out_poly;
+    zz_pX out_poly;
     int i;
     unsigned char* y_arr = new unsigned char[b_coeffs];   
            
@@ -142,7 +142,7 @@ ZZ_pX Hash_ZZ_pX(EVP_MD_CTX *mdctx, const long n_coeffs, const size_t b_coeffs)
             exit(1);
         }
         
-        out_poly[i] = conv<ZZ_p>(ZZFromBytes(y_arr, b_coeffs)); 
+        out_poly[i] = conv<zz_p>(ZZFromBytes(y_arr, b_coeffs)); 
     }
     
     out_poly.normalize();
@@ -154,7 +154,7 @@ ZZ_pX Hash_ZZ_pX(EVP_MD_CTX *mdctx, const long n_coeffs, const size_t b_coeffs)
 
 
 //==============================================================================
-// Hash_v_ZZp - Generate a random vector (mod q_hat) using Custom Hash function
+// Hash_v_zz_p - Generate a random vector (mod q_hat) using Custom Hash function
 // 
 // Inputs:
 // - mdctx:     digest context in OpenSSL
@@ -164,12 +164,12 @@ ZZ_pX Hash_ZZ_pX(EVP_MD_CTX *mdctx, const long n_coeffs, const size_t b_coeffs)
 // Output:
 // - out_vec:   vector of random numbers (modulo q_hat)
 //==============================================================================
-vec_ZZ_p  Hash_v_ZZp(EVP_MD_CTX *mdctx, const long n_elems, const size_t b_num)
+vec_zz_p  Hash_v_zz_p(EVP_MD_CTX *mdctx, const long n_elems, const size_t b_num)
 {    
     // NOTE: the current modulus (q_hat or q0) must already be set by the calling function
 
     int i;
-    vec_ZZ_p  out_vec;
+    vec_zz_p  out_vec;
     unsigned char* y_arr = new unsigned char[b_num];    
 
     out_vec.SetLength(n_elems);
@@ -182,7 +182,7 @@ vec_ZZ_p  Hash_v_ZZp(EVP_MD_CTX *mdctx, const long n_elems, const size_t b_num)
             exit(1);
         }
 
-        out_vec[i] = conv<ZZ_p>( ZZFromBytes(y_arr, b_num) );
+        out_vec[i] = conv<zz_p>( ZZFromBytes(y_arr, b_num) );
     }
     
     delete[] y_arr;   
@@ -289,9 +289,9 @@ CRS_Data2 Hcrs(const string inputStr)
 {
     int                     i, j, n, m1, m2, n256;
     EVP_MD_CTX              *mdctx;
-    Mat<ZZ_pX>              A_1, A_2, B_y, B_g, b;
-    Mat<ZZ_pX>              A_bar_1, A_bar_2, B_bar_1, B_bar_2;    
-    Vec<Mat<ZZ_pX>>         crsISIS, crsCom;
+    Mat<zz_pX>              A_1, A_2, B_y, B_g, b;
+    Mat<zz_pX>              A_bar_1, A_bar_2, B_bar_1, B_bar_2;    
+    Vec<Mat<zz_pX>>         crsISIS, crsCom;
     CRS_Data2               crs;
     size_t                  b_coeffs;
        
@@ -300,8 +300,8 @@ CRS_Data2 Hcrs(const string inputStr)
     // ###########################  crs_ISIS  #########################################
     {
         // NOTE: elements of all matrices in crs_ISIS are mod q2_hat
-        ZZ_pPush push(conv<ZZ>(q2_hat)); 
-        // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., ZZ_p::init(q2_hat))    
+        zz_pPush push(q2_hat); 
+        // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))    
 
         // Compute the minimum number of bytes to represent each coefficient
         b_coeffs = ceil(log2( conv<double>(q2_hat) ) / 8.0);    
@@ -326,11 +326,11 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             for(j=0; j<m1; j++)
             {
-                A_1[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                A_1[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
             for(j=0; j<m2; j++)
             {
-                A_2[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                A_2[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }       
 
@@ -341,7 +341,7 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             for(j=0; j<m2; j++)
             {
-                B_y[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                B_y[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }
 
@@ -352,7 +352,7 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             for(j=0; j<m2; j++)
             {
-                B_g[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                B_g[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }
 
@@ -362,7 +362,7 @@ CRS_Data2 Hcrs(const string inputStr)
 
         for(i=0; i<m2; i++)
         {
-            b[0][i] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+            b[0][i] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
         }
 
         // Create the crsISIS structure  
@@ -378,8 +378,8 @@ CRS_Data2 Hcrs(const string inputStr)
     // ###########################  crs_Com  #########################################    
     {
         // NOTE: elements of all matrices in crs_Com are mod q1_hat
-        ZZ_pPush push(conv<ZZ>(q1_hat)); 
-        // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., ZZ_p::init(q1_hat))
+        zz_pPush push(q1_hat); 
+        // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
 
         // Compute the minimum number of bytes to represent each coefficient
         b_coeffs = ceil(log2( conv<double>(q1_hat) ) / 8.0);
@@ -398,11 +398,11 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             for(j=0; j<m1; j++)
             {
-                A_1[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                A_1[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
             for(j=0; j<m2; j++)
             {
-                A_2[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                A_2[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }       
 
@@ -413,7 +413,7 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             for(j=0; j<m2; j++)
             {
-                B_y[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                B_y[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }
 
@@ -424,7 +424,7 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             for(j=0; j<m2; j++)
             {
-                B_g[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                B_g[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }
 
@@ -436,7 +436,7 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             // for(j=0; j<1; j++)
             {
-                b[0][i] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                b[0][i] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }
         
@@ -448,8 +448,8 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             for(j=0; j<n_i; j++)
             {
-                A_bar_1[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
-                B_bar_1[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                A_bar_1[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
+                B_bar_1[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }
 
@@ -461,8 +461,8 @@ CRS_Data2 Hcrs(const string inputStr)
         {
             for(j=0; j<n_i; j++)
             {
-                A_bar_2[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
-                B_bar_2[i][j] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+                A_bar_2[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
+                B_bar_2[i][j] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
             }
         }
         
@@ -546,13 +546,13 @@ Vec<Mat<vec_ZZ>> HCom1(const string inputStr)
 // Output:
 // - gamma:     matrix of integers modulo q1_hat
 //==============================================================================
-mat_ZZ_p  HCom2(const string inputStr)
+mat_zz_p  HCom2(const string inputStr)
 {
-    ZZ_pPush push(conv<ZZ>(q1_hat)); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., ZZ_p::init(q1_hat))
+    zz_pPush push(q1_hat); 
+    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
 
     int         i, n257;
-    mat_ZZ_p    gamma;    
+    mat_zz_p    gamma;    
     EVP_MD_CTX *mdctx; 
     
     mdctx = Hash_Init(inputStr); 
@@ -568,7 +568,7 @@ mat_ZZ_p  HCom2(const string inputStr)
 
     for(i=0; i<tau0; i++)
     {
-        gamma[i] = Hash_v_ZZp(mdctx, n257, b_coeffs);
+        gamma[i] = Hash_v_zz_p(mdctx, n257, b_coeffs);
     }
 
     EVP_MD_CTX_free(mdctx);
@@ -587,13 +587,13 @@ mat_ZZ_p  HCom2(const string inputStr)
 // Output:
 // - mu:        vector with tau0 polynomials with d_hat coefficients modulo q1_hat
 //==============================================================================
-vec_ZZ_pX  HCom3(const string inputStr)
+vec_zz_pX  HCom3(const string inputStr)
 {
-    ZZ_pPush push(conv<ZZ>(q1_hat)); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., ZZ_p::init(q1_hat))
+    zz_pPush push(q1_hat); 
+    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
     
     int         i;
-    vec_ZZ_pX   mu;    
+    vec_zz_pX   mu;    
     EVP_MD_CTX *mdctx;
 
     // Compute the minimum number of bytes to represent each coefficient
@@ -606,7 +606,7 @@ vec_ZZ_pX  HCom3(const string inputStr)
 
     for(i=0; i<tau0; i++)
     {        
-        mu[i] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+        mu[i] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
     }
     
     EVP_MD_CTX_free(mdctx);
@@ -628,8 +628,8 @@ vec_ZZ_pX  HCom3(const string inputStr)
 //==============================================================================
 ZZX HCom4(const string inputStr)
 {
-    ZZ_pPush push(conv<ZZ>(q1_hat)); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., ZZ_p::init(q1_hat))
+    zz_pPush push(q1_hat); 
+    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
        
     int         i;
     EVP_MD_CTX *mdctx;    
@@ -675,7 +675,7 @@ ZZX HCom4(const string inputStr)
         c.normalize();
         
         // NOTE: avoid (rare) cases with c == 0
-        if (IsZero(conv<ZZ_pX>(c)))
+        if (IsZero(conv<zz_pX>(c)))
         {
             continue;
         }
@@ -761,13 +761,13 @@ Vec<Mat<vec_ZZ>> HISIS1(const string inputStr)
 // Output:
 // - gamma:     matrix of integers modulo q2_hat
 //==============================================================================
-mat_ZZ_p  HISIS2(const string inputStr)
+mat_zz_p  HISIS2(const string inputStr)
 {
-    ZZ_pPush push(conv<ZZ>(q2_hat)); 
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., ZZ_p::init(q2_hat))
+    zz_pPush push(q2_hat); 
+    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))
 
     int         i, n259;
-    mat_ZZ_p    gamma;       
+    mat_zz_p    gamma;       
     EVP_MD_CTX *mdctx; 
     
     mdctx = Hash_Init(inputStr); 
@@ -783,7 +783,7 @@ mat_ZZ_p  HISIS2(const string inputStr)
 
     for(i=0; i<tau0; i++)
     {
-        gamma[i] = Hash_v_ZZp(mdctx, n259, b_coeffs);
+        gamma[i] = Hash_v_zz_p(mdctx, n259, b_coeffs);
     }
     
     EVP_MD_CTX_free(mdctx);
@@ -802,14 +802,14 @@ mat_ZZ_p  HISIS2(const string inputStr)
 // Output:
 // - mu:        vector with tau0 polynomials with d_hat coefficients modulo q2_hat
 //==============================================================================
-vec_ZZ_pX  HISIS3(const string inputStr)
+vec_zz_pX  HISIS3(const string inputStr)
 // NOTE: HISIS3 is identical to HCom3, apart the modulo  
 {     
-    ZZ_pPush push(conv<ZZ>(q2_hat)); 
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., ZZ_p::init(q2_hat))
+    zz_pPush push(q2_hat); 
+    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))
     
     int         i;
-    vec_ZZ_pX   mu;    
+    vec_zz_pX   mu;    
     EVP_MD_CTX *mdctx;
 
     // Compute the minimum number of bytes to represent each coefficient
@@ -822,7 +822,7 @@ vec_ZZ_pX  HISIS3(const string inputStr)
 
     for(i=0; i<tau0; i++)
     {        
-        mu[i] = Hash_ZZ_pX(mdctx, d_hat, b_coeffs);
+        mu[i] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
     }
     
     EVP_MD_CTX_free(mdctx);
@@ -845,8 +845,8 @@ vec_ZZ_pX  HISIS3(const string inputStr)
 ZZX HISIS4(const string inputStr)
 // NOTE: HISIS4 is identical to HCom4, apart the modulo
 {
-    ZZ_pPush push(conv<ZZ>(q2_hat)); 
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., ZZ_p::init(q2_hat))
+    zz_pPush push(q2_hat); 
+    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))
        
     int         i;
     EVP_MD_CTX *mdctx;    
@@ -892,7 +892,7 @@ ZZX HISIS4(const string inputStr)
         c.normalize();
         
         // NOTE: avoid (rare) cases with c == 0
-        if (IsZero(conv<ZZ_pX>(c)))
+        if (IsZero(conv<zz_pX>(c)))
         {
             continue;
         }
@@ -943,14 +943,14 @@ vec_ZZ HM(const string a_i)
     // Compute the numerical range of each coefficient
     range = 2*psi0 + 1;
 
-    ZZ_pPush push(conv<ZZ>(range)); 
-    // NOTE: backup current modulus q0, temporarily set to range (i.e., ZZ_p::init(range))
+    zz_pPush push(range);
+    // NOTE: backup current modulus q0, temporarily set to range (i.e., zz_p::init(range))
     
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(range) / 8.0);
 
     // Random generation of m_i (modulo range)
-    m_i = conv<vec_ZZ>( Hash_v_ZZp(mdctx, h0, b_coeffs) );
+    m_i = conv<vec_ZZ>( Hash_v_zz_p(mdctx, h0, b_coeffs) );
 
     for(k=0; k<h0; k++)
     {
