@@ -188,7 +188,6 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
     Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
     Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
-    string               a_1, a_2, a_3, a_4;     
     Mat<vec_ZZ>          R_goth, R_goth_0, R_goth_1;  
     Vec<Mat<vec_ZZ>>     R_goth2;  
     Vec<vec_ZZ>          coeffs_R_goth;
@@ -608,13 +607,10 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
         // 19. a_1 ← (t_A, t_y, t_g, w) 
         ss.str("");    ss.clear();
-        ss << t_A << t_y << t_g << w;
-        a_1 = ss.str();
+        ss << crs << P << C << mex << B_f << Bounds << aux << t_A << t_y << t_g << w;
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
-        ss.str("");    ss.clear();
-        ss << 1 << crs << P << C << mex << B_f << Bounds << aux << a_1;
-        R_goth2  = HISIS1(ss.str());
+        R_goth2  = HISIS1("1" + ss.str());
         R_goth_0 = R_goth2[0];
         R_goth_1 = R_goth2[1];
         // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat) 
@@ -675,15 +671,11 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
         
         // 26. a_2 ← z_3,   a2 ∈ Z^256    
-        ss.str("");    ss.clear();
         ss << z_3;
-        a_2 = ss.str();
 
-        // 27. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat    
-        // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com 
-        ss.str("");    ss.clear();
-        ss << 2 << crs << P << C << mex << B_f << Bounds << aux << a_1 << a_2;    
-        gamma  = HISIS2(ss.str());
+        // 27. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
+        gamma  = HISIS2("2" + ss.str());    
+        // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
         
         // Precompute r_j, σ(r_j), σ(r_s,j), σ(r_r,j), σ(r_u,j), h_part1
@@ -762,14 +754,10 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
 
         // 31. a_3 ← h,   a_3 ∈ R^^(τ)_(q_hat)    
-        ss.str("");    ss.clear();
         ss << h;
-        a_3 = ss.str();
 
-        // 32. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)        
-        ss.str("");    ss.clear();
-        ss << 3 << crs << P << C << mex << B_f << Bounds << aux << a_1 << a_2 << a_3;  
-        mu = HISIS3(ss.str());
+        // 32. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
+        mu = HISIS3("3" + ss.str());
 
         // 33. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
         B.SetDims((n256 + tau0), m2);
@@ -1194,15 +1182,11 @@ PROOF_ISIS  Prove_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, 
 
 
         // 49. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
-        ss.str("");    ss.clear();
         ss << t << f0;
-        a_4 = ss.str();
 
 
-        // 50. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^          
-        ss.str("");    ss.clear();
-        ss << 4 << crs << P << C << mex << B_f << Bounds << aux << a_1 << a_2 << a_3 << a_4;
-        c = HISIS4(ss.str());
+        // 50. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^
+        c = HISIS4("4" + ss.str());
 
 
         // 51. for i ∈ {1, 2} do
@@ -1314,7 +1298,6 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
     Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
     Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
-    string               a_1, a_2, a_3, a_4;     
     Mat<vec_ZZ>          R_goth, R_goth_0, R_goth_1;  
     Vec<Mat<vec_ZZ>>     R_goth2;  
     Vec<vec_ZZ>          coeffs_R_goth;
@@ -1391,30 +1374,21 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
     z_1_mod = conv<vec_zz_pX>( Pi.z_1 );
     z_2_mod = conv<vec_zz_pX>( Pi.z_2 );
     
-    // 6. a_1 ← (t_A, t_y, t_g, w) 
-    ss.str("");    ss.clear();
-    ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
-    a_1 = ss.str();
-
+    // 6. a_1 ← (t_A, t_y, t_g, w)     
+    // a_1 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
+    
     // 7. a_2 ← z_3,   a2 ∈ Z^256    
-    ss.str("");    ss.clear();
-    ss << Pi.z_3;
-    a_2 = ss.str();
-
+    // a_2 << Pi.z_3;
+    
     // 8. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)    
-    ss.str("");    ss.clear();
-    ss << Pi.h;
-    a_3 = ss.str();
-
+    // a_3 << Pi.h;
+    
     // 9. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
-    ss.str("");    ss.clear();
-    ss << Pi.t << Pi.f0;
-    a_4 = ss.str();
-
+    // a_4 << Pi.t << Pi.f0;
+    
     // 10. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
-    ss.str("");    ss.clear();
-    ss << 1 << crs << P << C << mex << B_f << Bounds << aux << a_1;
-    R_goth2  = HISIS1(ss.str());
+    ss << crs << P << C << mex << B_f << Bounds << aux << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
+    R_goth2  = HISIS1("1" + ss.str());
     R_goth_0 = R_goth2[0];
     R_goth_1 = R_goth2[1];
     // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)     
@@ -1441,21 +1415,18 @@ int  Verify_ISIS(const CRS_Data& crs, const mat_ZZ& P0, const mat_ZZ& C0, const 
     }
 
 
-    // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat    
-    // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com 
-    ss.str("");    ss.clear();
-    ss << 2 << crs << P << C << mex << B_f << Bounds << aux << a_1 << a_2;    
-    gamma  = HISIS2(ss.str());
+    // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
+    ss << Pi.z_3;
+    gamma  = HISIS2("2" + ss.str());    
+    // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
-    // 12. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)        
-    ss.str("");    ss.clear();
-    ss << 3 << crs << P << C << mex << B_f << Bounds << aux << a_1 << a_2 << a_3;  
-    mu = HISIS3(ss.str());
+    // 12. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
+    ss << Pi.h;
+    mu = HISIS3("3" + ss.str());
 
-    // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)           
-    ss.str("");    ss.clear();
-    ss << 4 << crs << P << C << mex << B_f << Bounds << aux << a_1 << a_2 << a_3 << a_4;
-    c = conv<zz_pX>( HISIS4(ss.str()) );
+    // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
+    ss << Pi.t << Pi.f0;
+    c = conv<zz_pX>( HISIS4("4" + ss.str()) );
     // NOTE: Verify_ISIS only uses c mod q_hat 
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
