@@ -1,4 +1,5 @@
 #include "Hash.h"
+#include "Utils.h"
 
 
 //==============================================================================
@@ -31,15 +32,13 @@ long int CustomHash(const long int x, const size_t out_len)
     }
 
     mdctx = EVP_MD_CTX_new();
-
     //if(!EVP_DigestInit_ex(mdctx, md, NULL)) {
     if (!EVP_DigestInit_ex2(mdctx, md, NULL)) {          
-        // NOTE: EVP_DigestInit_ex2 requires OpenSSL 3.x
+        // NOTE: EVP_DigestInit_ex2 requires OpenSSL >= 3.x
         printf("Message digest initialization failed.\n");
         EVP_MD_CTX_free(mdctx);
         exit(1);
     }
-
     if (!EVP_DigestUpdate(mdctx, x_arr, sizeof(x))) {
         printf("Message digest update failed.\n");
         EVP_MD_CTX_free(mdctx);
@@ -52,7 +51,7 @@ long int CustomHash(const long int x, const size_t out_len)
         EVP_MD_CTX_free(mdctx);
         exit(1);
     }
-    // NOTE: EVP_DigestSqueeze (instead of EVP_DigestFinalXOF) requires OpenSSL 3.3.0
+    // NOTE: EVP_DigestSqueeze (instead of EVP_DigestFinalXOF) requires OpenSSL >= 3.3.0
     
     EVP_MD_CTX_free(mdctx);
 
@@ -84,10 +83,6 @@ EVP_MD_CTX* Hash_Init(const string inputStr)
     const EVP_MD *md;
     const size_t in_len = inputStr.length(); 
     const char alg[] = "shake256";
-        
-    unsigned char* x_arr = new unsigned char[in_len];
-
-    memcpy(x_arr, inputStr.data(), in_len);
 
     md = EVP_get_digestbyname(alg);
     if (md == NULL) {
@@ -101,14 +96,12 @@ EVP_MD_CTX* Hash_Init(const string inputStr)
         EVP_MD_CTX_free(mdctx);
         exit(1);
     }
-    if (!EVP_DigestUpdate(mdctx, x_arr, in_len)) {
+    if (!EVP_DigestUpdate(mdctx, inputStr.data(), in_len)) {
         printf("Message digest update failed.\n");
         EVP_MD_CTX_free(mdctx);
         exit(1);
     }
-
-    delete[] x_arr;
-
+    
     return mdctx;
 }
 
@@ -203,10 +196,10 @@ vec_zz_p  Hash_v_zz_p(EVP_MD_CTX *mdctx, const long n_elems, const size_t b_num)
 //==============================================================================
 vec_ZZ  Hash_bits(EVP_MD_CTX *mdctx, const long n_elems)
 {    
-    int i, j, k, n_bytes; 
-    ZZ curr_byte;
-    unsigned char* y_arr;
-    vec_ZZ  out_bits;   
+    long            i, j, k, n_bytes; 
+    unsigned char   curr_byte;
+    unsigned char*  y_arr;
+    vec_ZZ          out_bits;   
 
     // Compute the minimum number of bytes needed to fill the vector  
     n_bytes = ceil(n_elems / 8.0);
@@ -224,18 +217,17 @@ vec_ZZ  Hash_bits(EVP_MD_CTX *mdctx, const long n_elems)
 
     for(i=0; i < n_bytes; i++)
     {
-        curr_byte = ZZFromBytes( &(y_arr[i]), 1);
-
+        curr_byte = y_arr[i];
+        
         for(j=0; j < 8; j++)
         {
             if(k < n_elems)
             {
-                out_bits[k] = curr_byte % 2;
-                curr_byte =  RightShift(curr_byte, 1);
+                out_bits[k] = conv<ZZ>( curr_byte & 1 );
+                curr_byte = curr_byte >> 1;
             }
             k++;
         }
-        
     } 
     
     delete[] y_arr;
@@ -290,13 +282,17 @@ CRS_Data2 Hcrs(const string inputStr)
     int                     i, j, n, m1, m2, n256;
     EVP_MD_CTX              *mdctx;
     Mat<zz_pX>              A_1, A_2, B_y, B_g, b;
-    Mat<zz_pX>              A_bar_1, A_bar_2, B_bar_1, B_bar_2;    
-    Vec<Mat<zz_pX>>         crsISIS, crsCom;
+    Mat<zz_pX>              A_bar_1, A_bar_2, B_bar_1, B_bar_2;
     CRS_Data2               crs;
     size_t                  b_coeffs;
        
-    mdctx = Hash_Init(inputStr);    
-           
+    mdctx = Hash_Init(inputStr);
+
+    // Create the crs structure  
+    crs.SetLength(2); 
+    crs[0].SetLength(5); // crs_ISIS
+    crs[1].SetLength(9); // crs_Com
+
     // ###########################  crs_ISIS  #########################################
     {
         // NOTE: elements of all matrices in crs_ISIS are mod q2_hat
@@ -365,13 +361,12 @@ CRS_Data2 Hcrs(const string inputStr)
             b[0][i] = Hash_zz_pX(mdctx, d_hat, b_coeffs);
         }
 
-        // Create the crsISIS structure  
-        crsISIS.SetLength(5);
-        crsISIS[0] = A_1;
-        crsISIS[1] = A_2;
-        crsISIS[2] = B_y;
-        crsISIS[3] = B_g;
-        crsISIS[4] = b;
+        // Create the crsISIS structure, i.e. crs[0]
+        crs[0][0] = A_1;
+        crs[0][1] = A_2;
+        crs[0][2] = B_y;
+        crs[0][3] = B_g;
+        crs[0][4] = b;
     }
 
       
@@ -466,23 +461,17 @@ CRS_Data2 Hcrs(const string inputStr)
             }
         }
         
-        // Create the crsCom structure  
-        crsCom.SetLength(9);
-        crsCom[0] = A_1;
-        crsCom[1] = A_2;
-        crsCom[2] = B_y;
-        crsCom[3] = B_g;
-        crsCom[4] = b;
-        crsCom[5] = A_bar_1;
-        crsCom[6] = A_bar_2;
-        crsCom[7] = B_bar_1;
-        crsCom[8] = B_bar_2;
+        // Create the crsCom structure, i.e. crs[1]        
+        crs[1][0] = A_1;
+        crs[1][1] = A_2;
+        crs[1][2] = B_y;
+        crs[1][3] = B_g;
+        crs[1][4] = b;
+        crs[1][5] = A_bar_1;
+        crs[1][6] = A_bar_2;
+        crs[1][7] = B_bar_1;
+        crs[1][8] = B_bar_2;
     }
-       
-    // Create the crs structure  
-    crs.SetLength(2);   
-    crs[0] = crsISIS;
-    crs[1] = crsCom;
 
     EVP_MD_CTX_free(mdctx);
     
@@ -499,12 +488,10 @@ CRS_Data2 Hcrs(const string inputStr)
 //
 // Output:
 // - R_goth:    structure with the pair (R_goth_0, R_goth_1), 3D matrices of {0, 1}
-// 
 //==============================================================================
 Vec<Mat<vec_ZZ>> HCom1(const string inputStr)
 {
     int                 i, j;
-    Mat<vec_ZZ>         R_goth_0, R_goth_1;
     Vec<Mat<vec_ZZ>>    R_goth;    
     EVP_MD_CTX *mdctx;
 
@@ -512,23 +499,20 @@ Vec<Mat<vec_ZZ>> HCom1(const string inputStr)
 
     mdctx = Hash_Init(inputStr);  
     
-    // Random generation of R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)    
-    R_goth_0.SetDims(256, m1);
-    R_goth_1.SetDims(256, m1); 
-    
+    // Create the R_goth structure  
+    R_goth.SetLength(2);   
+    R_goth[0].SetDims(256, m1);
+    R_goth[1].SetDims(256, m1); 
+
+    // Random generation of R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)
     for(i=0; i<256; i++)
     {
         for(j=0; j<m1; j++)
         {
-            R_goth_0[i][j] = Hash_bits(mdctx, d_hat);
-            R_goth_1[i][j] = Hash_bits(mdctx, d_hat);            
+            R_goth[0][i][j] = Hash_bits(mdctx, d_hat);
+            R_goth[1][i][j] = Hash_bits(mdctx, d_hat);            
         }
     }
-
-    // Create the R_goth structure  
-    R_goth.SetLength(2);   
-    R_goth[0] = R_goth_0;
-    R_goth[1] = R_goth_1;
 
     EVP_MD_CTX_free(mdctx);
 
@@ -685,7 +669,9 @@ ZZX HCom4(const string inputStr)
 
         for(i=0; i<(2*k0 - 1); i++)
         {
-            c_2k *= c;
+            // c_2k *= c;
+            // c_2k = (c_2k * c) % phi_hat; 
+            c_2k = ModPhi_hat(c_2k * c);
         }
 
         // Compute ||c^(2k)||_1
@@ -694,7 +680,7 @@ ZZX HCom4(const string inputStr)
         for(i=0; i<=deg(c_2k); i++)
         {
             // norm1_c = norm1_c + c_2k[i];
-            norm1_c += coeff(c_2k, i);
+            norm1_c += abs(coeff(c_2k, i)); 
         }
     }
     
@@ -714,12 +700,10 @@ ZZX HCom4(const string inputStr)
 // Output:
 // - R_goth:    structure with the pair (R_goth_0, R_goth_1), 3D matrices of {0, 1}
 //==============================================================================
+// NOTE: HISIS1 is identical to HCom1, apart m1
 Vec<Mat<vec_ZZ>> HISIS1(const string inputStr)
 {
-    // NOTE: HISIS1 is identical to HCom1, apart m1
-
     int                 i, j;
-    Mat<vec_ZZ>         R_goth_0, R_goth_1;
     Vec<Mat<vec_ZZ>>    R_goth;    
     EVP_MD_CTX *mdctx;
 
@@ -727,23 +711,20 @@ Vec<Mat<vec_ZZ>> HISIS1(const string inputStr)
 
     mdctx = Hash_Init(inputStr);  
     
-    // Random generation of R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)    
-    R_goth_0.SetDims(256, m1);
-    R_goth_1.SetDims(256, m1);
-    
+    // Create the R_goth structure  
+    R_goth.SetLength(2);   
+    R_goth[0].SetDims(256, m1);
+    R_goth[1].SetDims(256, m1); 
+
+    // Random generation of R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat) 
     for(i=0; i<256; i++)
     {
         for(j=0; j<m1; j++)
         {
-            R_goth_0[i][j] = Hash_bits(mdctx, d_hat);
-            R_goth_1[i][j] = Hash_bits(mdctx, d_hat);            
+            R_goth[0][i][j] = Hash_bits(mdctx, d_hat);
+            R_goth[1][i][j] = Hash_bits(mdctx, d_hat);            
         }
     }
-
-    // Create the R_goth structure  
-    R_goth.SetLength(2);   
-    R_goth[0] = R_goth_0;
-    R_goth[1] = R_goth_1;
 
     EVP_MD_CTX_free(mdctx);
 
@@ -902,7 +883,9 @@ ZZX HISIS4(const string inputStr)
 
         for(i=0; i<(2*k0 - 1); i++)
         {
-            c_2k *= c;
+            // c_2k *= c;
+            // c_2k = (c_2k * c) % phi_hat; 
+            c_2k = ModPhi_hat(c_2k * c);
         }
 
         // Compute ||c^(2k)||_1
@@ -911,7 +894,7 @@ ZZX HISIS4(const string inputStr)
         for(i=0; i<=deg(c_2k); i++)
         {
             // norm1_c = norm1_c + c_2k[i];
-            norm1_c += coeff(c_2k, i);
+            norm1_c += abs(coeff(c_2k, i)); 
         }
     }
     
@@ -934,7 +917,7 @@ ZZX HISIS4(const string inputStr)
 //==============================================================================
 vec_ZZ HM(const string a_i)
 {
-    int     k, range;
+    long    k, range;
     vec_ZZ  m_i;    
     EVP_MD_CTX *mdctx; 
     
