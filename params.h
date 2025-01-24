@@ -175,7 +175,6 @@ typedef Mat<long>   mat_L;
 
 
 
-const ZZ q1 = conv<ZZ>(q0);
 const RR log2e_Const = (log(exp(RR(1))) / log(RR(2))); //log2(e) with e = EulerConstant
 
 #endif

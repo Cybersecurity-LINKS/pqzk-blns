@@ -27,7 +27,7 @@ int main()
     zz_p::init(q0); // Initialize modulus q
     
     mat_L           isk;
-    IPK_STRUCT      ipk;
+    IPK_t           ipk;
     string          randomSeed;
     Vec<string>     attrs, attrs_prime;
     mat_zz_p        B_f;
@@ -35,11 +35,11 @@ int main()
     vec_ZZ          s;
     vec_ZZX         w;
     ZZ              x;
-    CRS_Data2       crs;
-    PROOF_Com       Pi;
-    STATE_STRUCT    state;
-    CRED_STRUCT     cred;
-    VP_STRUCT       VP;
+    CRS2_t          crs;
+    PROOF_C_t       Pi;
+    STATE_t         state;
+    CRED_t          cred;
+    VP_t            VP;
     int             iter, N, i, valid;
     double          t1, t2, t3;  
         

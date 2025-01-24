@@ -12,7 +12,7 @@ typedef struct
 {
     vec_ZZX     m;
     vec_ZZX     r;
-} STATE_STRUCT;
+} STATE_t;
 
 typedef struct
 {
@@ -20,23 +20,23 @@ typedef struct
     vec_ZZX     r;
     ZZ          x;
     int         valid;
-} CRED_STRUCT;
+} CRED_t;
 
 typedef struct
 {
     // vec_ZZ      cp;
-    IPK_STRUCT  ipk;
+    IPK_t  ipk;
     Vec<string> attrs_prime;
     vec_ZZ      idx;
-    PROOF_ISIS  pi;
+    PROOF_I_t   pi;
     int         valid;
-} VP_STRUCT;
+} VP_t;
 
 
-void    H_Init(CRS_Data2& crs, Vec<string>& attrs, const string inputStr);
+void    H_Init(CRS2_t& crs, Vec<string>& attrs, const string& inputStr);
 
-void    H_VerCred1(zz_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const string inputStr, const CRS_Data2& crs, const IPK_STRUCT& ipk, const Vec<string>& attrs);
-void    H_VerCred2(CRED_STRUCT& cred, const IPK_STRUCT& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_STRUCT& state);
-void    H_VerPres(VP_STRUCT& VP, const CRED_STRUCT& cred, const string inputStr, const CRS_Data2& crs, const IPK_STRUCT& ipk, const mat_zz_p& B_f, const Vec<string>& attrs);
+void    H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs);
+void    H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_t& state);
+void    H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const mat_zz_p& B_f, const Vec<string>& attrs);
 
 #endif

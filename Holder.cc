@@ -13,14 +13,14 @@
 // - idx_hid:   | \overline{\idx} |, number of undisclosed attributes
 // - idx_pub:   | idx |, number of disclosed attributes 
 //==============================================================================
-void H_Init(CRS_Data2& crs, Vec<string>& attrs, const string inputStr)
+void H_Init(CRS2_t& crs, Vec<string>& attrs, const string& inputStr)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
     
     unsigned int    i;
     
     // Generation of crs structure, using H_crs custom Hash function     
-    crs = Hcrs(inputStr);
+    Hcrs(crs, inputStr);
     // NOTE: crs contains 3D uniformly random matrices mod q_hat
 
     // Initialize attributes
@@ -51,7 +51,7 @@ void H_Init(CRS_Data2& crs, Vec<string>& attrs, const string inputStr)
 // - u, Pi:         commitment u and proof π, corresponding to the structure ρ_1 
 // - state:         structure that contains the polynomial vectors m and r
 //==============================================================================
-void H_VerCred1(zz_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const string inputStr, const CRS_Data2& crs, const IPK_STRUCT& ipk, const Vec<string>& attrs)
+void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     
@@ -82,7 +82,7 @@ void H_VerCred1(zz_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const string input
     for(i=0; i<l0; i++)
     {                  
         // a_i = attrs[i];        
-        m_i = HM( attrs[i] );        
+        HM(m_i, attrs[i] );        
 
         for(j=0; j<h0; j++)     
         {
@@ -232,7 +232,7 @@ void H_VerCred1(zz_pX& u, PROOF_Com& Pi, STATE_STRUCT& state, const string input
 // Outputs:
 // - cred = (s,r,x): triple that corresponds to the credential
 //==============================================================================
-void H_VerCred2(CRED_STRUCT& cred, const IPK_STRUCT& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_STRUCT& state)
+void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_t& state)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
 
@@ -364,7 +364,7 @@ void H_VerCred2(CRED_STRUCT& cred, const IPK_STRUCT& ipk, const mat_zz_p& B_f, c
 // Output:
 // - VP:             structure for the Verifiable Presentation
 //==============================================================================
-void H_VerPres(VP_STRUCT& VP, const CRED_STRUCT& cred, const string inputStr, const CRS_Data2& crs, const IPK_STRUCT& ipk, const mat_zz_p& B_f, const Vec<string>& attrs)
+void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const mat_zz_p& B_f, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     
@@ -416,7 +416,7 @@ void H_VerPres(VP_STRUCT& VP, const CRED_STRUCT& cred, const string inputStr, co
     for(i=0; i<l0; i++)
     {                  
         // a_i = attrs[i];        
-        m_i = HM( attrs[i] );
+        HM(m_i, attrs[i] );
 
         for(j=0; j<h0; j++)     
         {
@@ -562,7 +562,7 @@ void H_VerPres(VP_STRUCT& VP, const CRED_STRUCT& cred, const string inputStr, co
     
       
     // 12. VP ← emptyVP()
-    // NOTE: see VP_STRUCT
+    // NOTE: see VP_t
 
     // 13. VP.cp ← VC.cp
     // VP.cp = VC.cp;

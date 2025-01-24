@@ -106,7 +106,7 @@ void  Preprocessing_Com(vec_ZZ& s0, const vec_ZZ& s, const ZZ B_goth2)
 // Output:
 // - Pi:            proof (π) structure 
 //==============================================================================
-PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const vec_ZZ& w0)
+PROOF_C_t  Prove_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const vec_ZZ& w0)
 {    
     zz_pPush push(q1_hat); 
     // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))  
@@ -128,14 +128,14 @@ PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUC
     Vec<vec_zz_pX>      sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_;
     Vec<vec_ZZX>        st_1,  st_2,  op_1,  op_2;
     stringstream        ss;         
-    Mat<vec_ZZ>         R_goth, R_goth_0, R_goth_1;  
-    Vec<Mat<vec_ZZ>>    R_goth2;  
+    Mat<vec_ZZ>         R_goth;  
+    R_GOTH_t            R_goth2;  
     Vec<vec_ZZ>         coeffs_R_goth;
     vec_ZZ              s0, coeffs_y3, z_3, coeffs_R_goth_mult_s1; //coeffs_s1;
     mat_zz_p            gamma;
     vec_zz_p            e_tmp;
     // zz_p             sum_z3, B_goth_p;
-    PROOF_Com           Pi;
+    PROOF_C_t           Pi;
 
     // Convert input P & u to be modulo q_hat
     mat_zz_p      P  = conv<mat_zz_p>(P0);
@@ -459,9 +459,7 @@ PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUC
         // NOTE: using inputStr, ipk.c0, ipk.c1, instead of crs, P to speedup Hash_Init
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
-        R_goth2  = HCom1("1" + ss.str());
-        R_goth_0 = R_goth2[0];
-        R_goth_1 = R_goth2[1];
+        HCom1(R_goth2, "1" + ss.str());
         // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat) 
         
         // 21. R_goth = R_goth_0 - R_goth_1
@@ -473,7 +471,7 @@ PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUC
             for(j=0; j<m1; j++)
             {
                 R_goth[i][j].SetLength(d_hat);
-                R_goth[i][j] = R_goth_0[i][j] - R_goth_1[i][j];
+                R_goth[i][j] = R_goth2[0][i][j] - R_goth2[1][i][j];
             }
         }
 
@@ -516,7 +514,7 @@ PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUC
         ss << z_3;
         
         // 26. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat
-        gamma  = HCom2("2" + ss.str());
+        HCom2(gamma, "2" + ss.str());
 
 
         // Initialize h ∈ R^^(tau)_(q_hat)
@@ -564,7 +562,7 @@ PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUC
         ss << h;
 
         // 32. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(tau)_(q_hat)        
-        mu = HCom3("3" + ss.str());
+        HCom3(mu, "3" + ss.str());
 
         // 33. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
         B.SetDims((n256 + tau0), m2);
@@ -884,7 +882,7 @@ PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUC
         ss << t << f0;
 
         // 46. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^       
-        c = HCom4("4" + ss.str());
+        HCom4(c, "4" + ss.str());
 
 
         // 47. for i ∈ {1, 2} do
@@ -991,7 +989,7 @@ PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUC
     // 56. else return ⊥
     else // (rst == 0)      
     {
-        // NOTE: invalid proof, other data fields in PROOF_Com structure are empty
+        // NOTE: invalid proof, other data fields in PROOF_C_t structure are empty
         Pi.valid = 0;        
     }
     
@@ -1017,7 +1015,7 @@ PROOF_Com  Prove_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUC
 // Output:
 // - 0 or 1:        reject or accept 
 //==============================================================================
-int  Verify_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const PROOF_Com& Pi)
+int  Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const PROOF_C_t& Pi)
 {
     zz_pPush push(q1_hat); 
     // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))  
@@ -1033,8 +1031,8 @@ int  Verify_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ip
     Vec<vec_zz_pX>      e_ , e_prime;
     Vec<vec_zz_pX>      sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_; 
     stringstream        ss;
-    Mat<vec_ZZ>         R_goth, R_goth_0, R_goth_1;  
-    Vec<Mat<vec_ZZ>>    R_goth2;  
+    Mat<vec_ZZ>         R_goth;  
+    R_GOTH_t            R_goth2;  
     Vec<vec_ZZ>         coeffs_R_goth;    
     mat_zz_p            gamma;
     vec_zz_p            e_tmp;
@@ -1114,9 +1112,7 @@ int  Verify_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ip
     ss << inputStr << ipk.c0 << ipk.c1 << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
     // NOTE: using inputStr, ipk.c0, ipk.c1, instead of crs, P to speedup Hash_Init
     
-    R_goth2  = HCom1("1" + ss.str());
-    R_goth_0 = R_goth2[0];
-    R_goth_1 = R_goth2[1];
+    HCom1(R_goth2, "1" + ss.str());
     // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat) 
     
     // 10. R_goth = R_goth_0 - R_goth_1
@@ -1128,7 +1124,7 @@ int  Verify_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ip
         for(j=0; j<m1; j++)
         {
             R_goth[i][j].SetLength(d_hat);
-            R_goth[i][j] = R_goth_0[i][j] - R_goth_1[i][j];
+            R_goth[i][j] = R_goth2[0][i][j] - R_goth2[1][i][j];
         }
     }
 
@@ -1144,15 +1140,15 @@ int  Verify_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ip
 
     // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat     
     ss << Pi.z_3;    
-    gamma  = HCom2("2" + ss.str());
+    HCom2(gamma, "2" + ss.str());
 
     // 12. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(tau)_(q_hat)        
     ss << Pi.h;    
-    mu = HCom3("3" + ss.str());
+    HCom3(mu, "3" + ss.str());
 
     // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^           
     ss << Pi.t << Pi.f0;       
-    c = HCom4("4" + ss.str());
+    HCom4(c, "4" + ss.str());
     c_mod = conv<zz_pX>( c );
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)

@@ -13,7 +13,7 @@
 // Output:
 // -  1 or 0:        accept if π is valid, reject if the proof is invalid
 //==============================================================================
-int  V_Verify(const VP_STRUCT& VP, const string inputStr, const CRS_Data2& crs, const mat_zz_p& B_f)
+int  V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     
@@ -52,7 +52,7 @@ int  V_Verify(const VP_STRUCT& VP, const string inputStr, const CRS_Data2& crs, 
     for(i=0; i<l0; i++)
     {                  
         // a_i = VP.attrs_prime[i];        
-        m_i = HM( VP.attrs_prime[i] );
+        HM(m_i, VP.attrs_prime[i] );
 
         for(j=0; j<h0; j++)     
         {

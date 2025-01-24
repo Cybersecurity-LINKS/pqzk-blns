@@ -15,7 +15,7 @@
 // NOTE: Issuer.KeyGen in BLNS pseudocode, corresponding to
 //       Fig. 18: AnonCreds.Init, pag. 52 in [BLNS23]
 //==============================================================================
-void I_KeyGen(IPK_STRUCT& ipk, mat_L& isk)
+void I_KeyGen(IPK_t& ipk, mat_L& isk)
 {
     unsigned int i;
 
@@ -72,7 +72,7 @@ void I_KeyGen(IPK_STRUCT& ipk, mat_L& isk)
 // - x:             random integer, uniformly sampled from the set [N]
 //                  NOTE: (s_0, w, x) correspond to the structure ρ_2
 //==============================================================================
-void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string inputStr, const CRS_Data2& crs, const mat_zz_p& B_f, const IPK_STRUCT& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, const PROOF_Com& Pi)
+void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, const PROOF_C_t& Pi)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
         
@@ -110,7 +110,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string inputStr, const CRS_
     for(i=0; i<l0; i++)
     {                  
         // a_i =  attrs_prime[i];        
-        m_i = HM( attrs_prime[i] );        
+        HM(m_i, attrs_prime[i] );        
 
         for(j=0; j<h0; j++)     
         {

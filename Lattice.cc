@@ -23,8 +23,9 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
     RR      gamma, gamma2;
     mat_L   A;
 
-    const ZZX   phi     = Phi();
-    const RR max_gamma  = RR(1.17) * sqrt( RR(q0) );
+    const ZZ    q          = conv<ZZ>(q0);
+    const ZZX   phi         = Phi();
+    const RR    max_gamma   = RR(1.17) * sqrt( RR(q0) );
     
     // 1. σ_f ← 1.17*√(q/2d),  σ_f ∈ R
     const RR sigma_f    = RR(1.17) * sqrt( RR(q0) / RR(2*d0) );
@@ -119,7 +120,7 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
         XGCD(R_f, rho_f, iphi, -f, phi, 0); 
         
         // 13.2 if GCD(R_f, q) ≠ 1,  go to step 2
-        if(GCD(R_f, q1)!=1)
+        if(GCD(R_f, q)!=1)
         {
             valid = 0;
             continue; // skip next steps, go to 2
@@ -154,11 +155,11 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
 
     // 16. F ← q·v·ρ_g F ∈ R
     F.SetLength(d0);
-    F =  q1 * v * rho_g;
+    F =  q * v * rho_g;
 
     // 17. G ← −q·u·ρ_f G ∈ R
     G.SetLength(d0);  
-    G = -q1 * u * rho_f;
+    G = -q * u * rho_f;
 
     k = 1;
 

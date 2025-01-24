@@ -170,7 +170,7 @@ void  Preprocessing_ISIS(vec_ZZ& s1, vec_ZZ& r1, const vec_ZZ& s0, const ZZ B_go
 // Output:
 // -  Pi:           proof (π) structure 
 //==============================================================================
-PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ipk, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const Vec<vec_ZZ>& w0)
+PROOF_I_t  Prove_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const Vec<vec_ZZ>& w0)
 {
     zz_pPush push(q2_hat); 
     // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))  
@@ -190,8 +190,8 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
     Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
     Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
-    Mat<vec_ZZ>          R_goth, R_goth_0, R_goth_1;  
-    Vec<Mat<vec_ZZ>>     R_goth2;  
+    Mat<vec_ZZ>          R_goth;  
+    R_GOTH_t             R_goth2;  
     Vec<vec_ZZ>          coeffs_R_goth;
     vec_ZZ               s0, r0, u0, s1, r1, coeffs_s1, coeffs_y3, z_3, coeffs_R_goth_mult_s1;    
     mat_zz_p             gamma, C_m, C_r;
@@ -202,7 +202,7 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
     RR                   alpha_i,     B_goth;
     ZZ                   B_goth_s2,   B_goth_r2;
     zz_p                 B_goth_s2_p, B_goth_r2_p; //sums;
-    PROOF_ISIS           Pi;  
+    PROOF_I_t            Pi;  
 
     // Convert input P, C, B_f to be modulo q2_hat
     mat_zz_p      P   = conv<mat_zz_p>(P0);
@@ -614,12 +614,9 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
         // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
-        R_goth2  = HISIS1("1" + ss.str());
-        R_goth_0 = R_goth2[0];
-        R_goth_1 = R_goth2[1];
-        // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat) 
-        
-        
+        HISIS1(R_goth2, "1" + ss.str());
+        // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)
+
         // 21. R_goth = R_goth_0 - R_goth_1
         R_goth.SetDims(256, m1);
         // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1 x d_hat) 
@@ -629,7 +626,7 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
             for(j=0; j<m1; j++)
             {
                 R_goth[i][j].SetLength(d_hat);
-                R_goth[i][j] = R_goth_0[i][j] - R_goth_1[i][j];
+                R_goth[i][j] = R_goth2[0][i][j] - R_goth2[1][i][j];
             }
         }
 
@@ -678,7 +675,7 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
         ss << z_3;
 
         // 27. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
-        gamma  = HISIS2("2" + ss.str());    
+        HISIS2(gamma, "2" + ss.str());    
         // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
         
@@ -761,7 +758,7 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
         ss << h;
 
         // 32. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
-        mu = HISIS3("3" + ss.str());
+        HISIS3(mu, "3" + ss.str());
 
         // 33. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
         B.SetDims((n256 + tau0), m2);
@@ -1190,7 +1187,7 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
 
 
         // 50. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^
-        c = HISIS4("4" + ss.str());
+        HISIS4(c, "4" + ss.str());
 
 
         // 51. for i ∈ {1, 2} do
@@ -1267,7 +1264,7 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
     // 57. else return ⊥
     else // (rst == 0)      
     {
-        // NOTE: invalid proof, other data fields in PROOF_ISIS structure are empty
+        // NOTE: invalid proof, other data fields in PROOF_I_t structure are empty
         Pi.valid = 0;        
     }
     
@@ -1291,7 +1288,7 @@ PROOF_ISIS  Prove_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STR
 // Output:
 // -  0 or 1:       reject or accept 
 //==============================================================================
-int  Verify_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ipk, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_ISIS& Pi)
+int  Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_I_t& Pi)
 {
     zz_pPush push(q2_hat);
     // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))  
@@ -1300,12 +1297,13 @@ int  Verify_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& i
     Mat<zz_pX>           A_1, A_2, B_y, B_g, B, D2; //D2_2_1
     vec_zz_pX            b, t_B, z, d_1, acc_vec, coeffs_ones, sigma_ones;
     vec_zz_pX            r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, z_1_mod, z_2_mod;
+    ZZX                  c0;
     zz_pX                acc, delta_1, delta_2, delta_3, c, d_0;
     Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
     Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
-    Mat<vec_ZZ>          R_goth, R_goth_0, R_goth_1;  
-    Vec<Mat<vec_ZZ>>     R_goth2;  
+    Mat<vec_ZZ>          R_goth;
+    R_GOTH_t             R_goth2;
     Vec<vec_ZZ>          coeffs_R_goth;
     mat_zz_p             gamma, C_m, C_r;
     vec_zz_p             ones, e_tmp, m_C;
@@ -1397,9 +1395,7 @@ int  Verify_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& i
     ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << mex << B_f << Bounds << aux << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
     // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init
 
-    R_goth2  = HISIS1("1" + ss.str());
-    R_goth_0 = R_goth2[0];
-    R_goth_1 = R_goth2[1];
+    HISIS1(R_goth2, "1" + ss.str());
     // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)     
     
     // R_goth = R_goth_0 - R_goth_1
@@ -1411,7 +1407,7 @@ int  Verify_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& i
         for(j=0; j<m1; j++)
         {
             R_goth[i][j].SetLength(d_hat);
-            R_goth[i][j] = R_goth_0[i][j] - R_goth_1[i][j];
+            R_goth[i][j] = R_goth2[0][i][j] - R_goth2[1][i][j];
         }
     }
 
@@ -1426,16 +1422,17 @@ int  Verify_ISIS(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& i
 
     // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
     ss << Pi.z_3;
-    gamma  = HISIS2("2" + ss.str());    
+    HISIS2(gamma, "2" + ss.str());    
     // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
     // 12. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
     ss << Pi.h;
-    mu = HISIS3("3" + ss.str());
+    HISIS3(mu, "3" + ss.str());
 
     // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
     ss << Pi.t << Pi.f0;
-    c = conv<zz_pX>( HISIS4("4" + ss.str()) );
+    HISIS4(c0, "4" + ss.str());
+    c = conv<zz_pX>( c0 );
     // NOTE: Verify_ISIS only uses c mod q_hat 
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
