@@ -3,8 +3,6 @@
 
 #include "params.h"
 #include "Lattice.h"
-#include "Com.h"
-
 
 typedef struct
 {
@@ -14,8 +12,10 @@ typedef struct
     vec_zz_pX   c1;
 } IPK_STRUCT;
 
+#include "Com.h"
+
  
 void    I_KeyGen(IPK_STRUCT& ipk, mat_L& isk);
-void    I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const CRS_Data2& crs, const mat_zz_p& B_f, const IPK_STRUCT& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, const PROOF_Com& Pi);
+void    I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string inputStr, const CRS_Data2& crs, const mat_zz_p& B_f, const IPK_STRUCT& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, const PROOF_Com& Pi);
 
 #endif

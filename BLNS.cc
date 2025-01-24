@@ -74,7 +74,7 @@ int main()
         cout << "=====================================================================" << endl;
      
         cout << "\n- Holder.VerCred1  (prove knowledge of undisclosed attributes)" << endl;
-        H_VerCred1(u, Pi, state, crs, ipk, attrs);
+        H_VerCred1(u, Pi, state, randomSeed, crs, ipk, attrs);
 
         // Select disclosed attributes, fill with zeros hidden attributes 
         attrs_prime = attrs;
@@ -88,7 +88,7 @@ int main()
    
 
         cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
-        I_VerCred(s, w, x, crs, B_f, ipk, isk, attrs_prime, u, Pi);
+        I_VerCred(s, w, x, randomSeed, crs, B_f, ipk, isk, attrs_prime, u, Pi);
  
 
         cout << "\n- Holder.VerCred2  (unblind signature and store credential)" << endl;
@@ -102,11 +102,11 @@ int main()
         cout << "=====================================================================" << endl;
 
         cout << "\n- Holder.VerPres   (prove knowledge of signature and attributes)" << endl;
-        H_VerPres(VP, cred, crs, ipk, B_f, attrs);
+        H_VerPres(VP, cred, randomSeed, crs, ipk, B_f, attrs);
 
 
         cout << "\n- Verifier.Verify  (verify proof and authorize)" << endl;
-        valid = V_Verify(VP, crs, B_f);
+        valid = V_Verify(VP, randomSeed, crs, B_f);
 
         if (valid)
         {

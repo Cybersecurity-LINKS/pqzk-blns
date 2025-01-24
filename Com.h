@@ -8,7 +8,6 @@
 #include "Hash.h"
 #include "Squares.h"
 
-
 typedef struct
 {
     vec_zz_pX       t_A, t_y, t_g, w;
@@ -21,9 +20,11 @@ typedef struct
     int             valid;
 } PROOF_Com;
 
+#include "Issuer.h"
+
 
 void       Preprocessing_Com(vec_ZZ& s1, const vec_ZZ& s, const ZZ B_goth2);
-PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const vec_ZZ& w0);
-int        Verify_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const PROOF_Com& Pi);
+PROOF_Com  Prove_Com( const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const vec_ZZ& w0);
+int        Verify_Com(const string inputStr, const CRS_Data& crs, const IPK_STRUCT& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const PROOF_Com& Pi);
 
 #endif
