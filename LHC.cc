@@ -16,16 +16,16 @@
 // - com:       commitment structure    
 // - st:        status structure
 //==============================================================================
-void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_ZZX s, const vec_ZZX y) 
+void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_ZZX& s, const vec_ZZX& y) 
 {    
     zz_pPush push(q1_hat); 
     // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))    
 
-    long i, j, m, n, eta;
-    RR alpha_i, s_goth;    
-    vec_ZZX    e_1, e_2, e_3, f_1, f_2, f_3; 
-    vec_zz_pX  t_1, t_2, w_1, w_2;
-    ZZX acc_1, acc_2;
+    long        i, j, m, n, eta;
+    RR          alpha_i, s_goth;    
+    vec_ZZX     e_1, e_2, e_3, f_1, f_2, f_3; 
+    vec_zz_pX   t_1, t_2, w_1, w_2;
+    ZZX         acc_1, acc_2;
     
     // Manage the invocation with index 1 or 2
     n   = n_i;
@@ -45,6 +45,7 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int index, const Mat<z
     {
         cout << "ERROR! index must be 1 or 2" << endl;
         assert((index == 1) || (index == 2));
+        m = 0;
     }     
     // \overline{\mathfrak{s}}_1 (or 2)    
     s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR((n + 2*m) * d0));
@@ -121,7 +122,7 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int index, const Mat<z
 
         for(j=0; j<d_hat; j++)
         {
-            f_1[i][j] = ZSampler(s_goth, RR(0));
+            ZSampler(f_1[i][j], s_goth, RR(0));
         }
     }
     for(i=0; i<m; i++)
@@ -131,8 +132,8 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int index, const Mat<z
 
         for(j=0; j<d_hat; j++)
         {
-            f_2[i][j] = ZSampler(s_goth, RR(0));
-            f_3[i][j] = ZSampler(s_goth, RR(0));
+            ZSampler(f_2[i][j], s_goth, RR(0));
+            ZSampler(f_3[i][j], s_goth, RR(0));
         }
     }
 
@@ -197,7 +198,7 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int index, const Mat<z
 // Output:
 // - 0 | 1: reject or accept
 //==============================================================================
-int Rej(const int index, const vec_ZZX z, const vec_ZZX v, const RR s, const RR M)
+int Rej(const int& index, const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 {
     int i, j, m;
     RR u, mul, den, eq;
@@ -216,6 +217,7 @@ int Rej(const int index, const vec_ZZX z, const vec_ZZX v, const RR s, const RR 
     {
         cout << "ERROR! index must be 1 or 2" << endl;
         assert((index == 1) || (index == 2));
+        m = 0;
     }     
             
     // u <--[0,1), uniformly distributed
@@ -268,7 +270,7 @@ int Rej(const int index, const vec_ZZX z, const vec_ZZX v, const RR s, const RR 
 // Output:
 // - 0 | 1: reject or accept
 //==============================================================================
-int Rej_v_ZZ(const vec_ZZ z, const vec_ZZ v, const RR s, const RR M)
+int Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M)
 {
     int i, len;
     RR u, mul, den, eq;
@@ -326,7 +328,7 @@ int Rej_v_ZZ(const vec_ZZ z, const vec_ZZ v, const RR s, const RR M)
 // Output:
 // - 0 | 1: reject or accept
 //==============================================================================
-int Rej_v_ZZX(const vec_ZZX z, const vec_ZZX v, const RR s, const RR M)
+int Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 {
     int i, j, len;
     RR u, mul, den, eq;
@@ -391,13 +393,12 @@ int Rej_v_ZZX(const vec_ZZX z, const vec_ZZX v, const RR s, const RR M)
 // - op:      list of (n + m + m) polynomials of d_hat length, if accept, 
 //            otherwise op = [] (i.e. op = ⊥, reject)
 //==============================================================================
-Vec<vec_ZZX> LHC_Open(const int index, const ZZX c, const Vec<vec_ZZX>& st)
+void LHC_Open(Vec<vec_ZZX>& op, const int& index, const ZZX& c, const Vec<vec_ZZX>& st)
 {
     long i, m, n;
     int  b;
     RR alpha_i, s_goth, M_bar;
-    vec_ZZX  e_1, e_2, e_3, f_1, f_2, f_3, z_1, z_2, z_3, z, v; 
-    Vec<vec_ZZX> op;
+    vec_ZZX  e_1, e_2, e_3, f_1, f_2, f_3, z_1, z_2, z_3, z, v;
         
     // Manage the invocation with index 1 or 2  
     n = n_i;
@@ -416,6 +417,7 @@ Vec<vec_ZZX> LHC_Open(const int index, const ZZX c, const Vec<vec_ZZX>& st)
     {
         cout << "ERROR! index must be 1 or 2" << endl;
         assert((index == 1) || (index == 2));
+        m = 0;
     }     
     // \overline{\mathfrak{s}}_1 (or 2)
     s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR((n + 2*m) * d0));
@@ -501,19 +503,18 @@ Vec<vec_ZZX> LHC_Open(const int index, const ZZX c, const Vec<vec_ZZX>& st)
     b = Rej(index, z, v, s_goth, M_bar);
         
     if (b == 0)
-    {    
-        // op = [] (i.e. ⊥, reject)
-        return (op);
+    {
+        //     op = [] (i.e. ⊥, reject)
+        op.kill();
     }
-    else 
+    else //if (b == 1) // (accept)
     {        
-        // b = 1 (accept)
         op.SetLength(3);
         op[0] = z_1;
         op[1] = z_2;
-        op[2] = z_3;            
-        return(op);
+        op[2] = z_3;
     }
+    // return(op);
 }
 
 
@@ -533,7 +534,7 @@ Vec<vec_ZZX> LHC_Open(const int index, const ZZX c, const Vec<vec_ZZX>& st)
 // Output:
 // - 0 or 1:    reject or accept 
 //==============================================================================
-int LHC_Verify(const int index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const Vec<vec_zz_pX>& com, const ZZX c, const vec_ZZX z, const Vec<vec_ZZX>& op)
+int LHC_Verify(const int& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const Vec<vec_zz_pX>& com, const ZZX& c, const vec_ZZX& z, const Vec<vec_ZZX>& op)
 {
     zz_pPush push(q1_hat); 
     // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat)) 
@@ -569,6 +570,7 @@ int LHC_Verify(const int index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, co
     {
         cout << "\n ERROR! index must be 1 or 2" << endl;
         assert((index == 1) || (index == 2));
+        m = 0;
     }     
     // \overline{\mathfrak{s}}_1 (or 2)    
     s_goth = ((alpha_i * eta_i * nu0) * sqrt(conv<RR>((n + 2*m) * d0)));

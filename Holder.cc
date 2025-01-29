@@ -91,7 +91,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
         }
     }    
 
-    mex = CoeffsInvX(coeffs_m, lm0);
+    CoeffsInvX(mex, coeffs_m, lm0);
 
 
     // 4. r ← S^ℓr_ψ,   r ∈ R^ℓr
@@ -120,7 +120,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
     // NOTE: zero padding of P (d_hat columns) anticipated here, from Preprocessing_Com
 
     P0.SetDims(d0, lm0*d0);    
-    P0 = rot_vect(c0);
+    rot_vect(P0, c0);
 
     // NOTE: only first idx_hid*h0 columns of P0 (corresponding to undisclosed attributes) 
     //       are copied into P, while P1 is fully copied into P.
@@ -136,7 +136,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
     }
     
     P1.SetDims(d0, lr0*d0);
-    P1 = rot_vect(c1);    
+    rot_vect(P1, c1);    
 
     for(j=0; j<(lr0*d0); j++)
     {
@@ -153,7 +153,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
     // 7. s ← (Coeffs(m)_(idx_hid), Coeffs(r)),   s ∈ Z^(|idx_hid|·h + ℓr·d)
     s.SetLength(idxhlrd);
     
-    coeffs_r   = CoeffsX(r, lr0);
+    CoeffsX(coeffs_r, r, lr0);
     
     // NOTE: only first idx_hid*h0 coeffs of m (corresponding to undisclosed attributes) 
     //       are copied into s, while coeffs of r is fully copied into s.
@@ -200,7 +200,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
     // B_goth = psi0 * sqrt(conv<RR>( idxhlrd ));
     B_goth2 = sqr( ZZ(psi0)) * ZZ( idxhlrd );
    
-    Pi = Prove_Com(inputStr, crs[1], ipk, (q1_hat/q0*conv<mat_ZZ>(P)), (q1_hat/q0*conv<vec_ZZ>(u_vect)), B_goth2, s);
+    Prove_Com(Pi, inputStr, crs[1], ipk, (q1_hat/q0*conv<mat_ZZ>(P)), (q1_hat/q0*conv<vec_ZZ>(u_vect)), B_goth2, s);
     // NOTE: P & u must be converted to ZZ, without modulo q0, to be properly passed as inputs to Prove_Com
 
     P.kill();
@@ -448,7 +448,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     P.SetDims(d0, (m2d + d_hat)); 
     // NOTE: zero padding of P (d_hat columns) anticipated here, from Preprocessing_ISIS   
     
-    A = rot_vect(a);
+    rot_vect(A, a);
     
     for(i=0; i<d0; i++)
         {   
@@ -466,7 +466,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     // NOTE: zero padding of C (d_hat columns) anticipated here, from Preprocessing_ISIS
 
     C0.SetDims(d0, lm0*d0);
-    C0 = rot_vect(c0);
+    rot_vect(C0, c0);
 
     // NOTE: first copy in C the columns for disclosed attributes, then those for undisclosed attributes
     // NOTE: lm0*d0 = l0*h0 = (idx_pub + idx_hid) * h0       
@@ -493,7 +493,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     C0.kill();   
 
     C1.SetDims(d0, lr0*d0);  
-    C1 = rot_vect(c1);    
+    rot_vect(C1, c1);    
 
     for(j=0; j<(lr0*d0); j++)
     {
@@ -517,12 +517,12 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
 
 
     // 8. s ← Coeffs(s),   s ∈ Z^((m+2)d)   
-    coeffs_s   = CoeffsX( s, (m0+2) );
+    CoeffsX(coeffs_s, s, (m0+2));
     
     // 9. r ← (Coeffs(m)_(idx_hid), Coeffs(r)),   r ∈ Z^(|idx_hid|·h + ℓr·d)
     r_vect.SetLength(idxhlrd);    
     
-    coeffs_r   = CoeffsX( r, lr0 );   
+    CoeffsX(coeffs_r, r, lr0 );
     
     // NOTE: only first idx_hid*h0 coeffs of m (corresponding to undisclosed attributes) 
     //       are copied into r_vect, while coeffs of r is fully copied into r_vect.
@@ -598,8 +598,8 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     sig[0] = coeffs_s;
     sig[1] = r_vect;
     sig[2] = coeffs_u;
-      
-    VP.pi = Prove_ISIS( inputStr, crs[0], ipk, (mul * conv<mat_ZZ>(P)), (mul * conv<mat_ZZ>(C)), coeffs_m_idx, (mul * conv<mat_ZZ>(B_f)), Bounds, ZZ(idx_pub), sig );
+    
+    Prove_ISIS(VP.pi, inputStr, crs[0], ipk, (mul * conv<mat_ZZ>(P)), (mul * conv<mat_ZZ>(C)), coeffs_m_idx, (mul * conv<mat_ZZ>(B_f)), Bounds, ZZ(idx_pub), sig );
     // NOTE: P, C, B_f must be converted to ZZ, without modulo q0, to be properly passed as inputs to Prove_ISIS
 
     P.kill();

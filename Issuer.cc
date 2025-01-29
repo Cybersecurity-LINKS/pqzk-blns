@@ -128,7 +128,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS
     // NOTE: zero padding of P (d_hat columns) anticipated here, from Verify_Com
 
     P0.SetDims(d0, lm0*d0);
-    P0 = rot_vect(c0);
+    rot_vect(P0, c0);
 
     // NOTE: only first idx_hid*h0 columns of P0 (corresponding to undisclosed attributes) 
     //       are copied into P, while P1 is fully copied into P.
@@ -144,7 +144,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS
     }    
 
     P1.SetDims(d0, lr0*d0);
-    P1 = rot_vect(c1);
+    rot_vect(P1, c1);
 
     for(j=0; j<(lr0*d0); j++)
     {

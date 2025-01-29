@@ -84,7 +84,7 @@ int  V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
     P.SetDims(d0, (m2d + d_hat)); 
     // NOTE: zero padding of P (d_hat columns) anticipated here, from Verify_ISIS   
     
-    A = rot_vect(a);
+    rot_vect(A, a);
     
     for(i=0; i<d0; i++)
         {   
@@ -102,7 +102,7 @@ int  V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
     // NOTE: zero padding of C (d_hat columns) anticipated here, from Verify_ISIS
 
     C0.SetDims(d0, lm0*d0);
-    C0 = rot_vect(c0);
+    rot_vect(C0, c0);
 
     // NOTE: first copy in C the columns for disclosed attributes, then those for undisclosed attributes
     // NOTE: lm0*d0 = l0*h0 = (idx_pub + idx_hid) * h0       
@@ -129,7 +129,7 @@ int  V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
     C0.kill(); 
 
     C1.SetDims(d0, lr0*d0);
-    C1 = rot_vect(c1);
+    rot_vect(C1, c1);
 
     for(j=0; j<(lr0*d0); j++)
     {

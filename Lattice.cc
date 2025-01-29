@@ -42,11 +42,11 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
         
         // 5. f ← Sum_{i=0}^{d−1}(f_i * x^i),  f ∈ R
         f.SetLength(d0);
-        f = polySampler(sigma_f);
+        polySampler(f, sigma_f);
 
         // 6. g ← Sum_{i=0}^{d−1}(g_i * x^i),  g ∈ R
         g.SetLength(d0);
-        g = polySampler(sigma_f);  
+        polySampler(g, sigma_f);
 
         // 7. fr ← f_0 − Sum_{i=0}^{d−1}(f_(d−i) * x^i),  fr ∈ R
         fr.SetLength(d0);
@@ -300,7 +300,7 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
             spi = sigma / sqrt(norm2);
 
             // 7. z_i ← ZSampler(σ′_i, c′_i),   z_i ∈ Z
-            zi = ZSampler(spi, cpi); 
+            ZSampler(zi, spi, cpi); 
 
             // 8. c_(i−1) ← c_i − z_i*b_i,   c_(i−1) ∈ Z^(2d)
             zibi = zi * conv<vec_ZZ>( B[i] );
@@ -336,15 +336,15 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
 // - s:     short vector,       s ∈ Z^(2d)
 // - w:     polynomial vector,  w ∈ R^m
 //==============================================================================
-void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX h, const vec_zz_pX a, const mat_L& B, const RR sigma, const zz_pX d)
+void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const mat_L& B, const RR& sigma, const zz_pX& d)
 {
-    long            i, j, valid;  
-    ZZX             u;
-    mat_ZZ          A, Id;
-    mat_L    R;        
-    vec_ZZ          c, d_u, v;  
+    long    i, j, valid;  
+    ZZX     u;
+    mat_ZZ  A, Id;
+    mat_L   R;        
+    vec_ZZ  c, d_u, v;  
 
-    const ZZ        thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
+    const ZZ thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
  
     // NOTE: loop to find a valid w (i.e. small norm, see Holder.VerCred2, row 5)
     valid = 0;
@@ -362,7 +362,7 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX h, const vec_zz_pX a, const mat
         for(i=0; i<m0; i++)
         {
             // 4. w_i ← polySampler(σ, 0),  w_i ∈ R     
-            w[i] = polySampler(sigma);
+            polySampler(w[i], sigma);
 
             // 5. u ← u + w_i * a_i,   u ∈ R            
             u += ModPhi( w[i] * conv<ZZX>( a[i]) );
@@ -448,10 +448,10 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX h, const vec_zz_pX a, const mat
 // Output:
 // - x:     integer sampled from the discrete Gaussian distribution
 // ==============================================================================
-ZZ ZSampler(const RR sigma, const RR c) 
+void ZSampler(ZZ& x, const RR& sigma, const RR& c) 
 {
     long b;
-    ZZ   x, left, right, range, c_int;    
+    ZZ   left, right, range, c_int;    
     RR   delta, iden, val, p, u, c_floor, c_frac; 
             
     if (sigma<=0)
@@ -480,11 +480,13 @@ ZZ ZSampler(const RR sigma, const RR c)
 
         if (u >= c_frac)
         {
-            return c_int;
+            x = c_int;
+            return;
         }
         else // (u < c_frac)
         {
-            return (c_int+1);
+            x = c_int+1;
+            return;
         }
     }
 
@@ -523,8 +525,9 @@ ZZ ZSampler(const RR sigma, const RR c)
             b = 1;                
         }
     }
-
-    return (x + c_int);
+    
+    // return (x + c_int);
+    x += c_int;
 }
 
 
@@ -538,16 +541,17 @@ ZZ ZSampler(const RR sigma, const RR c)
 // Output:
 // - s:     polynomial, s ∈ R
 //==============================================================================
-ZZX polySampler(const RR sigma)
+void polySampler(ZZX& s, const RR& sigma)
 {
-    unsigned int    i;
-    ZZX             s;
+    long    i;
+    ZZ      x;
 
     s.SetLength(d0);
    
     for(i=0; i<d0; i++)
     {
-        SetCoeff(s, i, ZSampler(sigma, RR(0)));  
+        ZSampler(x, sigma, RR(0));
+        SetCoeff(s, i, x);
     }       
 
     // NOTE: ensure that deg(s) == d0-1, to avoid errors in NTRU_TrapGen    
@@ -556,5 +560,5 @@ ZZX polySampler(const RR sigma)
         SetCoeff(s, d0-1, 1);
     }
       
-    return s; // s ∈ R
+    // return s; // s ∈ R
 }
