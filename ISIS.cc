@@ -190,9 +190,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
     Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
-    Mat<vec_ZZ>          R_goth;  
-    R_GOTH_t             R_goth2;  
-    Vec<vec_ZZ>          coeffs_R_goth;
+    mat_L                R_goth;
     vec_ZZ               s0, r0, u0, s1, r1, coeffs_s1, coeffs_y3, coeffs_R_goth_mult_s1;    
     mat_zz_p             gamma, C_m, C_r;
     vec_zz_p             ones;
@@ -319,6 +317,10 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     s_1_mod = conv<vec_zz_pX>( s_1 );
     // NOTE: modulo q_hat on all coefficients
 
+    // coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)   
+    CoeffsHat(coeffs_s1, s_1, m1);
+    // NOTE: coeffs_s1 contains the same coefficients listed in w0
+
 
     // Initialize e ∈ R^^(256 x 256/d_hat)_(q_hat)
     e_.SetLength(256);    
@@ -358,14 +360,14 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
     for(j=0; j<d0; j++)        
     {
-        CoeffsInvHat(p_j    , P[j], (m2d+d_hat)/d_hat);
-        CoeffsInvHat(Beta_j , B_f[j], t_d_hat); 
-        sigma_map(sigma_p_[j]    , p_j, d_hat);        
-        sigma_map(sigma_Beta_[j] , Beta_j, d_hat);                  
+        CoeffsInvHat(p_j, P[j], (m2d+d_hat)/d_hat);
+        CoeffsInvHat(Beta_j, B_f[j], t_d_hat); 
+        sigma_map(sigma_p_[j], p_j, d_hat);        
+        sigma_map(sigma_Beta_[j], Beta_j, d_hat);                  
     }
 
-    sigma_map(sigma_s  , s_mod, d_hat);
-    sigma_map(sigma_r  , r_mod, d_hat);
+    sigma_map(sigma_s, s_mod, d_hat);
+    sigma_map(sigma_r, r_mod, d_hat);
     sigma_map(sigma_s_1, s_1_mod, d_hat);
 
     // Create C_m and C_r
@@ -613,34 +615,14 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
-        HISIS1(R_goth2, "1" + ss.str());
-        // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)
-
         // 21. R_goth = R_goth_0 - R_goth_1
-        R_goth.SetDims(256, m1);
-        // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1 x d_hat) 
-
-        for(i=0; i<256; i++)
-        {
-            for(j=0; j<m1; j++)
-            {
-                R_goth[i][j].SetLength(d_hat);
-                R_goth[i][j] = R_goth2[0][i][j] - R_goth2[1][i][j];
-            }
-        }
-
-        // Convert coeffs_R_goth ← Coeffs(R_goth),   coeffs_R_goth ∈ Z^(256 x m_1*d_hat)
-        coeffs_R_goth.SetLength(256);
-
-        for(i=0; i<256; i++)
-        {
-            CoeffsHat(coeffs_R_goth[i],  conv<vec_ZZX>( R_goth[i] ), m1);
-        }
-
+        HISIS1(R_goth, "1" + ss.str());
+        // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat),
+        //       equivalent to (R_goth_0 - R_goth_1) in BLNS
         
         // 22. coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)   
-        CoeffsHat(coeffs_s1, s_1, m1);
-        // NOTE: coeffs_s1 contains the same coefficients listed in w0
+        // CoeffsHat(coeffs_s1, s_1, m1);
+        // NOTE: precomputed after row 9
                 
         // 23. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)   
         CoeffsHat(coeffs_y3, y_3, n256);
@@ -652,7 +634,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
         for(i=0; i<256; i++)
         {
-            coeffs_R_goth_mult_s1[i] = (coeffs_R_goth[i] * coeffs_s1);       
+            coeffs_R_goth_mult_s1[i] = ( conv<vec_ZZ>(R_goth[i]) * coeffs_s1 );       
             // NOTE: this term corresponds to InnerProduct(result, coeffs_R_goth[i], coeffs_s1);
 
             Pi.z_3[i] = coeffs_y3[i] + coeffs_R_goth_mult_s1[i];
@@ -688,8 +670,8 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
         for(j=0; j<256; j++)        
         {
-            CoeffsInvHat(r_j,  conv<vec_zz_p>(coeffs_R_goth[j]), m1 );
-            sigma_map(sigma_r_[j]  , r_j, d_hat);
+            CoeffsInvHat(r_j,  conv<vec_zz_p>(R_goth[j]), m1 );
+            sigma_map(sigma_r_[j], r_j, d_hat);
 
             // NOTE: (r_s,j , r_r,j , r_u,j ) ← r_j  at row 42, where:   
             //       r_s,j ∈ R^^(((m+2)d+d_hat)/d_hat)_(q_hat)
@@ -1301,9 +1283,7 @@ int  Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
     Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
-    Mat<vec_ZZ>          R_goth;
-    R_GOTH_t             R_goth2;
-    Vec<vec_ZZ>          coeffs_R_goth;
+    mat_L                R_goth;
     mat_zz_p             gamma, C_m, C_r;
     vec_zz_p             ones, e_tmp, m_C;
     RR                   B_goth;    
@@ -1393,31 +1373,9 @@ int  Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     // ss << crs << P << C << mex << B_f << Bounds << aux << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
     ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << mex << B_f << Bounds << aux << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
     // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init
-
-    HISIS1(R_goth2, "1" + ss.str());
-    // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)     
-    
-    // R_goth = R_goth_0 - R_goth_1
-    R_goth.SetDims(256, m1);
-    // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1 x d_hat) 
-
-    for(i=0; i<256; i++)
-    {
-        for(j=0; j<m1; j++)
-        {
-            R_goth[i][j].SetLength(d_hat);
-            R_goth[i][j] = R_goth2[0][i][j] - R_goth2[1][i][j];
-        }
-    }
-
-    // Convert coeffs_R_goth ← Coeffs(R_goth),   coeffs_R_goth ∈ Z^(256 x m_1*d_hat)
-    coeffs_R_goth.SetLength(256);
-
-    for(i=0; i<256; i++)
-    {
-        CoeffsHat(coeffs_R_goth[i],  conv<vec_ZZX>( R_goth[i] ), m1);
-    }
-
+    HISIS1(R_goth, "1" + ss.str());
+    // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat),
+    //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
     // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
     ss << Pi.z_3;
@@ -1583,8 +1541,8 @@ int  Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
 
     for(j=0; j<256; j++)        
     {
-        CoeffsInvHat(r_j,  conv<vec_zz_p>(coeffs_R_goth[j]), m1 );
-        sigma_map(sigma_r_[j]  , r_j, d_hat);
+        CoeffsInvHat(r_j,  conv<vec_zz_p>(R_goth[j]), m1 );
+        sigma_map(sigma_r_[j], r_j, d_hat);
         
         // NOTE: m1 = m1_ISIS = (((m+2)*d+d_hat)/d_hat) + (|idx_hid|·h + ℓr·d + d_hat)/d_hat + t/d_hat
 

@@ -183,23 +183,23 @@ void Hash_v_zz_p(vec_zz_p& out_vec, EVP_MD_CTX *mdctx, const long& n_elems, cons
 
 
 //==============================================================================
-// Hash_bits -  Generate a random vector of bits using the Custom Hash function
+// Hash_R_goth - Generate a random vector for R_goth using the Custom Hash function
 // 
 // Inputs:
 // - mdctx:     digest context in OpenSSL
-// - n_elems:   number of elements of the random vector (i.e. d_hat)
+// - n_elems:   number of elements of the random vector (i.e. m1*d_hat)
 //
 // Output:
-// - out_bits:  vector of random bits {0, 1}
+// - out:       random vector with n_elems elements in {-1, 0, 1},
+//              equivalent to the pair (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
-void Hash_bits(vec_ZZ& out_bits, EVP_MD_CTX *mdctx, const long& n_elems)
+void Hash_R_goth(vec_L& out, EVP_MD_CTX *mdctx, const long& n_elems)
 {    
-    long            i, j, k, n_bytes; 
-    unsigned char   curr_byte;
+    long            i, j, k, curr_byte, R_goth_0, R_goth_1;
     unsigned char*  y_arr;
     
     // Compute the minimum number of bytes needed to fill the vector  
-    n_bytes = ceil(n_elems / 8.0);
+    const long n_bytes = ceil(2*n_elems / 8.0);
 
     y_arr = new unsigned char[n_bytes];
 
@@ -209,19 +209,24 @@ void Hash_bits(vec_ZZ& out_bits, EVP_MD_CTX *mdctx, const long& n_elems)
         exit(1);
     }
            
-    out_bits.SetLength(n_elems);
+    // out.SetLength(n_elems);
     k = 0;
 
     for(i=0; i < n_bytes; i++)
     {
-        curr_byte = y_arr[i];
+        curr_byte = (long)(y_arr[i]);
         
-        for(j=0; j < 8; j++)
+        // NOTE: each byte will fill 4 elements, 2 bits per element (R_goth_0, R_goth_1)
+        for(j=0; j < 4; j++)
         {
             if(k < n_elems)
             {
-                out_bits[k] = conv<ZZ>( curr_byte & 1 );
+                R_goth_0 = ( curr_byte & 1 );
                 curr_byte = curr_byte >> 1;
+                R_goth_1 = ( curr_byte & 1 );
+                curr_byte = curr_byte >> 1;
+                out[k] = R_goth_0 - R_goth_1;                
+                // NOTE: each element is in {-1, 0, 1}
             }
             k++;
         }
@@ -229,7 +234,7 @@ void Hash_bits(vec_ZZ& out_bits, EVP_MD_CTX *mdctx, const long& n_elems)
     
     delete[] y_arr;
 
-    // return out_bits;
+    // return out;
 }
 
 
@@ -480,32 +485,26 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
 // - inputStr:  string containing the input messages
 //
 // Output:
-// - R_goth:    structure with the pair (R_goth_0, R_goth_1), 3D matrices of {0, 1}
+// - R_goth:    matrix of {-1, 0, 1} values, equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
-void HCom1(R_GOTH_t& R_goth, const string& inputStr)
+void HCom1(mat_L& R_goth, const string& inputStr)
 {
-    int         i, j;
+    long        i;
     EVP_MD_CTX *mdctx;
 
-    const int  m1 = m1_Com;
+    const long  m1 = m1_Com;
 
     mdctx = Hash_Init(inputStr);  
     
-    // Create the R_goth structure  
-    R_goth.SetLength(2);   
-    R_goth[0].SetDims(256, m1);
-    R_goth[1].SetDims(256, m1); 
-
-    // Random generation of R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat)
+    // Create the R_goth matrix  
+    R_goth.SetDims(256, m1*d_hat);   
+    
+    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) 
     for(i=0; i<256; i++)
-    {
-        for(j=0; j<m1; j++)
-        {
-            Hash_bits(R_goth[0][i][j], mdctx, d_hat);
-            Hash_bits(R_goth[1][i][j], mdctx, d_hat);
-        }
+    { 
+        Hash_R_goth(R_goth[i], mdctx, m1*d_hat);
     }
-
+    
     EVP_MD_CTX_free(mdctx);
 
     // return R_goth;
@@ -688,33 +687,27 @@ void HCom4(ZZX& c, const string& inputStr)
 // - inputStr:  string containing the input messages
 //
 // Output:
-// - R_goth:    structure with the pair (R_goth_0, R_goth_1), 3D matrices of {0, 1}
+// - R_goth:    matrix of {-1, 0, 1} values, equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
 // NOTE: HISIS1 is identical to HCom1, apart m1
-void HISIS1(R_GOTH_t& R_goth, const string& inputStr)
+void HISIS1(mat_L& R_goth, const string& inputStr)
 {
-    int                 i, j;
+    long        i;
     EVP_MD_CTX *mdctx;
 
-    const int  m1 = m1_ISIS;
+    const long  m1 = m1_ISIS;
 
     mdctx = Hash_Init(inputStr);  
     
-    // Create the R_goth structure  
-    R_goth.SetLength(2);   
-    R_goth[0].SetDims(256, m1);
-    R_goth[1].SetDims(256, m1); 
-
-    // Random generation of R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat) 
+    // Create the R_goth matrix  
+    R_goth.SetDims(256, m1*d_hat);   
+    
+    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) 
     for(i=0; i<256; i++)
-    {
-        for(j=0; j<m1; j++)
-        {
-            Hash_bits(R_goth[0][i][j], mdctx, d_hat);
-            Hash_bits(R_goth[1][i][j], mdctx, d_hat);            
-        }
+    { 
+        Hash_R_goth(R_goth[i], mdctx, m1*d_hat);
     }
-
+    
     EVP_MD_CTX_free(mdctx);
 
     // return R_goth;

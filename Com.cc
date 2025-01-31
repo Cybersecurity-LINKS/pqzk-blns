@@ -127,9 +127,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     Vec<vec_zz_pX>      sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_;
     Vec<vec_ZZX>        st_1,  st_2;
     stringstream        ss;         
-    Mat<vec_ZZ>         R_goth;  
-    R_GOTH_t            R_goth2;  
-    Vec<vec_ZZ>         coeffs_R_goth;
+    mat_L               R_goth;
     vec_ZZ              s0, coeffs_y3, coeffs_R_goth_mult_s1; //coeffs_s1;
     mat_zz_p            gamma;
     vec_zz_p            e_tmp;
@@ -457,34 +455,14 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         // NOTE: using inputStr, ipk.c0, ipk.c1, instead of crs, P to speedup Hash_Init
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
-        HCom1(R_goth2, "1" + ss.str());
-        // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat) 
-        
         // 21. R_goth = R_goth_0 - R_goth_1
-        R_goth.SetDims(256, m1);
-        // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1 x d_hat) 
-
-        for(i=0; i<256; i++)
-        {
-            for(j=0; j<m1; j++)
-            {
-                R_goth[i][j].SetLength(d_hat);
-                R_goth[i][j] = R_goth2[0][i][j] - R_goth2[1][i][j];
-            }
-        }
+        HCom1(R_goth, "1" + ss.str());
+        // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat),
+        //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
         // 22. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)   
         CoeffsHat(coeffs_y3, y_3, n256);
         
-        // Convert also R_goth ∈ {-1, 0, 1}^(256 x m_1 x d_hat) 
-        // coeffs_R_goth ← Coeffs(R_goth),   coeffs_R_goth ∈ Z^(256 x m_1*d_hat)
-        coeffs_R_goth.SetLength(256);
-
-        for(i=0; i<256; i++)
-        {
-            CoeffsHat(coeffs_R_goth[i],  conv<vec_ZZX>( R_goth[i] ), m1);
-        }
-                
         // 23.  z_3 = y_3 + R_goth*s,   z_3 ∈ Z^(256)   
         coeffs_R_goth_mult_s1.SetLength(256);
         Pi.z_3.SetLength(256);
@@ -492,7 +470,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
         for(i=0; i<256; i++)
         {
-            coeffs_R_goth_mult_s1[i] = (coeffs_R_goth[i] * s0); //coeffs_s1);       
+            coeffs_R_goth_mult_s1[i] = ( conv<vec_ZZ>(R_goth[i]) * s0 ); //coeffs_s1);
             // NOTE: this term corresponds to InnerProduct(result, coeffs_R_goth[i], coeffs_s1);
 
             Pi.z_3[i] = coeffs_y3[i] + coeffs_R_goth_mult_s1[i];
@@ -526,7 +504,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
         for(j=0; j<256; j++)        
         {
-            CoeffsInvHat(r_j,  conv<vec_zz_p>(coeffs_R_goth[j]), m1 ); 
+            CoeffsInvHat(r_j,  conv<vec_zz_p>(R_goth[j]), m1 ); 
             sigma_map(sigma_r_[j], r_j, d_hat);  
             h_part1[j] = poly_mult_hat(sigma_r_[j], s_1_mod) + poly_mult_hat(sigma_e_[j], conv<vec_zz_pX>( y_3 )) + (conv<zz_p>( - Pi.z_3[j] ));
         }
@@ -1028,9 +1006,7 @@ int  Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     Vec<vec_zz_pX>      e_ , e_prime;
     Vec<vec_zz_pX>      sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_; 
     stringstream        ss;
-    Mat<vec_ZZ>         R_goth;  
-    R_GOTH_t            R_goth2;  
-    Vec<vec_ZZ>         coeffs_R_goth;    
+    mat_L               R_goth;
     mat_zz_p            gamma;
     vec_zz_p            e_tmp;
     zz_p                sum_z3, B_goth_p;
@@ -1109,31 +1085,10 @@ int  Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     ss << inputStr << ipk.c0 << ipk.c1 << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
     // NOTE: using inputStr, ipk.c0, ipk.c1, instead of crs, P to speedup Hash_Init
     
-    HCom1(R_goth2, "1" + ss.str());
-    // NOTE: R_goth_i ∈ {0, 1}^(256 x m_1 x d_hat) 
-    
     // 10. R_goth = R_goth_0 - R_goth_1
-    R_goth.SetDims(256, m1);
-    // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1 x d_hat) 
-
-    for(i=0; i<256; i++)
-    {
-        for(j=0; j<m1; j++)
-        {
-            R_goth[i][j].SetLength(d_hat);
-            R_goth[i][j] = R_goth2[0][i][j] - R_goth2[1][i][j];
-        }
-    }
-
-    // Convert R_goth ∈ {-1, 0, 1}^(256 x m_1 x d_hat) 
-    // coeffs_R_goth ← Coeffs(R_goth),   coeffs_R_goth ∈ Z^(256 x m_1*d_hat)
-    coeffs_R_goth.SetLength(256);
-
-    for(i=0; i<256; i++)
-    {
-        CoeffsHat(coeffs_R_goth[i],  conv<vec_ZZX>( R_goth[i] ), m1);
-    }
-
+    HCom1(R_goth, "1" + ss.str());
+    // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat),
+    //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
     // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat     
     ss << Pi.z_3;    
@@ -1309,10 +1264,10 @@ int  Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     
     for(j=0; j<256; j++)        
     {
-        CoeffsInvHat(r_j,  conv<vec_zz_p>(coeffs_R_goth[j]), m1 ); 
+        CoeffsInvHat(r_j,  conv<vec_zz_p>(R_goth[j]), m1 );
         sigma_map(sigma_r_[j], r_j, d_hat);
         sigma_map(sigma_e_[j], e_[j], d_hat);  
-    }       
+    }
 
     for(j=0; j<d0; j++)        
     {
@@ -1399,7 +1354,7 @@ int  Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
             // Fill d_1 (256/d_hat polynomials) by accumulating mu[i]*(...sums...) 
             d_1[(2*m1)+k] += ModPhi_hat_q( mu[i] * acc_vec[k]);             
         }
-    } 
+    }
     
     // 4th entry of d_1 (tau0 polynomials)    
     k = 0;

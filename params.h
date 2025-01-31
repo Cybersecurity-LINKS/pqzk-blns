@@ -17,7 +17,8 @@ using namespace std;
 using namespace NTL;
 
 typedef Vec<double> vec_D;
-typedef Mat<double> mat_D; 
+typedef Mat<double> mat_D;
+typedef Vec<long>   vec_L; 
 typedef Mat<long>   mat_L; 
 
 /*
@@ -93,7 +94,6 @@ typedef Mat<long>   mat_L;
 #define n_Com   18      // n   for Π^Com_NIZK
 #define m2_ISIS 68      // m_2 for Π^ISIS_NIZK, m2 ≥ n + ℓ
 #define m2_Com  51      // m_2 for Π^Com_NIZK,  m2 ≥ n + ℓ
-#define p2_hat  17      // \hat{p}_2
 #define q1_hat  85      // \hat{q}_1 modulus of the proof system Π^Com_NIZK  (must be divisible by q)
 #define p_bar   68527215// \overline{p}, an odd integer co-prime to \hat{q}
 #define n_i     28      // n_1 == n_2
