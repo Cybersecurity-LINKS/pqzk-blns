@@ -26,7 +26,6 @@
 void  Preprocessing_ISIS(vec_ZZ& s1, vec_ZZ& r1, const vec_ZZ& s0, const ZZ& B_goth_s2, const vec_ZZ& r0, const ZZ& B_goth_r2)
 {    
     // NOTE: assuming that current modulus is q2_hat (not q0)
-
     long    i;
     ZZ      diff; //a1, a2, a3, a4;
     vec_ZZ  v;
@@ -175,8 +174,8 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     zz_pPush push(q2_hat); 
     // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))  
    
-    unsigned int         idx, i, j, k;
-    int                  rst, b1, b2, b3;
+    unsigned long        idx, i, j, k;
+    long                 rst, b1, b2, b3;
     Mat<zz_pX>           B, D2; //D2_2_1
     vec_zz_pX            s_1_mod, s_2_mod, g; //t_B;
     vec_zz_pX            h_part1, h_part2;
@@ -207,14 +206,14 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     mat_zz_p      B_f = conv<mat_zz_p>(B0);
     
     // Initialise constants
-    const unsigned int  n           = n_ISIS;
-    const unsigned int  m1          = m1_ISIS;
-    const unsigned int  m2          = m2_ISIS;
-    const unsigned int  m2d         = (m0 + 2)*d0;    // (m+2)·d
-    const unsigned int  idxhlrd     = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d    
-    const unsigned int  n256        = (256/d_hat);    
-    const unsigned int  t_d_hat     = (t0/d_hat);
-    const unsigned int  m1_n256_tau = 2*m1 + 2*(n256 + tau0);
+    const unsigned long n           = n_ISIS;
+    const unsigned long m1          = m1_ISIS;
+    const unsigned long m2          = m2_ISIS;
+    const unsigned long m2d         = (m0 + 2)*d0;    // (m+2)·d
+    const unsigned long idxhlrd     = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d    
+    const unsigned long n256        = (256/d_hat);    
+    const unsigned long t_d_hat     = (t0/d_hat);
+    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau0);
 
     // Initialise the "goth" constants
     // M1 := exp(sqrt(2(λ+1)/log e) * 1/α_1 + 1/2α_1^2
@@ -1269,12 +1268,12 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 // Output:
 // -  0 or 1:       reject or accept 
 //==============================================================================
-int  Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_I_t& Pi)
+long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_I_t& Pi)
 {
     zz_pPush push(q2_hat);
     // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))  
    
-    unsigned int         i, j, k;
+    unsigned long        i, j, k;
     Mat<zz_pX>           B, D2; //D2_2_1
     vec_zz_pX            t_B, z, d_1, acc_vec, coeffs_ones, sigma_ones;
     vec_zz_pX            r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, z_1_mod, z_2_mod;
@@ -1298,14 +1297,14 @@ int  Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     mat_zz_p      B_f = conv<mat_zz_p>(B0);
 
     // Initialise constants
-    const unsigned int  n           = n_ISIS;
-    const unsigned int  m1          = m1_ISIS;
-    const unsigned int  m2          = m2_ISIS;
-    const unsigned int  m2d         = (m0 + 2)*d0;    // (m+2)·d
-    const unsigned int  idxhlrd     = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d    
-    const unsigned int  n256        = (256/d_hat);
-    const unsigned int  t_d_hat     = (t0/d_hat);
-    const unsigned int  m1_n256_tau = 2*m1 + 2*(n256 + tau0);
+    const unsigned long n           = n_ISIS;
+    const unsigned long m1          = m1_ISIS;
+    const unsigned long m2          = m2_ISIS;
+    const unsigned long m2d         = (m0 + 2)*d0;    // (m+2)·d
+    const unsigned long idxhlrd     = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d    
+    const unsigned long n256        = (256/d_hat);
+    const unsigned long t_d_hat     = (t0/d_hat);
+    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau0);
     
     // Initialise the "goth" constants
     // (B_goth_s^2, B_goth_r^2) ← Bounds,   (B_goth_s^2, B_goth_r^2) ∈ Z^2

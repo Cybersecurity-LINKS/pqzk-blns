@@ -20,7 +20,6 @@
 void  Preprocessing_Com(vec_ZZ& s0, const vec_ZZ& s, const ZZ& B_goth2)
 {    
     // NOTE: assuming that current modulus is q1_hat (not q0)
-
     long    i;//j;
     ZZ      diff; //a1, a2, a3, a4;
     vec_ZZ  v;
@@ -111,8 +110,8 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     zz_pPush push(q1_hat); 
     // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))  
 
-    unsigned int        i, j, k, idx;
-    int                 rst, b1, b2, b3, bbar1, bbar2;
+    unsigned long       i, j, k, idx;
+    long                rst, b1, b2, b3, bbar1, bbar2;
     Mat<zz_pX>          B, D2;
     vec_zz_pX           u, s_1_mod, s_2_mod, g; //t_B;
     vec_zz_pX           h_part1, h_part2;
@@ -138,12 +137,12 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     vec_zz_p      u1 = conv<vec_zz_p>(u0);
 
     // Initialise constants    
-    const unsigned int  n           = n_Com;
-    const unsigned int  m1          = m1_Com;
-    const unsigned int  m2          = m2_Com;
-    const unsigned int  d_d_hat     = (d0/d_hat);
-    const unsigned int  n256        = (256/d_hat);
-    const unsigned int  m1_n256_tau = 2*m1 + 2*(n256 + tau0);
+    const unsigned long n           = n_Com;
+    const unsigned long m1          = m1_Com;
+    const unsigned long m2          = m2_Com;
+    const unsigned long d_d_hat     = (d0/d_hat);
+    const unsigned long n256        = (256/d_hat);
+    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau0);
 
     // Initialise the "goth" constants
     const RR  B_goth = sqrt(conv<RR>(B_goth2));
@@ -991,13 +990,13 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 // Output:
 // - 0 or 1:        reject or accept 
 //==============================================================================
-int  Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const PROOF_C_t& Pi)
+long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const PROOF_C_t& Pi)
 {
     zz_pPush push(q1_hat); 
     // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))  
 
-    unsigned int        i, j, k;
-    int                 b1, b2;
+    unsigned long       i, j, k;
+    long                b1, b2;
     Mat<zz_pX>          B, D2;
     vec_zz_pX           u, t_B, mu, z, tmp_vec, tmp_vec2, r_j, p_j;
     vec_zz_pX           d_1, acc_vec, z_1_mod, z_2_mod;
@@ -1018,12 +1017,12 @@ int  Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     vec_zz_p      u1 = conv<vec_zz_p>(u0);
 
     // Initialise constants and variables
-    const unsigned int  n           = n_Com;
-    const unsigned int  m1          = m1_Com;
-    const unsigned int  m2          = m2_Com;
-    const unsigned int  d_d_hat     = (d0/d_hat);
-    const unsigned int  n256        = (256/d_hat);
-    const unsigned int  m1_n256_tau = 2*m1 + 2*(n256 + tau0);
+    const unsigned long n           = n_Com;
+    const unsigned long m1          = m1_Com;
+    const unsigned long m2          = m2_Com;
+    const unsigned long d_d_hat     = (d0/d_hat);
+    const unsigned long n256        = (256/d_hat);
+    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau0);
 
     // Initialise the "goth" constants
     const RR  B_goth  = sqrt(conv<RR>(B_goth2));

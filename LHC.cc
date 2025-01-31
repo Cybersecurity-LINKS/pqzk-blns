@@ -16,11 +16,9 @@
 // - com:       commitment structure    
 // - st:        status structure
 //==============================================================================
-void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_ZZX& s, const vec_ZZX& y) 
-{    
-    zz_pPush push(q1_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))    
-
+void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_ZZX& s, const vec_ZZX& y) 
+{
+    // NOTE: assuming that current modulus is q1_hat (not q0)
     long        i, j, m, n, eta;
     RR          alpha_i, s_goth;    
     vec_ZZX     e_1, e_2, e_3, f_1, f_2, f_3; 
@@ -198,9 +196,9 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const int& index, const Mat<
 // Output:
 // - 0 | 1: reject or accept
 //==============================================================================
-int Rej(const int& index, const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
+long Rej(const long& index, const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 {
-    int i, j, m;
+    long i, j, m;
     RR u, mul, den, eq;
     ZZ dot_prod, norm2, v_ij;    
 
@@ -270,9 +268,9 @@ int Rej(const int& index, const vec_ZZX& z, const vec_ZZX& v, const RR& s, const
 // Output:
 // - 0 | 1: reject or accept
 //==============================================================================
-int Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M)
+long Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M)
 {
-    int i, len;
+    long i, len;
     RR u, mul, den, eq;
     ZZ dot_prod, norm2;    
 
@@ -328,9 +326,9 @@ int Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M)
 // Output:
 // - 0 | 1: reject or accept
 //==============================================================================
-int Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
+long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 {
-    int i, j, len;
+    long i, j, len;
     RR u, mul, den, eq;
     ZZ dot_prod, norm2, z_Z, v_Z;    
     
@@ -393,10 +391,9 @@ int Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 // - op:      list of (n + m + m) polynomials of d_hat length, if accept, 
 //            otherwise op = [] (i.e. op = ⊥, reject)
 //==============================================================================
-void LHC_Open(Vec<vec_ZZX>& op, const int& index, const ZZX& c, const Vec<vec_ZZX>& st)
+void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_ZZX>& st)
 {
-    long i, m, n;
-    int  b;
+    long i, m, n, b;
     RR alpha_i, s_goth, M_bar;
     vec_ZZX  e_1, e_2, e_3, f_1, f_2, f_3, z_1, z_2, z_3, z, v;
         
@@ -424,7 +421,7 @@ void LHC_Open(Vec<vec_ZZX>& op, const int& index, const ZZX& c, const Vec<vec_ZZ
     // # \overline{M}_1 (or 2)
     M_bar = exp( sqrt( RR(2*(lambda0 + 1)) / log2e_Const ) * 1/alpha_i + 1/(2*sqr(alpha_i)));
 
-    const int n2m = n + 2*m;
+    const long n2m = n + 2*m;
    
     // Initialize e_i, f_i, z_i, for i = 1, 2, 3
     e_1.SetLength(n);
@@ -534,12 +531,10 @@ void LHC_Open(Vec<vec_ZZX>& op, const int& index, const ZZX& c, const Vec<vec_ZZ
 // Output:
 // - 0 or 1:    reject or accept 
 //==============================================================================
-int LHC_Verify(const int& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const Vec<vec_zz_pX>& com, const ZZX& c, const vec_ZZX& z, const Vec<vec_ZZX>& op)
+long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const Vec<vec_zz_pX>& com, const ZZX& c, const vec_ZZX& z, const Vec<vec_ZZX>& op)
 {
-    zz_pPush push(q1_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat)) 
-    
-    int         i, j, m, n, flag;
+    // NOTE: assuming that current modulus is q1_hat (not q0)
+    long        i, j, m, n, flag;
     RR          alpha_i, s_goth, thres;
     vec_zz_pX   t_1, t_2, w_1, w_2, z_a, z_b, zi_mod; 
     vec_ZZX     z_1, z_2, z_3;

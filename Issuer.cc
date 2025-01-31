@@ -17,7 +17,7 @@
 //==============================================================================
 void I_KeyGen(IPK_t& ipk, mat_L& isk)
 {
-    unsigned int i;
+    unsigned long i;
 
     // Algorithm NTRU.TrapGen(q, d) in [BLNS23]
     NTRU_TrapGen(ipk.a1, isk);
@@ -75,8 +75,7 @@ void I_KeyGen(IPK_t& ipk, mat_L& isk)
 void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, const PROOF_C_t& Pi)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
-        
-    unsigned int    i, j, k, result;
+    unsigned long   i, j, k, result;
     zz_pX           a1, fx_u;
     vec_zz_pX       a2, c0, c1; //mex_prime;
     vec_ZZ          m_i, coeffs_m;
@@ -84,7 +83,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS
     vec_zz_p        u_vect, prod;   
     ZZ              B_goth2;
     
-    const unsigned int  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
     
     // 1. (a'_1, ... , a'_k) ← attrs',  a'_i ∈ {0, 1}∗

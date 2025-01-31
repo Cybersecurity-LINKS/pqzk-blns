@@ -19,7 +19,7 @@ typedef struct
     vec_ZZX     s;
     vec_ZZX     r;
     ZZ          x;
-    int         valid;
+    long        valid;
 } CRED_t;
 
 typedef struct
@@ -29,7 +29,7 @@ typedef struct
     Vec<string> attrs_prime;
     vec_ZZ      idx;
     PROOF_I_t   pi;
-    int         valid;
+    long        valid;
 } VP_t;
 
 

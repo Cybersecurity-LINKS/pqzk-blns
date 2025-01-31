@@ -17,7 +17,7 @@ typedef struct
     zz_pX           t, f0;
     vec_ZZX         z_1,  z_2;
     Vec<vec_ZZX>    op_1, op_2;
-    int             valid;
+    long            valid;
 } PROOF_C_t;
 
 #include "Issuer.h"
@@ -25,6 +25,6 @@ typedef struct
 
 void Preprocessing_Com(vec_ZZ& s1, const vec_ZZ& s, const ZZ& B_goth2);
 void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const vec_ZZ& w0);
-int  Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const PROOF_C_t& Pi);
+long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const PROOF_C_t& Pi);
 
 #endif

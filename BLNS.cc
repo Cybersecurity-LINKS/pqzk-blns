@@ -1,4 +1,4 @@
-// Copyright 2024 Fondazione LINKS
+// Copyright 2025 Fondazione LINKS
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ int main()
     STATE_t         state;
     CRED_t          cred;
     VP_t            VP;
-    int             iter, N, i, valid;
+    long            iter, N, i, valid;
     double          t1, t2, t3;  
         
 

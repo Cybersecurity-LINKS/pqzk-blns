@@ -153,8 +153,8 @@ void OGS_Ortho(mat_D& Bt, vec_D& Norms2, const mat_L& B)
 //==============================================================================
 void rot(mat_L& M, const ZZX& f)
 {
-    unsigned int    i, j, dfu;
-    int             df;
+    unsigned long   i, j, dfu;
+    long            df;
     
     M.SetDims(d0, d0);
     df = deg(f);
@@ -195,8 +195,8 @@ void rot(mat_L& M, const ZZX& f)
 //==============================================================================
 void rot_T(mat_zz_p& M, const zz_pX& f)
 {
-    unsigned int    i, j, dfu;
-    int             df;
+    unsigned long   i, j, dfu;
+    long            df;
 
     M.SetDims(d0, d0);
     df = deg(f);
@@ -239,7 +239,7 @@ void rot_T(mat_zz_p& M, const zz_pX& f)
 //==============================================================================
 void rot_vect( mat_zz_p& R, const vec_zz_pX& v )
 {
-    unsigned int    i, j, k, r, len;
+    unsigned long   i, j, k, r, len;
     mat_zz_p        M;
     
     len = v.length();
@@ -270,9 +270,9 @@ void rot_vect( mat_zz_p& R, const vec_zz_pX& v )
 // CoeffsX(x) - For an input polynomial vector x ∈ R^l, 
 //              it returns the coefficient vector of x, Coeffs(x) ∈ Z^(l*d)
 //==============================================================================
-void CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned int& l)
+void CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l)
 {
-    unsigned int    i, j, ld;
+    unsigned long   i, j, ld;
     
     ld = l * d0;   
     coeffs_x.SetLength(ld);
@@ -294,9 +294,9 @@ void CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned int& l)
 // CoeffsInv(c) - For an input vector of coefficients c ∈ Z^(l*d),
 //                it returns the polynomial vector x = Coeffs^{−1}(c) ∈ R^l_q
 //==============================================================================
-void CoeffsInv(vec_zz_pX& x, const vec_ZZ& c, const unsigned int& l)
+void CoeffsInv(vec_zz_pX& x, const vec_ZZ& c, const unsigned long& l)
 {
-    unsigned int    i, j;
+    unsigned long   i, j;
     
     x.SetLength(l);
    
@@ -319,9 +319,9 @@ void CoeffsInv(vec_zz_pX& x, const vec_ZZ& c, const unsigned int& l)
 // CoeffsInvX(c) - For an input vector of coefficients c ∈ Z^(l*d),
 //                 it returns the polynomial vector x = Coeffs^{−1}(c) ∈ R^l
 //==============================================================================
-void CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const unsigned int& l)
+void CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const unsigned long& l)
 {
-    unsigned int    i, j;
+    unsigned long   i, j;
     
     x.SetLength(l);
    
@@ -344,9 +344,9 @@ void CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const unsigned int& l)
 // CoeffsHat(x) - For an input polynomial vector x ∈ R_hat^l, 
 //                it returns the coefficient vector of x, Coeffs(x) ∈ Z^(l*d_hat)
 //==============================================================================
-void CoeffsHat(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned int& l)
+void CoeffsHat(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l)
 {
-    unsigned int    i, j, ld;
+    unsigned long   i, j, ld;
     
     ld = l * d_hat;   
     coeffs_x.SetLength(ld);    
@@ -368,9 +368,9 @@ void CoeffsHat(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned int& l)
 // CoeffsInvHat(c) - For an input vector of coefficients c ∈ Z^(l*d_hat)_(q_hat),
 //                   it returns the polynomial vector x = Coeffs^{−1}(c) ∈ R_hat^l_(q_hat)
 //==============================================================================
-void CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const unsigned int& l)
+void CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l)
 {
-    unsigned int    i, j;
+    unsigned long   i, j;
     
     x.SetLength(l);
    
@@ -393,9 +393,9 @@ void CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const unsigned int& l)
 // CoeffsInvHatX(c) - For an input vector of coefficients c ∈ Z^(l*d_hat),
 //                    it returns the polynomial vector x = Coeffs^{−1}(c) ∈ R_hat^l
 //==============================================================================
-void CoeffsInvHatX(vec_ZZX& x, const vec_ZZ& c, const unsigned int& l)
+void CoeffsInvHatX(vec_ZZX& x, const vec_ZZ& c, const unsigned long& l)
 {
-    unsigned int    i, j;
+    unsigned long   i, j;
     
     x.SetLength(l);
    
@@ -421,9 +421,9 @@ void CoeffsInvHatX(vec_ZZX& x, const vec_ZZ& c, const unsigned int& l)
 //                   It takes as input a polynomial vector and its degree.
 //                   It outputs the result of the automorphism.
 //==============================================================================
-void sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const unsigned int& d)
+void sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const unsigned long& d)
 {    
-    unsigned int i, j, len;
+    unsigned long i, j, len;
   
     len = M.length();  
     N.SetLength(len);
@@ -451,8 +451,8 @@ void sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const unsigned int& d)
 //=====================================================================================
 zz_pX  poly_mult(const vec_zz_pX& f, const vec_zz_pX& g)
 {
-    unsigned int    i, len;
-    zz_pX           h;
+    long    i, len;
+    zz_pX   h;
     
     len = f.length();
 
@@ -478,8 +478,8 @@ zz_pX  poly_mult(const vec_zz_pX& f, const vec_zz_pX& g)
 //=====================================================================================
 zz_pX  poly_mult_hat(const vec_zz_pX& f, const vec_zz_pX& g)
 {
-    unsigned int    i, len;
-    zz_pX           h;
+    long    i, len;
+    zz_pX   h;
     
     len = f.length();
 
@@ -507,10 +507,10 @@ zz_pX  poly_mult_hat(const vec_zz_pX& f, const vec_zz_pX& g)
 //=====================================================================================
 zz_pX   Compute_f(const mat_zz_p& B_f, const ZZ& x)
 {    
-    const unsigned int n = 1;    
+    const unsigned long n = 1;    
     // NOTE: assuming  n = 1, thus B_f ∈ Z^(d×t)_q  and  f(x) ∈ R_q 
 
-    unsigned int    i;    
+    unsigned long   i;    
     vec_zz_p        enc_x;
     vec_zz_pX       vec_f;
     zz_pX           f_x;
@@ -555,7 +555,7 @@ ZZ  Norm2(const vec_ZZ& v)
 //==============================================================================
 // Computes the squared norm of a vector v of polynomials with d coefficients.
 //==============================================================================
-ZZ  Norm2X(const vec_ZZX& v, const unsigned int& d)
+ZZ  Norm2X(const vec_ZZX& v, const long& d)
 {
     long    i, j;
     ZZ      norm2;

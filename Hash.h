@@ -11,7 +11,7 @@ typedef      Vec<Mat<zz_pX>>   CRS_t;
 typedef  Vec<Vec<Mat<zz_pX>>>  CRS2_t;
 
 
-long int    CustomHash(const long int x, const size_t out_len);
+long     CustomHash(const long  x, const size_t out_len);
 
 EVP_MD_CTX* Hash_Init(const string& inputStr);
 

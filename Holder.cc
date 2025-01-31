@@ -16,8 +16,7 @@
 void H_Init(CRS2_t& crs, Vec<string>& attrs, const string& inputStr)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
-    
-    unsigned int    i;
+    unsigned long   i;
     
     // Generation of crs structure, using H_crs custom Hash function     
     Hcrs(crs, inputStr);
@@ -54,8 +53,7 @@ void H_Init(CRS2_t& crs, Vec<string>& attrs, const string& inputStr)
 void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
-    
-    unsigned int    i, j, k;
+    unsigned long   i, j, k;
     vec_zz_pX       c0, c1;
     vec_ZZX         mex, r;
     vec_ZZ          m_i, coeffs_m, coeffs_r, s;
@@ -63,7 +61,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
     vec_zz_p        u_vect, prod;
     ZZ              range, B_goth2;
 
-    const unsigned int  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
        
     // 1. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗
@@ -235,8 +233,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
 void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_t& state)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
-
-    unsigned int    i, j;
+    unsigned long   i, j;
     zz_pX           a1, left, right;
     vec_zz_pX       a2, c0, c1, a;
     vec_ZZX         m, r, s;
@@ -367,8 +364,7 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
 void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const mat_zz_p& B_f, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
-    
-    unsigned int    i, j, k;
+    unsigned long   i, j, k;
     zz_pX           a1;
     vec_zz_pX       a2, c0, c1, a; 
     vec_ZZX         s, r; //mex
@@ -379,9 +375,9 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     vec_ZZ          Bounds;
     Vec<vec_ZZ>     sig;
 
-    const unsigned int  m2d     = (m0 + 2)*d0;    // (m+2)·d
-    const unsigned int  lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
-    const unsigned int  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const unsigned long m2d     = (m0 + 2)*d0;    // (m+2)·d
+    const unsigned long lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
+    const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
        
     // 1. (a_1, ... , a_l) ← attrs,   a_i ∈ {0, 1}∗

@@ -13,12 +13,11 @@
 // Output:
 // -  1 or 0:        accept if π is valid, reject if the proof is invalid
 //==============================================================================
-int  V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f)
+long V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
-    
-    unsigned int    i, j, k;
-    int             out;
+    unsigned long   i, j, k;
+    long            out;
     zz_pX           a1;
     vec_zz_pX       a2, c0, c1, a; //mex;
     vec_ZZ          m_i, coeffs_m;
@@ -27,9 +26,9 @@ int  V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
     vec_ZZ          Bounds;
     ZZ              mul;
 
-    const unsigned int  m2d     = (m0 + 2)*d0;    // (m+2)·d
-    const unsigned int  lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
-    const unsigned int  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const unsigned long m2d     = (m0 + 2)*d0;    // (m+2)·d
+    const unsigned long lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
+    const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
     
     // 1. (a′_1, ··· , a′_ℓ) ← attrs′,   a′_i ∈ {0, 1}∗

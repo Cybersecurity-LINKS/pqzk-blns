@@ -12,18 +12,18 @@
 // Output:
 // - y:         integer (out_len bytes) 
 //==============================================================================
-long int CustomHash(const long int x, const size_t out_len) 
+long  CustomHash(const long  x, const size_t out_len) 
 {
     EVP_MD_CTX *mdctx;
     const EVP_MD *md;
     char alg[] = "shake256";
-    long int y = 0;
+    long  y = 0;
 
 
-    unsigned char* x_arr = new unsigned char[sizeof(long int)];
+    unsigned char* x_arr = new unsigned char[sizeof(long )];
     unsigned char* y_arr = new unsigned char[out_len];
 
-    memcpy(x_arr, &x, sizeof(long int));
+    memcpy(x_arr, &x, sizeof(long ));
 
     md = EVP_get_digestbyname(alg);
     if (md == NULL) {
@@ -56,7 +56,7 @@ long int CustomHash(const long int x, const size_t out_len)
     EVP_MD_CTX_free(mdctx);
 
     if (out_len > sizeof(y)) {
-        memcpy(&y, y_arr, sizeof(long int));
+        memcpy(&y, y_arr, sizeof(long ));
     } else {
         memcpy(&y, y_arr, out_len);
     }
@@ -121,7 +121,7 @@ void Hash_zz_pX(zz_pX& out_poly, EVP_MD_CTX *mdctx, const long& n_coeffs, const 
 {    
     // NOTE: the current modulus (q_hat or q0) must already be set by the calling function
 
-    int i;
+    long i;
     unsigned char* y_arr = new unsigned char[b_coeffs];   
            
     out_poly.SetLength(n_coeffs);
@@ -159,7 +159,6 @@ void Hash_zz_pX(zz_pX& out_poly, EVP_MD_CTX *mdctx, const long& n_coeffs, const 
 void Hash_v_zz_p(vec_zz_p& out_vec, EVP_MD_CTX *mdctx, const long& n_elems, const size_t& b_num)
 {    
     // NOTE: the current modulus (q_hat or q0) must already be set by the calling function
-
     long      i;
     unsigned char* y_arr = new unsigned char[b_num];    
 
@@ -280,7 +279,7 @@ void Hash_ZZ_xi0(ZZ& out, EVP_MD_CTX *mdctx, const size_t& b_num)
 //==============================================================================
 void Hcrs(CRS2_t& crs, const string& inputStr)
 {
-    int                     i, j, n, m1, m2, n256;
+    long                    i, j, n, m1, m2, n256;
     EVP_MD_CTX              *mdctx;
     size_t                  b_coeffs;
        
@@ -523,10 +522,8 @@ void HCom1(mat_L& R_goth, const string& inputStr)
 //==============================================================================
 void HCom2(mat_zz_p& gamma, const string& inputStr)
 {
-    zz_pPush push(q1_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
-
-    int         i, n257;
+    // NOTE: assuming that current modulus is q1_hat (not q0)
+    long        i, n257;
     EVP_MD_CTX *mdctx; 
     
     mdctx = Hash_Init(inputStr); 
@@ -563,10 +560,8 @@ void HCom2(mat_zz_p& gamma, const string& inputStr)
 //==============================================================================
 void HCom3(vec_zz_pX& mu, const string& inputStr)
 {
-    zz_pPush push(q1_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
-    
-    int         i;
+    // NOTE: assuming that current modulus is q1_hat (not q0)
+    long        i;
     EVP_MD_CTX *mdctx;
 
     // Compute the minimum number of bytes to represent each coefficient
@@ -601,10 +596,7 @@ void HCom3(vec_zz_pX& mu, const string& inputStr)
 //==============================================================================
 void HCom4(ZZX& c, const string& inputStr)
 {
-    zz_pPush push(q1_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
-       
-    int         i;
+    long        i;
     EVP_MD_CTX *mdctx;    
     ZZ          norm1_c, c_i;    
     ZZX         c_2k;
@@ -726,10 +718,8 @@ void HISIS1(mat_L& R_goth, const string& inputStr)
 //==============================================================================
 void HISIS2(mat_zz_p& gamma, const string& inputStr)
 {
-    zz_pPush push(q2_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))
-
-    int         i, n259;       
+    // NOTE: assuming that current modulus is q2_hat (not q0)
+    long        i, n259;       
     EVP_MD_CTX *mdctx; 
     
     mdctx = Hash_Init(inputStr); 
@@ -767,10 +757,8 @@ void HISIS2(mat_zz_p& gamma, const string& inputStr)
 void HISIS3(vec_zz_pX& mu, const string& inputStr)
 // NOTE: HISIS3 is identical to HCom3, apart the modulo  
 {     
-    zz_pPush push(q2_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))
-    
-    int         i;
+    // NOTE: assuming that current modulus is q2_hat (not q0)
+    long        i;
     EVP_MD_CTX *mdctx;
 
     // Compute the minimum number of bytes to represent each coefficient
@@ -806,10 +794,7 @@ void HISIS3(vec_zz_pX& mu, const string& inputStr)
 void HISIS4(ZZX& c, const string& inputStr)
 // NOTE: HISIS4 is identical to HCom4, apart the modulo
 {
-    zz_pPush push(q2_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))
-       
-    int         i;
+    long        i;
     EVP_MD_CTX *mdctx;    
     ZZ          norm1_c, c_i;    
     ZZX         c_2k;
@@ -899,18 +884,18 @@ void HM(vec_ZZ& m_i, const string& a_i)
 {
     long        k, range;
     EVP_MD_CTX *mdctx;
-    vec_zz_p    tmp;
     
-    mdctx = Hash_Init(a_i);
-
     // Compute the numerical range of each coefficient
     range = 2*psi0 + 1;
 
     zz_pPush push(range);
     // NOTE: backup current modulus q0, temporarily set to range (i.e., zz_p::init(range))
+    vec_zz_p    tmp;
     
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(range) / 8.0);
+
+    mdctx = Hash_Init(a_i);
 
     // Random generation of m_i (modulo range)
     Hash_v_zz_p(tmp, mdctx, h0, b_coeffs);
