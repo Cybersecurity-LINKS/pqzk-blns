@@ -210,7 +210,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS
     fx_u = Compute_f(B_f, x) + u;
               
     // Gaussian sampling  
-    GSampler(s_0, w, ipk.a1, ipk.a2, isk, RR(sigma0), fx_u);
+    GSampler(s_0, w, ipk.a1, ipk.a2, isk, sigma0, fx_u);
         
 
     // 12. ρ_2 ← (s_0, w, x),   ρ_2 ∈ Z^(2d) × R^m × N

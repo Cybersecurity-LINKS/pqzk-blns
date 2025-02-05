@@ -20,7 +20,7 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long        i, j, m, n, eta;
-    RR          alpha_i, s_goth;    
+    RR          alpha_i;    
     vec_ZZX     e_1, e_2, e_3, f_1, f_2, f_3; 
     vec_zz_pX   t_1, t_2, w_1, w_2;
     ZZX         acc_1, acc_2;
@@ -46,7 +46,8 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat
         m = 0;
     }     
     // \overline{\mathfrak{s}}_1 (or 2)    
-    s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR((n + 2*m) * d0));
+    const RR     s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR((n + 2*m) * d0));
+    const double s_goth_d = conv<double>(s_goth);
                
     // Random generation of e_i        
     e_1.SetLength(n);
@@ -120,7 +121,7 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat
 
         for(j=0; j<d_hat; j++)
         {
-            ZSampler(f_1[i][j], s_goth, RR(0));
+            ZSampler(f_1[i][j], s_goth_d, 0);
         }
     }
     for(i=0; i<m; i++)
@@ -130,8 +131,8 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat
 
         for(j=0; j<d_hat; j++)
         {
-            ZSampler(f_2[i][j], s_goth, RR(0));
-            ZSampler(f_3[i][j], s_goth, RR(0));
+            ZSampler(f_2[i][j], s_goth_d, 0);
+            ZSampler(f_3[i][j], s_goth_d, 0);
         }
     }
 
@@ -393,9 +394,9 @@ long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 //==============================================================================
 void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_ZZX>& st)
 {
-    long i, m, n, b;
-    RR alpha_i, s_goth, M_bar;
-    vec_ZZX  e_1, e_2, e_3, f_1, f_2, f_3, z_1, z_2, z_3, z, v;
+    long    i, m, n, b;
+    RR      alpha_i;
+    vec_ZZX e_1, e_2, e_3, f_1, f_2, f_3, z_1, z_2, z_3, z, v;
         
     // Manage the invocation with index 1 or 2  
     n = n_i;
@@ -417,9 +418,10 @@ void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_Z
         m = 0;
     }     
     // \overline{\mathfrak{s}}_1 (or 2)
-    s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR((n + 2*m) * d0));
+    const RR s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR((n + 2*m) * d0));
+
     // # \overline{M}_1 (or 2)
-    M_bar = exp( sqrt( RR(2*(lambda0 + 1)) / log2e_Const ) * 1/alpha_i + 1/(2*sqr(alpha_i)));
+    const RR M_bar = exp( sqrt( RR(2*(lambda0 + 1)) / log2e_Const ) * 1/alpha_i + 1/(2*sqr(alpha_i)));
 
     const long n2m = n + 2*m;
    

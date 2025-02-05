@@ -103,7 +103,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
         for(j=0; j<d0; j++)     
         {
             r[i][j] = RandomBnd(range) - psi0;
-            // NOTE: each coefficient is in the range (−psi0, psi0);
+            // NOTE: each coefficient is in the range [−psi0, psi0];
         }
     }
 

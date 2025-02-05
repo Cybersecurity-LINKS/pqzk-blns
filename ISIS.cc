@@ -253,6 +253,9 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     const RR  s1_goth = RR(alpha_1 * nu0) * B_goth;
     const RR  s2_goth = RR(alpha_2 * nu0) * sqrt( RR(m2*d_hat) );
     const RR  s3_goth = RR(alpha_3 * w_max) * B_goth;
+    const double s1_goth_d = conv<double>(s1_goth);
+    const double s2_goth_d = conv<double>(s2_goth);
+    const double s3_goth_d = conv<double>(s3_goth);
 
 
     // 4. (s0, r0, u0) ← w0    
@@ -494,7 +497,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
             for(j=0; j<d_hat; j++)
             {
-                ZSampler(y_1[i][j], s1_goth, RR(0));
+                ZSampler(y_1[i][j], s1_goth_d, 0);
                 // NOTE: implicitly sample the vector of coefficients and then convert it to a polynomial vector
             }
         }
@@ -505,7 +508,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
             for(j=0; j<d_hat; j++)
             {
-                ZSampler(y_2[i][j], s2_goth, RR(0));
+                ZSampler(y_2[i][j], s2_goth_d, 0);
                 // NOTE: implicitly sample the vector of coefficients and then convert it to a polynomial vector
             }
         }
@@ -516,7 +519,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
             for(j=0; j<d_hat; j++)
             {
-                ZSampler(y_3[i][j], s3_goth, RR(0));
+                ZSampler(y_3[i][j], s3_goth_d, 0);
                 // NOTE: implicitly sample the vector of coefficients and then convert it to a polynomial vector
             }
         }

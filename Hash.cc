@@ -872,13 +872,13 @@ void HISIS4(ZZX& c, const string& inputStr)
 //==============================================================================
 // HM     -     H_M, custom Hash function needed in BLNS for hashing attributes. 
 //              It hashes an attribute a_i into a vector of length h0, 
-//              with coefficients in the range (−ψ, ψ).
+//              with coefficients in the range [−ψ, ψ].
 // 
 // Input:
 // - a_i:       attribute, string of bits of arbitrary length a_i ∈ {0, 1}∗
 //
 // Output:
-// - m_i:       vector with h0 coefficients in the range (−psi0, psi0)
+// - m_i:       vector with h0 coefficients in the range [−psi0, psi0]
 //==============================================================================
 void HM(vec_ZZ& m_i, const string& a_i)
 {
@@ -904,7 +904,7 @@ void HM(vec_ZZ& m_i, const string& a_i)
     for(k=0; k<h0; k++)
     {
         m_i[k] = m_i[k] - psi0;
-        // NOTE: now each coefficient is in the range (−psi0, psi0)
+        // NOTE: now each coefficient is in the range [−psi0, psi0]
     }
     
     EVP_MD_CTX_free(mdctx);
