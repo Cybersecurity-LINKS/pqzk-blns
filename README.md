@@ -1,7 +1,7 @@
 BLNS Framework for PQ Anonymous Verifiable Credentials
 ======================================================
 
-This repository contains a proof-of-concept implementation of the framework for Post-Quantum (PQ) Anonymous Verifiable Credentials defined by Bootle, Lyubashevsky, Nguyen, and Sorniotti (BLNS) and available in https://eprint.iacr.org/2023/560.pdf
+This repository contains an implementation of the framework for Post-Quantum (PQ) Anonymous Verifiable Credentials defined by Bootle, Lyubashevsky, Nguyen, and Sorniotti (BLNS) and available in https://eprint.iacr.org/2023/560.pdf
 
 
 ## Requirements
