@@ -7,30 +7,31 @@
 #include "params.h"
 
 
-typedef      Vec<Mat<ZZ_pX>>   CRS_Data;
-typedef  Vec<Vec<Mat<ZZ_pX>>>  CRS_Data2;
+typedef      Vec<Mat<zz_pX>>   CRS_t;
+typedef  Vec<Vec<Mat<zz_pX>>>  CRS2_t;
 
 
-long int            CustomHash(const long int x, const size_t out_len);
+long     CustomHash(const long  x, const size_t out_len);
 
-EVP_MD_CTX*         Hash_Init(const string inputStr);
-ZZ_pX               Hash_ZZ_pX(EVP_MD_CTX *mdctx, const long n_coeffs, const size_t b_coeffs);
-vec_ZZ_p            Hash_v_ZZp(EVP_MD_CTX *mdctx, const long n_elems, const size_t b_num);
-vec_ZZ              Hash_bits(EVP_MD_CTX *mdctx, const long n_elems);
-ZZ                  Hash_ZZ_xi0(EVP_MD_CTX *mdctx, const size_t b_num);
+EVP_MD_CTX* Hash_Init(const string& inputStr);
 
-CRS_Data2           Hcrs(const string inputStr);
+void Hash_zz_pX(zz_pX& out_poly, EVP_MD_CTX *mdctx, const long& n_coeffs, const size_t& b_coeffs);
+void Hash_v_zz_p(vec_zz_p& out_vec, EVP_MD_CTX *mdctx, const long& n_elems, const size_t& b_num);
+void Hash_R_goth(vec_L& out, EVP_MD_CTX *mdctx, const long& n_elems);
+void Hash_ZZ_xi0(ZZ& out, EVP_MD_CTX *mdctx, const size_t& b_num);
 
-Vec<Mat<vec_ZZ>>    HCom1(const string inputStr);
-mat_ZZ_p            HCom2(const string inputStr);
-vec_ZZ_pX           HCom3(const string inputStr);
-ZZX                 HCom4(const string inputStr);
+void Hcrs(CRS2_t& crs, const string& inputStr);
 
-Vec<Mat<vec_ZZ>>    HISIS1(const string inputStr);
-mat_ZZ_p            HISIS2(const string inputStr);
-vec_ZZ_pX           HISIS3(const string inputStr);
-ZZX                 HISIS4(const string inputStr);
+void HCom1(mat_L& R_goth, const string& inputStr);
+void HCom2(mat_zz_p& gamma, const string& inputStr);
+void HCom3(vec_zz_pX& mu, const string& inputStr);
+void HCom4(ZZX& c, const string& inputStr);
 
-vec_ZZ              HM(const string a_i);
+void HISIS1(mat_L& R_goth, const string& inputStr);
+void HISIS2(mat_zz_p& gamma, const string& inputStr);
+void HISIS3(vec_zz_pX& mu, const string& inputStr);
+void HISIS4(ZZX& c, const string& inputStr);
+
+void HM(vec_ZZ& m_i, const string& a_i);
 
 #endif

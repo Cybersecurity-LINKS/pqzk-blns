@@ -8,22 +8,23 @@
 #include "Hash.h"
 #include "Squares.h"
 
-
 typedef struct
 {
-    vec_ZZ_pX       t_A, t_y, t_g, w;
-    Vec<vec_ZZ_pX>  com_1, com_2;
+    vec_zz_pX       t_A, t_y, t_g, w;
+    Vec<vec_zz_pX>  com_1, com_2;
     vec_ZZ          z_3;
-    vec_ZZ_pX       h;
-    ZZ_pX           t, f0;
+    vec_zz_pX       h;
+    zz_pX           t, f0;
     vec_ZZX         z_1,  z_2;
     Vec<vec_ZZX>    op_1, op_2;
-    int             valid;
-} PROOF_Com;
+    long            valid;
+} PROOF_C_t;
+
+#include "Issuer.h"
 
 
-void       Preprocessing_Com(vec_ZZ& s1, const vec_ZZ& s, const ZZ B_goth2);
-PROOF_Com  Prove_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const vec_ZZ& w0);
-int        Verify_Com(const CRS_Data& crs, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ B_goth2, const PROOF_Com& Pi);
+void Preprocessing_Com(vec_ZZ& s1, const vec_ZZ& s, const ZZ& B_goth2);
+void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const vec_ZZ& w0);
+long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const PROOF_C_t& Pi);
 
 #endif

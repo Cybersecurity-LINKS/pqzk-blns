@@ -6,6 +6,6 @@
 #include "ISIS.h"
 
 
-int  V_Verify(const VP_STRUCT& VP, const CRS_Data2& crs, const mat_ZZ_p& B_f);
+long V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f);
 
 #endif

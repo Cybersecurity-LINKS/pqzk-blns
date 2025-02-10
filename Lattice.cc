@@ -14,21 +14,21 @@
 // NOTE: Algorithm 2 Master Keygen(N, q) at pag. 15 in [DLP14]
 //       equivalent to algorithm NTRU.TrapGen(q, d) in [BLNS23]  
 //==============================================================================
-void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
+void NTRU_TrapGen(zz_pX& a1, mat_L& B)
 {
     long    i, j, valid;
     ZZX     f, g, F, G, fr, gr, num, den, inv_den, iphi, a, b, rho_f, rho_g, k;
-    ZZ_pX   inv_f;
+    zz_pX   inv_f;
     ZZ      acc, res, out, R_f, R_g, u, v;
     RR      gamma, gamma2;
     mat_L   A;
 
-    const RR max_gamma  = RR(1.17) * sqrt( RR(q0) );
-    const ZZ_pX  phi_q  = conv<ZZ_pX>(phi);
-
-
+    const ZZ    q          = conv<ZZ>(q0);
+    const ZZX   phi         = Phi();
+    const RR    max_gamma   = RR(1.17) * sqrt( RR(q0) );
+    
     // 1. σ_f ← 1.17*√(q/2d),  σ_f ∈ R
-    const RR sigma_f    = RR(1.17) * sqrt( RR(q0) / RR(2*d0) );
+    const double sigma_f    = (double)(1.17) * sqrt( (double)(q0) / (double)(2*d0) );
     
     
     // Loop to find a valid basis (see steps 10, 13, 15)
@@ -42,11 +42,11 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
         
         // 5. f ← Sum_{i=0}^{d−1}(f_i * x^i),  f ∈ R
         f.SetLength(d0);
-        f = polySampler(sigma_f);
+        polySampler(f, sigma_f);
 
         // 6. g ← Sum_{i=0}^{d−1}(g_i * x^i),  g ∈ R
         g.SetLength(d0);
-        g = polySampler(sigma_f);  
+        polySampler(g, sigma_f);
 
         // 7. fr ← f_0 − Sum_{i=0}^{d−1}(f_(d−i) * x^i),  fr ∈ R
         fr.SetLength(d0);
@@ -81,12 +81,12 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
         
         // Compute gamma2 = ∥(q*fr /(f*fr+g*gr)), (q*gr /(f*fr+g*gr))∥
         den.SetLength(d0);
-        den = (f * fr + g * gr) % (phi);
+        den = ModPhi(f * fr + g * gr);
         
         // inv_den = inv(den) % phi
         XGCD(res, inv_den, iphi, den, phi, 0);
-        a = (fr * inv_den) % (phi);
-        b = (gr * inv_den) % (phi);
+        a = ModPhi(fr * inv_den);
+        b = ModPhi(gr * inv_den);
         acc = 0;
         
         for(i=0; i<d0; i++)
@@ -120,7 +120,7 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
         XGCD(R_f, rho_f, iphi, -f, phi, 0); 
         
         // 13.2 if GCD(R_f, q) ≠ 1,  go to step 2
-        if(GCD(R_f, q1)!=1)
+        if(GCD(R_f, q)!=1)
         {
             valid = 0;
             continue; // skip next steps, go to 2
@@ -155,11 +155,11 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
 
     // 16. F ← q·v·ρ_g F ∈ R
     F.SetLength(d0);
-    F =  q1 * v * rho_g;
+    F =  q * v * rho_g;
 
     // 17. G ← −q·u·ρ_f G ∈ R
     G.SetLength(d0);  
-    G = -q1 * u * rho_f;
+    G = -q * u * rho_f;
 
     k = 1;
 
@@ -167,10 +167,10 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
     while( deg(k) >= 0 )
     {
         // 18. k = [(F*fr + G*gr)/(f*fr + g*gr)] ∈ R
-        num = (F * fr + G * gr) % (phi);
+        num = ModPhi(F * fr + G * gr);
         // den = (f * fr + g * gr) % (phi);    
         // XGCD(res, inv_den, iphi, den, phi, 0);    
-        k = (num * inv_den) % (phi);
+        k = ModPhi(num * inv_den);
                 
         for(i=0; i<d0; i++)
         {
@@ -179,16 +179,16 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
         }
         
         // 19. F ← F − k*f,  F ∈ R
-        F = (F - k*f) % (phi);
+        F = ModPhi(F - k*f);
 
         // 20. G ← G − k*g,  G ∈ R
-        G = (G - k*g) % (phi);
+        G = ModPhi(G - k*g);
     }
           
     // 21. a1 ← g*f^(−1) mod q ∈ R_q   
     a1.SetLength(d0);
-    inv_f = InvMod(conv<ZZ_pX>(f), phi_q);
-    a1    = ( conv<ZZ_pX>(g) * inv_f ) % (phi_q);
+    inv_f = InvMod( conv<zz_pX>(f), conv<zz_pX>(phi) );
+    a1    = ModPhi_q( conv<zz_pX>(g) * inv_f );
 
     
     // 22. B ← [rot(g) −rot(f); 
@@ -258,23 +258,20 @@ void NTRU_TrapGen(ZZ_pX& a1, mat_L& B)
 //       Dimension n in [DLP14] corresponds to 2*d0 in [BLNS23]
 // NOTE: Optimized version, with OGS_Ortho & all double instead of RR.
 //==============================================================================
-void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
+void preGSampler(vec_ZZ& v, const mat_L& B, const double& sigma, const vec_ZZ& c)
 {
     long    i, valid;
     mat_D   Bt;
-    vec_D   Norms2;
-    RR      norm2;
+    vec_D   Norms2;    
     vec_ZZ  ci, zibi;
-    RR      cpi, spi;
+    double  cpi, spi;
     ZZ      zi;
 
-    const ZZ thres_s = sqr( ZZ(sigma0) ) * ZZ(2*d0);     
+    const ZZ thres_s = sqr( ZZ(sigma0) ) * ZZ(2*d0);
 
     zibi.SetLength(2*d0);
 
     // 1. (b˜_1, ..., b˜_(2d)) ← GramSchmidt.Orthogonalization(B),   b˜_i ∈ R^(2d)
-    // GS_Ortho(Bt, Norms2, B);         
-    // MGS_Ortho(Bt, Norms2, B);
     OGS_Ortho(Bt, Norms2, B);
 
 
@@ -295,14 +292,13 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
         for(i=(2*d0-1); i>=0; i--)    
         {
             // 5. c′_i ← ⟨c_i, b˜_i⟩ / ∥b˜_i∥^2,   c′_i ∈ R
-            norm2 = conv<RR>( Norms2[i] );
-            cpi   = conv<RR>( InnerProdD( conv<vec_D>(ci), Bt[i] ) ) / norm2;
+            cpi   = InnerProdD( conv<vec_D>(ci), Bt[i] ) / Norms2[i];
 
             // 6. σ′_i ← σ / ∥b˜_i∥,   σ′_i ∈ R
-            spi = sigma / sqrt(norm2);
+            spi = sigma / sqrt(Norms2[i]);
 
             // 7. z_i ← ZSampler(σ′_i, c′_i),   z_i ∈ Z
-            zi = ZSampler(spi, cpi); 
+            ZSampler(zi, spi, cpi); 
 
             // 8. c_(i−1) ← c_i − z_i*b_i,   c_(i−1) ∈ Z^(2d)
             zibi = zi * conv<vec_ZZ>( B[i] );
@@ -338,15 +334,15 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const RR& sigma, const vec_ZZ& c)
 // - s:     short vector,       s ∈ Z^(2d)
 // - w:     polynomial vector,  w ∈ R^m
 //==============================================================================
-void GSampler(vec_ZZ& s, vec_ZZX& w, const ZZ_pX h, const vec_ZZ_pX a, const mat_L& B, const RR sigma, const ZZ_pX d)
+void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const mat_L& B, const double& sigma, const zz_pX& d)
 {
-    long            i, j, valid;  
-    ZZX             u;
-    mat_ZZ          A, Id;
-    mat_L    R;        
-    vec_ZZ          c, d_u, v;  
+    long    i, j, valid;  
+    ZZX     u;
+    mat_ZZ  A, Id;
+    mat_L   R;        
+    vec_ZZ  c, d_u, v;  
 
-    const ZZ        thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
+    const ZZ thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
  
     // NOTE: loop to find a valid w (i.e. small norm, see Holder.VerCred2, row 5)
     valid = 0;
@@ -364,10 +360,10 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const ZZ_pX h, const vec_ZZ_pX a, const mat
         for(i=0; i<m0; i++)
         {
             // 4. w_i ← polySampler(σ, 0),  w_i ∈ R     
-            w[i] = polySampler(sigma);
+            polySampler(w[i], sigma);
 
             // 5. u ← u + w_i * a_i,   u ∈ R            
-            u += (( w[i] * conv<ZZX>( a[i]) ) % phi );
+            u += ModPhi( w[i] * conv<ZZX>( a[i]) );
         }
         // 6. w ← (w_1, ... , w_m),   w ∈ R^m 
         
@@ -450,12 +446,12 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const ZZ_pX h, const vec_ZZ_pX a, const mat
 // Output:
 // - x:     integer sampled from the discrete Gaussian distribution
 // ==============================================================================
-ZZ ZSampler(const RR sigma, const RR c) 
+void ZSampler(ZZ& x, const double& sigma, const double& c) 
 {
-    long b;
-    ZZ   x, left, right, range, c_int;    
-    RR   delta, iden, val, p, u, c_floor, c_frac; 
-            
+    long    b;
+    ZZ      left, right, range, c_int;    
+    double  delta, iden, val, p, u, c_floor, c_frac;
+
     if (sigma<=0)
     {
         cout << "ERROR! Sigma must be > 0 (sigma = " << (sigma) << ")" << endl;
@@ -468,7 +464,7 @@ ZZ ZSampler(const RR sigma, const RR c)
     c_int   = conv<ZZ>(c_floor);
                
     b = 0;
-    delta = sigma * conv<RR>(log2(lambda0));
+    delta = sigma * log2(lambda0);
     left  = conv<ZZ>(ceil ( c_frac - delta ));
     right = conv<ZZ>(floor( c_frac + delta ));
     range = right - left + 1;
@@ -478,20 +474,21 @@ ZZ ZSampler(const RR sigma, const RR c)
         cout << "WARNING! ZSampler: small sigma (sigma = "   << sigma << ", range = " << range << ")" << endl;
         
         // NOTE: workaround with inaccurate sigma, but at least correct center c
-        u = random_RR();
+        u = conv<double>(random_RR());
 
         if (u >= c_frac)
         {
-            return c_int;
+            x = c_int;
+            return;
         }
         else // (u < c_frac)
         {
-            return (c_int+1);
+            x = c_int+1;
+            return;
         }
     }
 
-    // iden   = 1 / (2 * sigma * sigma);    
-    iden   = 1 / (2 * sqr(sigma));
+    iden   = 1 / (2 * sigma * sigma);
 
     while(b == 0)
     {     
@@ -500,15 +497,16 @@ ZZ ZSampler(const RR sigma, const RR c)
         // NOTE: add c_int at the end, to reduce numerical approximations
         
         // p ← ρ_{σ,c}(x)        
-        val = -sqr(conv<RR>(x) - c_frac) * iden;
+        val = conv<double>(x) - c_frac;
+        val = -(val * val) * iden;
         
         if (val > 0)
         {
             p = 1;
         }
-        else if (val < -1e17)
+        else if (val < -1000)
         {
-            // NOTE: avoid RR: overflow error for exp(val)
+            // NOTE: exp(-1000) = 5,076e-435
             p = 0;
             continue;
         }
@@ -518,15 +516,16 @@ ZZ ZSampler(const RR sigma, const RR c)
         }        
 
         // b ← Bernoulli(p) 
-        u = random_RR();
+        u = conv<double>(random_RR());
 
         if (u < p)
         {
             b = 1;                
         }
     }
-
-    return (x + c_int);
+    
+    // return (x + c_int);
+    x += c_int;
 }
 
 
@@ -540,16 +539,17 @@ ZZ ZSampler(const RR sigma, const RR c)
 // Output:
 // - s:     polynomial, s ∈ R
 //==============================================================================
-ZZX polySampler(const RR sigma)
+void polySampler(ZZX& s, const double& sigma)
 {
-    unsigned int    i;
-    ZZX             s;
+    long    i;
+    ZZ      x;
 
     s.SetLength(d0);
    
     for(i=0; i<d0; i++)
     {
-        SetCoeff(s, i, ZSampler(sigma, RR(0)));  
+        ZSampler(x, sigma, 0);
+        SetCoeff(s, i, x);
     }       
 
     // NOTE: ensure that deg(s) == d0-1, to avoid errors in NTRU_TrapGen    
@@ -558,5 +558,5 @@ ZZX polySampler(const RR sigma)
         SetCoeff(s, d0-1, 1);
     }
       
-    return s; // s ∈ R
+    // return s; // s ∈ R
 }
