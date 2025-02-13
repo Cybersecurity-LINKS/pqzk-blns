@@ -6,7 +6,6 @@ This repository contains an implementation of the framework for Post-Quantum (PQ
 
 ## Requirements
 
-- [OpenSSL](https://www.openssl.org/source/) 3.3.0
 - [GMP](https://gmplib.org/) 6.2.0
 - [NTL](https://libntl.org/) 11.5.1
 
