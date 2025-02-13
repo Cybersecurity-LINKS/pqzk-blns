@@ -16,23 +16,22 @@
 #define BLNS_HASH_H
 
 #include <string.h>
-#include <openssl/evp.h>
 
 #include "params.h"
+#include "shake128.h"
 
 
 typedef      Vec<Mat<zz_pX>>   CRS_t;
 typedef  Vec<Vec<Mat<zz_pX>>>  CRS2_t;
+typedef  shake128_state_t      HASH_STATE_t; 
 
 
-long     CustomHash(const long  x, const size_t out_len);
+HASH_STATE_t* Hash_Init(const string& inputStr);
 
-EVP_MD_CTX* Hash_Init(const string& inputStr);
-
-void Hash_zz_pX(zz_pX& out_poly, EVP_MD_CTX *mdctx, const long& n_coeffs, const size_t& b_coeffs);
-void Hash_v_zz_p(vec_zz_p& out_vec, EVP_MD_CTX *mdctx, const long& n_elems, const size_t& b_num);
-void Hash_R_goth(vec_L& out, EVP_MD_CTX *mdctx, const long& n_elems);
-void Hash_ZZ_xi0(ZZ& out, EVP_MD_CTX *mdctx, const size_t& b_num);
+void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, const size_t& b_coeffs);
+void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, const size_t& b_num);
+void Hash_R_goth(vec_L& out, HASH_STATE_t *state, const long& n_elems);
+void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num);
 
 void Hcrs(CRS2_t& crs, const string& inputStr);
 

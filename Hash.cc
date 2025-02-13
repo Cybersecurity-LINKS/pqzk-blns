@@ -17,106 +17,23 @@
 
 
 //==============================================================================
-// CustomHash - Custom Hash function, implemented using SHAKE256
-// 
-// Inputs:
-// - x:         integer (initial seed)
-// - out_len:   length of the output value, in bytes
-//
-// Output:
-// - y:         integer (out_len bytes) 
-//==============================================================================
-long  CustomHash(const long  x, const size_t out_len) 
-{
-    EVP_MD_CTX *mdctx;
-    const EVP_MD *md;
-    char alg[] = "shake256";
-    long  y = 0;
-
-
-    unsigned char* x_arr = new unsigned char[sizeof(long )];
-    unsigned char* y_arr = new unsigned char[out_len];
-
-    memcpy(x_arr, &x, sizeof(long ));
-
-    md = EVP_get_digestbyname(alg);
-    if (md == NULL) {
-        printf("Unknown message digest %s\n", alg);
-        exit(1);
-    }
-
-    mdctx = EVP_MD_CTX_new();
-    //if(!EVP_DigestInit_ex(mdctx, md, NULL)) {
-    if (!EVP_DigestInit_ex2(mdctx, md, NULL)) {          
-        // NOTE: EVP_DigestInit_ex2 requires OpenSSL >= 3.x
-        printf("Message digest initialization failed.\n");
-        EVP_MD_CTX_free(mdctx);
-        exit(1);
-    }
-    if (!EVP_DigestUpdate(mdctx, x_arr, sizeof(x))) {
-        printf("Message digest update failed.\n");
-        EVP_MD_CTX_free(mdctx);
-        exit(1);
-    }
-
-    //if (!EVP_DigestFinalXOF(mdctx, y_arr, out_len)) {
-    if (!EVP_DigestSqueeze(mdctx, y_arr, out_len)) {
-        printf("Message digest squeeze failed.\n");
-        EVP_MD_CTX_free(mdctx);
-        exit(1);
-    }
-    // NOTE: EVP_DigestSqueeze (instead of EVP_DigestFinalXOF) requires OpenSSL >= 3.3.0
-    
-    EVP_MD_CTX_free(mdctx);
-
-    if (out_len > sizeof(y)) {
-        memcpy(&y, y_arr, sizeof(long ));
-    } else {
-        memcpy(&y, y_arr, out_len);
-    }
-
-    delete[] y_arr;
-    delete[] x_arr;
-
-    return y;
-}
-
-
-//==============================================================================
-// Hash_Init -  Initialize the Custom Hash function, implemented using SHAKE256
+// Hash_Init -  Initialize the Custom Hash function, implemented using SHAKE128
 // 
 // Inputs:
 // - inputStr:  string containing the input message (initial seed)
 //
 // Output:
-// - mdctx:     digest context in OpenSSL
+// - state:     status structure
 //==============================================================================
-EVP_MD_CTX* Hash_Init(const string& inputStr)
+HASH_STATE_t* Hash_Init(const string& inputStr)
 {
-    EVP_MD_CTX *mdctx;
-    const EVP_MD *md;
-    const size_t in_len = inputStr.length(); 
-    const char alg[] = "shake256";
+    const size_t in_len = inputStr.length();
+    HASH_STATE_t *state = new HASH_STATE_t();
 
-    md = EVP_get_digestbyname(alg);
-    if (md == NULL) {
-        printf("Unknown message digest %s\n", alg);
-        exit(1);
-    }
+    _shake128_init(state);
+    _shake128_absorb(state, reinterpret_cast<const uint8_t*>(&inputStr[0]), in_len); 
 
-    mdctx = EVP_MD_CTX_new();
-    if (!EVP_DigestInit_ex2(mdctx, md, NULL)) {   
-        printf("Message digest initialization failed.\n");
-        EVP_MD_CTX_free(mdctx);
-        exit(1);
-    }
-    if (!EVP_DigestUpdate(mdctx, inputStr.data(), in_len)) {
-        printf("Message digest update failed.\n");
-        EVP_MD_CTX_free(mdctx);
-        exit(1);
-    }
-    
-    return mdctx;
+    return state;
 }
 
 
@@ -124,14 +41,14 @@ EVP_MD_CTX* Hash_Init(const string& inputStr)
 // Hash_zz_pX - Generate a random polynomial using the Custom Hash function
 // 
 // Inputs:
-// - mdctx:     digest context in OpenSSL
+// - state:     status structure
 // - n_coeffs:  number of coefficients of the random polynomial (i.e. d_hat)
 // - b_coeffs:  number of bytes for each coefficient (i.e. |q_hat|)
 //
 // Output:
 // - out_poly:  random polynomial with n_coeffs coefficients (mod q_hat)
 //==============================================================================
-void Hash_zz_pX(zz_pX& out_poly, EVP_MD_CTX *mdctx, const long& n_coeffs, const size_t& b_coeffs)
+void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, const size_t& b_coeffs)
 {    
     // NOTE: the current modulus (q_hat or q0) must already be set by the calling function
 
@@ -142,11 +59,7 @@ void Hash_zz_pX(zz_pX& out_poly, EVP_MD_CTX *mdctx, const long& n_coeffs, const 
 
     for(i=0; i < n_coeffs; i++)
     {
-        if (!EVP_DigestSqueeze(mdctx, y_arr, b_coeffs)) {
-            printf("Message digest squeeze failed.\n");
-            EVP_MD_CTX_free(mdctx);
-            exit(1);
-        }
+        _shake128_squeeze(state, y_arr, b_coeffs);
         
         out_poly[i] = conv<zz_p>(ZZFromBytes(y_arr, b_coeffs)); 
     }
@@ -163,14 +76,14 @@ void Hash_zz_pX(zz_pX& out_poly, EVP_MD_CTX *mdctx, const long& n_coeffs, const 
 // Hash_v_zz_p - Generate a random vector (mod q_hat) using Custom Hash function
 // 
 // Inputs:
-// - mdctx:     digest context in OpenSSL
+// - state:     status structure
 // - n_elems:   number of elements of the random vector (i.e. 256+n+1)
 // - b_num:     number of bytes for each random number (i.e. |q_hat|)
 //
 // Output:
 // - out_vec:   vector of random numbers (modulo q_hat)
 //==============================================================================
-void Hash_v_zz_p(vec_zz_p& out_vec, EVP_MD_CTX *mdctx, const long& n_elems, const size_t& b_num)
+void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, const size_t& b_num)
 {    
     // NOTE: the current modulus (q_hat or q0) must already be set by the calling function
     long      i;
@@ -180,11 +93,7 @@ void Hash_v_zz_p(vec_zz_p& out_vec, EVP_MD_CTX *mdctx, const long& n_elems, cons
     
     for(i=0; i < n_elems; i++)
     {
-        if (!EVP_DigestSqueeze(mdctx, y_arr, b_num)) {
-            printf("Message digest squeeze failed.\n");
-            EVP_MD_CTX_free(mdctx);
-            exit(1);
-        }
+        _shake128_squeeze(state, y_arr, b_num);
 
         out_vec[i] = conv<zz_p>( ZZFromBytes(y_arr, b_num) );
     }
@@ -199,14 +108,14 @@ void Hash_v_zz_p(vec_zz_p& out_vec, EVP_MD_CTX *mdctx, const long& n_elems, cons
 // Hash_R_goth - Generate a random vector for R_goth using the Custom Hash function
 // 
 // Inputs:
-// - mdctx:     digest context in OpenSSL
+// - state:     status structure
 // - n_elems:   number of elements of the random vector (i.e. m1*d_hat)
 //
 // Output:
 // - out:       random vector with n_elems elements in {-1, 0, 1},
 //              equivalent to the pair (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
-void Hash_R_goth(vec_L& out, EVP_MD_CTX *mdctx, const long& n_elems)
+void Hash_R_goth(vec_L& out, HASH_STATE_t *state, const long& n_elems)
 {    
     long            i, j, k, curr_byte, R_goth_0, R_goth_1;
     unsigned char*  y_arr;
@@ -216,11 +125,7 @@ void Hash_R_goth(vec_L& out, EVP_MD_CTX *mdctx, const long& n_elems)
 
     y_arr = new unsigned char[n_bytes];
 
-    if (!EVP_DigestSqueeze(mdctx, y_arr, n_bytes)) {
-        printf("Message digest squeeze failed.\n");
-        EVP_MD_CTX_free(mdctx);
-        exit(1);
-    }
+    _shake128_squeeze(state, y_arr, n_bytes);
            
     // out.SetLength(n_elems);
     k = 0;
@@ -255,22 +160,17 @@ void Hash_R_goth(vec_L& out, EVP_MD_CTX *mdctx, const long& n_elems)
 // Hash_ZZ_xi0 - Generate a random integer modulo (xi0+1) using Custom Hash function
 // 
 // Inputs:
-// - mdctx:      digest context in OpenSSL
+// - state:      status structure
 // - b_num:      number of bytes of the random integer
 //
 // Output:
 // - out:        random integer modulo (xi0+1), i.e. from 0 to xi0
 //==============================================================================
-
-void Hash_ZZ_xi0(ZZ& out, EVP_MD_CTX *mdctx, const size_t& b_num)
+void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num)
 {    
     unsigned char* y_arr = new unsigned char[b_num];    
 
-    if (!EVP_DigestSqueeze(mdctx, y_arr, b_num)) {
-        printf("Message digest squeeze failed.\n");
-        EVP_MD_CTX_free(mdctx);
-        exit(1);
-    }
+    _shake128_squeeze(state, y_arr, b_num);
 
     out = (ZZFromBytes(y_arr, b_num)) % (xi0+1);
         
@@ -293,11 +193,11 @@ void Hash_ZZ_xi0(ZZ& out, EVP_MD_CTX *mdctx, const size_t& b_num)
 //==============================================================================
 void Hcrs(CRS2_t& crs, const string& inputStr)
 {
-    long                    i, j, n, m1, m2, n256;
-    EVP_MD_CTX              *mdctx;
-    size_t                  b_coeffs;
+    long            i, j, n, m1, m2, n256;
+    HASH_STATE_t    *state;
+    size_t          b_coeffs;
        
-    mdctx = Hash_Init(inputStr);
+    state = Hash_Init(inputStr);
 
     // Create the crs structure  
     crs.SetLength(2); 
@@ -340,11 +240,11 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             for(j=0; j<m1; j++)
             {
-                Hash_zz_pX(crs[0][0][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[0][0][i][j], state, d_hat, b_coeffs);
             }
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[0][1][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[0][1][i][j], state, d_hat, b_coeffs);
             }
         }       
 
@@ -355,7 +255,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[0][2][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[0][2][i][j], state, d_hat, b_coeffs);
             }
         }
 
@@ -366,7 +266,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[0][3][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[0][3][i][j], state, d_hat, b_coeffs);
             }
         }
 
@@ -376,7 +276,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
 
         for(i=0; i<m2; i++)
         {
-            Hash_zz_pX(crs[0][4][0][i], mdctx, d_hat, b_coeffs);
+            Hash_zz_pX(crs[0][4][0][i], state, d_hat, b_coeffs);
         }        
     }
 
@@ -415,11 +315,11 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             for(j=0; j<m1; j++)
             {
-                Hash_zz_pX(crs[1][0][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][0][i][j], state, d_hat, b_coeffs);
             }
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[1][1][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][1][i][j], state, d_hat, b_coeffs);
             }
         }       
 
@@ -430,7 +330,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[1][2][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][2][i][j], state, d_hat, b_coeffs);
             }
         }
 
@@ -441,7 +341,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[1][3][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][3][i][j], state, d_hat, b_coeffs);
             }
         }
 
@@ -453,7 +353,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             // for(j=0; j<1; j++)
             {
-                Hash_zz_pX(crs[1][4][0][i], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][4][0][i], state, d_hat, b_coeffs);
             }
         }
         
@@ -465,8 +365,8 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             for(j=0; j<n_i; j++)
             {
-                Hash_zz_pX(crs[1][5][i][j], mdctx, d_hat, b_coeffs);
-                Hash_zz_pX(crs[1][7][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][5][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][7][i][j], state, d_hat, b_coeffs);
             }
         }
 
@@ -478,13 +378,13 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         {
             for(j=0; j<n_i; j++)
             {
-                Hash_zz_pX(crs[1][6][i][j], mdctx, d_hat, b_coeffs);
-                Hash_zz_pX(crs[1][8][i][j], mdctx, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][6][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX(crs[1][8][i][j], state, d_hat, b_coeffs);
             }
         }
     }
 
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
     
     // return crs;    
 }
@@ -502,12 +402,12 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
 //==============================================================================
 void HCom1(mat_L& R_goth, const string& inputStr)
 {
-    long        i;
-    EVP_MD_CTX *mdctx;
+    long         i;
+    HASH_STATE_t *state;
 
-    const long  m1 = m1_Com;
+    const long   m1 = m1_Com;
 
-    mdctx = Hash_Init(inputStr);  
+    state = Hash_Init(inputStr);  
     
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
@@ -515,10 +415,10 @@ void HCom1(mat_L& R_goth, const string& inputStr)
     // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) 
     for(i=0; i<256; i++)
     { 
-        Hash_R_goth(R_goth[i], mdctx, m1*d_hat);
+        Hash_R_goth(R_goth[i], state, m1*d_hat);
     }
     
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
 
     // return R_goth;
 }
@@ -537,10 +437,10 @@ void HCom1(mat_L& R_goth, const string& inputStr)
 void HCom2(mat_zz_p& gamma, const string& inputStr)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
-    long        i, n257;
-    EVP_MD_CTX *mdctx; 
+    long         i, n257;
+    HASH_STATE_t *state; 
     
-    mdctx = Hash_Init(inputStr); 
+    state = Hash_Init(inputStr); 
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat) ) / 8.0);    
@@ -553,10 +453,10 @@ void HCom2(mat_zz_p& gamma, const string& inputStr)
 
     for(i=0; i<tau0; i++)
     {
-        Hash_v_zz_p(gamma[i], mdctx, n257, b_coeffs);
+        Hash_v_zz_p(gamma[i], state, n257, b_coeffs);
     }
 
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
     
     // return gamma;
 }
@@ -575,23 +475,23 @@ void HCom2(mat_zz_p& gamma, const string& inputStr)
 void HCom3(vec_zz_pX& mu, const string& inputStr)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
-    long        i;
-    EVP_MD_CTX *mdctx;
+    long         i;
+    HASH_STATE_t *state;
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat) ) / 8.0);   
 
-    mdctx = Hash_Init(inputStr);  
+    state = Hash_Init(inputStr);  
 
     // Random generation of mu ∈ R^(tau0)_q_hat
     mu.SetLength(tau0);
 
     for(i=0; i<tau0; i++)
     {        
-        Hash_zz_pX(mu[i], mdctx, d_hat, b_coeffs);
+        Hash_zz_pX(mu[i], state, d_hat, b_coeffs);
     }
     
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
         
     // return mu;
 }
@@ -610,10 +510,10 @@ void HCom3(vec_zz_pX& mu, const string& inputStr)
 //==============================================================================
 void HCom4(ZZX& c, const string& inputStr)
 {
-    long        i;
-    EVP_MD_CTX *mdctx;    
-    ZZ          norm1_c, c_i;    
-    ZZX         c_2k;
+    long         i;
+    HASH_STATE_t *state;    
+    ZZ           norm1_c, c_i;    
+    ZZX          c_2k;
         
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(xi0+1) / 8.0);
@@ -624,7 +524,7 @@ void HCom4(ZZX& c, const string& inputStr)
     // Initialize the variable norm1_c = ||c^(2k)||_1
     norm1_c = 2*nu0_2k;
     
-    mdctx = Hash_Init(inputStr); 
+    state = Hash_Init(inputStr); 
 
     c.SetLength(d_hat);
     c_2k.SetLength(d_hat*2*k0);
@@ -634,7 +534,7 @@ void HCom4(ZZX& c, const string& inputStr)
     while(norm1_c > nu0_2k)
     {
         // Random generation of c ∈ R^_(xi0+1)
-        Hash_ZZ_xi0(c_i, mdctx, b_coeffs);
+        Hash_ZZ_xi0(c_i, state, b_coeffs);
         // NOTE: generate each coefficient c[i] ∈ [0, xi0], to ensure ||c||∞ ≤ ξ
         
         // c[0] = c_i;
@@ -642,7 +542,7 @@ void HCom4(ZZX& c, const string& inputStr)
                 
         for(i=1; i<(d_hat/2); i++)
         {
-            Hash_ZZ_xi0(c_i, mdctx, b_coeffs);
+            Hash_ZZ_xi0(c_i, state, b_coeffs);
             
             // c[i] = c_i;
             SetCoeff(c, i, c_i);
@@ -679,7 +579,7 @@ void HCom4(ZZX& c, const string& inputStr)
         }
     }
     
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
          
     // return c;
 }
@@ -698,12 +598,12 @@ void HCom4(ZZX& c, const string& inputStr)
 // NOTE: HISIS1 is identical to HCom1, apart m1
 void HISIS1(mat_L& R_goth, const string& inputStr)
 {
-    long        i;
-    EVP_MD_CTX *mdctx;
+    long         i;
+    HASH_STATE_t *state;
 
     const long  m1 = m1_ISIS;
 
-    mdctx = Hash_Init(inputStr);  
+    state = Hash_Init(inputStr);  
     
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
@@ -711,10 +611,10 @@ void HISIS1(mat_L& R_goth, const string& inputStr)
     // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) 
     for(i=0; i<256; i++)
     { 
-        Hash_R_goth(R_goth[i], mdctx, m1*d_hat);
+        Hash_R_goth(R_goth[i], state, m1*d_hat);
     }
     
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
 
     // return R_goth;
 }
@@ -733,10 +633,10 @@ void HISIS1(mat_L& R_goth, const string& inputStr)
 void HISIS2(mat_zz_p& gamma, const string& inputStr)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
-    long        i, n259;       
-    EVP_MD_CTX *mdctx; 
+    long         i, n259;       
+    HASH_STATE_t *state; 
     
-    mdctx = Hash_Init(inputStr); 
+    state = Hash_Init(inputStr); 
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat) ) / 8.0);    
@@ -749,10 +649,10 @@ void HISIS2(mat_zz_p& gamma, const string& inputStr)
 
     for(i=0; i<tau0; i++)
     {
-        Hash_v_zz_p(gamma[i], mdctx, n259, b_coeffs);
+        Hash_v_zz_p(gamma[i], state, n259, b_coeffs);
     }
     
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
 
     // return gamma;
 }
@@ -772,23 +672,23 @@ void HISIS3(vec_zz_pX& mu, const string& inputStr)
 // NOTE: HISIS3 is identical to HCom3, apart the modulo  
 {     
     // NOTE: assuming that current modulus is q2_hat (not q0)
-    long        i;
-    EVP_MD_CTX *mdctx;
+    long         i;
+    HASH_STATE_t *state;
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat) ) / 8.0);   
 
-    mdctx = Hash_Init(inputStr);  
+    state = Hash_Init(inputStr);  
 
     // Random generation of mu ∈ R^(tau0)_q_hat
     mu.SetLength(tau0);
 
     for(i=0; i<tau0; i++)
     {        
-        Hash_zz_pX(mu[i], mdctx, d_hat, b_coeffs);
+        Hash_zz_pX(mu[i], state, d_hat, b_coeffs);
     }
     
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
         
     // return mu;
 }
@@ -808,10 +708,10 @@ void HISIS3(vec_zz_pX& mu, const string& inputStr)
 void HISIS4(ZZX& c, const string& inputStr)
 // NOTE: HISIS4 is identical to HCom4, apart the modulo
 {
-    long        i;
-    EVP_MD_CTX *mdctx;    
-    ZZ          norm1_c, c_i;    
-    ZZX         c_2k;
+    long         i;
+    HASH_STATE_t *state;    
+    ZZ           norm1_c, c_i;    
+    ZZX          c_2k;
         
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(xi0+1) / 8.0);
@@ -822,7 +722,7 @@ void HISIS4(ZZX& c, const string& inputStr)
     // Initialize the variable norm1_c = ||c^(2k)||_1
     norm1_c = 2*nu0_2k;
     
-    mdctx = Hash_Init(inputStr); 
+    state = Hash_Init(inputStr); 
 
     c.SetLength(d_hat);
     c_2k.SetLength(d_hat*2*k0);
@@ -832,7 +732,7 @@ void HISIS4(ZZX& c, const string& inputStr)
     while(norm1_c > nu0_2k)
     {
         // Random generation of c ∈ R^_(xi0+1)
-        Hash_ZZ_xi0(c_i, mdctx, b_coeffs);
+        Hash_ZZ_xi0(c_i, state, b_coeffs);
         // NOTE: generate each coefficient c[i] ∈ [0, xi0], to ensure ||c||∞ ≤ ξ
         
         // c[0] = c_i;
@@ -840,7 +740,7 @@ void HISIS4(ZZX& c, const string& inputStr)
                 
         for(i=1; i<(d_hat/2); i++)
         {
-            Hash_ZZ_xi0(c_i, mdctx, b_coeffs);
+            Hash_ZZ_xi0(c_i, state, b_coeffs);
             
             // c[i] = c_i;
             SetCoeff(c, i, c_i);
@@ -877,7 +777,7 @@ void HISIS4(ZZX& c, const string& inputStr)
         }
     }
     
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
          
     // return c;
 }
@@ -896,8 +796,8 @@ void HISIS4(ZZX& c, const string& inputStr)
 //==============================================================================
 void HM(vec_ZZ& m_i, const string& a_i)
 {
-    long        k, range;
-    EVP_MD_CTX *mdctx;
+    long         k, range;
+    HASH_STATE_t *state;
     
     // Compute the numerical range of each coefficient
     range = 2*psi0 + 1;
@@ -909,10 +809,10 @@ void HM(vec_ZZ& m_i, const string& a_i)
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(range) / 8.0);
 
-    mdctx = Hash_Init(a_i);
+    state = Hash_Init(a_i);
 
     // Random generation of m_i (modulo range)
-    Hash_v_zz_p(tmp, mdctx, h0, b_coeffs);
+    Hash_v_zz_p(tmp, state, h0, b_coeffs);
     m_i = conv<vec_ZZ>( tmp );
 
     for(k=0; k<h0; k++)
@@ -921,7 +821,7 @@ void HM(vec_ZZ& m_i, const string& a_i)
         // NOTE: now each coefficient is in the range [−psi0, psi0]
     }
     
-    EVP_MD_CTX_free(mdctx);
+    delete(state);
 
     // return m_i;
 }
