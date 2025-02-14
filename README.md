@@ -6,7 +6,7 @@ This repository contains an implementation of the framework for Post-Quantum (PQ
 
 ## Requirements
 
-- [GMP](https://gmplib.org/) 6.2.0
+- [GMP](https://gmplib.org/) 6.3.0
 - [NTL](https://libntl.org/) 11.5.1
 
 For installation instructions and additional information, see [./Docs/INSTALL.md](./Docs/INSTALL.md)
