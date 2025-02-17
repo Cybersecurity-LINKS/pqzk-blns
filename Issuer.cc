@@ -96,6 +96,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS
     mat_zz_p        P0, P1, P; 
     vec_zz_p        u_vect, prod;   
     ZZ              B_goth2;
+    long            mul;
     
     const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
@@ -196,10 +197,23 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS
 
 
     // 8. if  Verify_Com(crs_Com, (q1_hat/q*P, q1_hat/q*u_vect, ψ*sqrt(h*|idx|+ℓr*d)), π) == 0:
+    if (not(divide( ZZ(q1_hat), q0)))
+    {
+        cout << " ERROR: q1_hat must be divisible by q! " << endl;
+    }
+
+    mul = long(q1_hat) / long(q0);
+    
     // B_goth = psi0 * sqrt(conv<RR>( idxhlrd ));    
     B_goth2 = sqr( ZZ(psi0)) * ZZ( idxhlrd );
     
-    result = Verify_Com(inputStr, crs[1], ipk, (q1_hat/q0*conv<mat_ZZ>(P)), (q1_hat/q0*conv<vec_ZZ>(u_vect)), B_goth2, Pi);
+    {
+        zz_pPush push(q1_hat); 
+        // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
+
+        result = Verify_Com(inputStr, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, Pi);
+        // NOTE: P, u are converted from modulo q0 to q1_hat
+    }
 
     P.kill();
         

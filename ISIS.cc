@@ -183,10 +183,9 @@ void  Preprocessing_ISIS(vec_ZZ& s1, vec_ZZ& r1, const vec_ZZ& s0, const ZZ& B_g
 // Output:
 // -  Pi:           proof (π) structure 
 //==============================================================================
-void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const Vec<vec_ZZ>& w0)
+void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const ZZ& aux, const Vec<vec_ZZ>& w0)
 {
-    zz_pPush push(q2_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))  
+    // NOTE: assuming that current modulus is q2_hat (not q0)
    
     unsigned long        idx, i, j, k;
     long                 rst, b1, b2, b3;
@@ -214,11 +213,6 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     ZZ                   B_goth_s2,   B_goth_r2;
     zz_p                 B_goth_s2_p, B_goth_r2_p; //sums;
 
-    // Convert input P, C, B_f to be modulo q2_hat
-    mat_zz_p      P   = conv<mat_zz_p>(P0);
-    mat_zz_p      C   = conv<mat_zz_p>(C0);    
-    mat_zz_p      B_f = conv<mat_zz_p>(B0);
-    
     // Initialise constants
     const unsigned long n           = n_ISIS;
     const unsigned long m1          = m1_ISIS;
@@ -1237,10 +1231,6 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     
     } // End of while loop (row 9)
 
-    P.kill();
-    C.kill();
-    B_f.kill();
-
     // 56. if rst = 1 then return π
     if (rst == 1)
     {
@@ -1285,10 +1275,9 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 // Output:
 // -  0 or 1:       reject or accept 
 //==============================================================================
-long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const mat_ZZ& C0, const vec_zz_p& mex, const mat_ZZ& B0, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_I_t& Pi)
+long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_I_t& Pi)
 {
-    zz_pPush push(q2_hat);
-    // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))  
+    // NOTE: assuming that current modulus is q2_hat (not q0) 
    
     unsigned long        i, j, k;
     Mat<zz_pX>           B, D2; //D2_2_1
@@ -1307,11 +1296,6 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     zz_p                 B_goth_s2_p, B_goth_r2_p, sums;
     ZZ                   norm2_z1, norm2_z2, norm2_z3;  
     RR                   norm_z1,  norm_z2,  norm_z3;
-
-    // Convert input P, C, B_f to be modulo q2_hat    
-    mat_zz_p      P  = conv<mat_zz_p>(P0);
-    mat_zz_p      C  = conv<mat_zz_p>(C0);    
-    mat_zz_p      B_f = conv<mat_zz_p>(B0);
 
     // Initialise constants
     const unsigned long n           = n_ISIS;
@@ -1623,9 +1607,6 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
         sigma_map(sigma_Beta_[j] , Beta_j, d_hat);                  
     }
 
-    P.kill();
-    B_f.kill();
-   
     // Create C_m and C_r
     C_m.SetDims(d0, (idx_pub*h0));
     C_r.SetDims(d0, (idxhlrd+d_hat)); 
@@ -1643,8 +1624,6 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
             C_r[i][j] = C[i][(idx_pub*h0)+j];
         }
     }
-
-    C.kill();   
 
     // Compute m_C := C_m * m
     m_C.SetLength(d0);

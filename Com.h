@@ -38,7 +38,7 @@ typedef struct
 
 
 void Preprocessing_Com(vec_ZZ& s1, const vec_ZZ& s, const ZZ& B_goth2);
-void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const vec_ZZ& w0);
-long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const PROOF_C_t& Pi);
+void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0);
+long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const PROOF_C_t& Pi);
 
 #endif

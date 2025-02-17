@@ -31,14 +31,13 @@ long V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
-    long            out;
+    long            out, mul;
     zz_pX           a1;
     vec_zz_pX       a2, c0, c1, a; //mex;
     vec_ZZ          m_i, coeffs_m;
     mat_zz_p        A, P, C, C0, C1; 
     vec_zz_p        coeffs_m_idx;
     vec_ZZ          Bounds;
-    ZZ              mul;
 
     const unsigned long m2d     = (m0 + 2)*d0;    // (m+2)·d
     const unsigned long lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
@@ -179,10 +178,15 @@ long V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
         cout << " ERROR: q2_hat must be divisible by q! " << endl;
     }
 
-    mul = ZZ(q2_hat)/q0;
+    mul = long(q2_hat) / long(q0);
 
-    out = Verify_ISIS(inputStr, crs[0], VP.ipk, (mul * conv<mat_ZZ>(P)), (mul * conv<mat_ZZ>(C)), coeffs_m_idx, (mul * conv<mat_ZZ>(B_f)), Bounds, ZZ(idx_pub), VP.pi ); 
-    // NOTE: P, C, B_f must be converted to ZZ, without modulo q0, to be properly passed as inputs to Verify_ISIS
+    {
+        zz_pPush push(q2_hat);
+        // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat)) 
+
+        out = Verify_ISIS(inputStr, crs[0], VP.ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, ZZ(idx_pub), VP.pi ); 
+        // NOTE: P, C, B_f are converted from modulo q0 to q2_hat
+    }
 
     P.kill();
     C.kill();

@@ -74,6 +74,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
     mat_zz_p        P0, P1, P; 
     vec_zz_p        u_vect, prod;
     ZZ              range, B_goth2;
+    long            mul;
 
     const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
@@ -208,12 +209,24 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
     }
 
 
-    // 9. π ← Prove_Com^HCom (crs_Com, (q1_hat/q·P, q1_hat/q·u_vect, ψ·sqrt(h·|idx_hid| + ℓr·d, s)    
+    // 9. π ← Prove_Com^HCom (crs_Com, (q1_hat/q·P, q1_hat/q·u_vect, ψ·sqrt(h·|idx_hid| + ℓr·d, s)
+    if (not(divide( ZZ(q1_hat), q0)))
+    {
+        cout << " ERROR: q1_hat must be divisible by q! " << endl;
+    }
+
+    mul = long(q1_hat) / long(q0);
+
     // B_goth = psi0 * sqrt(conv<RR>( idxhlrd ));
     B_goth2 = sqr( ZZ(psi0)) * ZZ( idxhlrd );
+
+    {
+        zz_pPush push(q1_hat); 
+        // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
    
-    Prove_Com(Pi, inputStr, crs[1], ipk, (q1_hat/q0*conv<mat_ZZ>(P)), (q1_hat/q0*conv<vec_ZZ>(u_vect)), B_goth2, s);
-    // NOTE: P & u must be converted to ZZ, without modulo q0, to be properly passed as inputs to Prove_Com
+        Prove_Com(Pi, inputStr, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, s);
+        // NOTE: P, u are converted from modulo q0 to q1_hat
+    }
 
     P.kill();
    
@@ -382,12 +395,13 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     zz_pX           a1;
     vec_zz_pX       a2, c0, c1, a; 
     vec_ZZX         s, r; //mex
-    ZZ              x, mul;   
+    ZZ              x;   
     vec_ZZ          m_i, coeffs_m, coeffs_s, coeffs_r, r_vect, enc_x, coeffs_u;
     vec_zz_p        coeffs_m_idx;
     mat_zz_p        P, A, C0, C1, C; 
     vec_ZZ          Bounds;
     Vec<vec_ZZ>     sig;
+    long            mul;
 
     const unsigned long m2d     = (m0 + 2)*d0;    // (m+2)·d
     const unsigned long lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
@@ -596,21 +610,25 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
          
         
     // 17. VP.pi ← Prove^HISIS_ISIS( crs_ISIS, ˆq2/q · P, ˆq2/q · C, m, ˆq2/q · B_f, Bounds, idx), (s, r, u) )
-
     if (not(divide( ZZ(q2_hat), q0)))
     {
         cout << " ERROR: q2_hat must be divisible by q! " << endl;
     }  
 
-    mul = ZZ(q2_hat)/q0;
+    mul = long(q2_hat) / long(q0);
 
     sig.SetLength(3);
     sig[0] = coeffs_s;
     sig[1] = r_vect;
     sig[2] = coeffs_u;
+
+    {
+        zz_pPush push(q2_hat);
+        // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat)) 
     
-    Prove_ISIS(VP.pi, inputStr, crs[0], ipk, (mul * conv<mat_ZZ>(P)), (mul * conv<mat_ZZ>(C)), coeffs_m_idx, (mul * conv<mat_ZZ>(B_f)), Bounds, ZZ(idx_pub), sig );
-    // NOTE: P, C, B_f must be converted to ZZ, without modulo q0, to be properly passed as inputs to Prove_ISIS
+        Prove_ISIS(VP.pi, inputStr, crs[0], ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, ZZ(idx_pub), sig );
+        // NOTE: P, C, B_f are converted from modulo q0 to q2_hat
+    }
 
     P.kill();
     C.kill();

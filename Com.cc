@@ -119,10 +119,9 @@ void  Preprocessing_Com(vec_ZZ& s0, const vec_ZZ& s, const ZZ& B_goth2)
 // Output:
 // - Pi:            proof (π) structure 
 //==============================================================================
-void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const vec_ZZ& w0)
+void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0)
 {
-    zz_pPush push(q1_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))  
+    // NOTE: assuming that current modulus is q1_hat (not q0)
 
     unsigned long       i, j, k, idx;
     long                rst, b1, b2, b3, bbar1, bbar2;
@@ -145,10 +144,6 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     mat_zz_p            gamma;
     vec_zz_p            e_tmp;
     // zz_p             sum_z3, B_goth_p;
-
-    // Convert input P & u to be modulo q_hat
-    mat_zz_p      P  = conv<mat_zz_p>(P0);
-    vec_zz_p      u1 = conv<vec_zz_p>(u0);
 
     // Initialise constants    
     const unsigned long n           = n_Com;
@@ -213,10 +208,8 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     CoeffsInvHatX(s_1, s0, m1);
     s_1_mod = conv<vec_zz_pX>( s_1 );    
 
-    // 7.2 Convert vector u1 into polynomial vector u ∈ R^^(d/d_hat)_(q_hat) 
-    CoeffsInvHat(u, u1, d_d_hat);
-
-    u1.kill();
+    // 7.2 Convert vector u0 into polynomial vector u ∈ R^^(d/d_hat)_(q_hat) 
+    CoeffsInvHat(u, u0, d_d_hat);
 
 
     // Initialize e ∈ R^^(256 x 256/d_hat)_(q_hat)
@@ -955,7 +948,6 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     
     } // End of while loop (row 7)
 
-    P.kill();
 
     // 55. if rst = 1 then return π
     if (rst == 1)
@@ -1007,10 +999,9 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 // Output:
 // - 0 or 1:        reject or accept 
 //==============================================================================
-long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_ZZ& P0, const vec_ZZ& u0, const ZZ& B_goth2, const PROOF_C_t& Pi)
+long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const PROOF_C_t& Pi)
 {
-    zz_pPush push(q1_hat); 
-    // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))  
+    // NOTE: assuming that current modulus is q1_hat (not q0)
 
     unsigned long       i, j, k;
     long                b1, b2;
@@ -1028,10 +1019,6 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     zz_p                sum_z3, B_goth_p;
     ZZ                  norm2_z1, norm2_z2, norm2_z3;  
     RR                  norm_z1, norm_z2, norm_z3;
-
-    // Convert input P & u to be modulo q_hat
-    mat_zz_p      P = conv<mat_zz_p>(P0);
-    vec_zz_p      u1 = conv<vec_zz_p>(u0);
 
     // Initialise constants and variables
     const unsigned long n           = n_Com;
@@ -1064,10 +1051,8 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
 
     // 2. Retrieve (P, u, B_goth) ← x
     // NOTE: (P, u0, B_goth) already provided as inputs, so we just need to 
-    //       convert u1 ∈ Z^(d)_q_hat  to  u ∈ R^^(d/d_hat)_(q_hat), needed at row 19
-    CoeffsInvHat(u, u1, d_d_hat);
-
-    u1.kill();
+    //       convert u0 ∈ Z^(d)_q_hat  to  u ∈ R^^(d/d_hat)_(q_hat), needed at row 19
+    CoeffsInvHat(u, u0, d_d_hat);
 
     // 3. P ← [P1,  0_(d × d_hat)],   P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)    
     // NOTE: zero padding of P already done in I_VerCred
@@ -1292,9 +1277,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
         sigma_map(sigma_e_prime_[j], e_prime[j], d_hat);            
     }
 
-    P.kill();
-
-
+    
     // 19. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
     d_1.SetLength(m1_n256_tau);
 

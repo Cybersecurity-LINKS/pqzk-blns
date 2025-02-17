@@ -350,11 +350,11 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const double& sigma, const vec_ZZ& c
 //==============================================================================
 void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const mat_L& B, const double& sigma, const zz_pX& d)
 {
-    long    i, j, valid;  
-    ZZX     u;
-    mat_ZZ  A, Id;
-    mat_L   R;        
-    vec_ZZ  c, d_u, v;  
+    long    i, valid;  
+    ZZX     u;         
+    vec_ZZ  c, d_u, v;
+    // mat_ZZ  A, Id;
+    // mat_L   R;
 
     const ZZ thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
  
@@ -390,6 +390,7 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
     
     // 7. A ← [  I_d   ]
     //        [ rot(h) ] ∈ Z^(2d×d)
+    /*
     A.SetDims(2*d0, d0);
 
     Id.SetDims(d0, d0);    
@@ -417,6 +418,8 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
     }
 
     R.kill();
+    */
+    // NOTE: next steps do not use matrix A
     
     
     // 8. c ← LinearSolve(c*A = d − Coeffs(u)),   c ∈ Z^(2d)
