@@ -35,7 +35,7 @@ long V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
     zz_pX           a1;
     vec_zz_pX       a2, c0, c1, a; //mex;
     vec_ZZ          m_i, coeffs_m;
-    mat_zz_p        A, P, C, C0, C1; 
+    mat_zz_p        P, C, C0, C1; 
     vec_zz_p        coeffs_m_idx;
     vec_ZZ          Bounds;
 
@@ -92,21 +92,9 @@ long V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
           
           
     // 4. P ← rot([1|a1|a2^T]) = rot(a),   P ∈ Z^(d×(m+2)d)_q
-    A.SetDims(d0, m2d);
     P.SetDims(d0, (m2d + d_hat)); 
-    // NOTE: zero padding of P (d_hat columns) anticipated here, from Verify_ISIS   
-    
-    rot_vect(A, a);
-    
-    for(i=0; i<d0; i++)
-        {   
-        for(j=0; j<m2d; j++)
-        {
-            P[i][j] = A[i][j];
-        }
-    }    
-
-    A.kill();
+    // NOTE: zero padding of P (d_hat columns) anticipated here, from Verify_ISIS
+    rot_vect(P, a);
 
 
     // 5. C ← [rot(c0^T)_(idx_pub) | rot(c0^T)_(idx_hid) | rot(c1^T)],   C ∈ Z_q^(d × (ℓm+ℓr)d)

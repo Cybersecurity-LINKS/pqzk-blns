@@ -208,6 +208,7 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
     // 22. B ← [rot(g) −rot(f); 
     //          rot(G) −rot(F)] ∈ Z^(2d×2d)
     B.SetDims(2*d0, 2*d0);
+    A.SetDims(d0, d0);
 
     rot(A, g); 
 
@@ -392,6 +393,7 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
     //        [ rot(h) ] ∈ Z^(2d×d)
     /*
     A.SetDims(2*d0, d0);
+    R.SetDims(d0, d0);
 
     Id.SetDims(d0, d0);    
     Id = ident_mat_ZZ(d0);

@@ -35,7 +35,7 @@ make
 make check
 sudo make install
 
-cd ..
+cd ../..
 ```
 
 # Download & Build

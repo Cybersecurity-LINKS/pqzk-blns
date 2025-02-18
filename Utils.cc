@@ -170,7 +170,8 @@ void rot(mat_L& M, const ZZX& f)
     unsigned long   i, j, dfu;
     long            df;
     
-    M.SetDims(d0, d0);
+    // M.SetDims(d0, d0);
+    // NOTE: the size of the output matrix M must be (d0, d0)
     df = deg(f);
        
     if(df!=-1)
@@ -212,7 +213,8 @@ void rot_T(mat_zz_p& M, const zz_pX& f)
     unsigned long   i, j, dfu;
     long            df;
 
-    M.SetDims(d0, d0);
+    // M.SetDims(d0, d0);
+    // NOTE: the size of the output matrix M must be (d0, d0)
     df = deg(f);
 
     if(df==-1)
@@ -258,7 +260,9 @@ void rot_vect( mat_zz_p& R, const vec_zz_pX& v )
     
     len = v.length();
     M.SetDims(d0, d0);
-    R.SetDims(d0, len*d0);
+    // R.SetDims(d0, len*d0);
+    // NOTE: the size of the output matrix R must be at least (d0, len*d0)
+
     r = 0;
 
     for(i=0; i<len; i++)

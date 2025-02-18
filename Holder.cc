@@ -398,7 +398,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     ZZ              x;   
     vec_ZZ          m_i, coeffs_m, coeffs_s, coeffs_r, r_vect, enc_x, coeffs_u;
     vec_zz_p        coeffs_m_idx;
-    mat_zz_p        P, A, C0, C1, C; 
+    mat_zz_p        P, C0, C1, C; 
     vec_ZZ          Bounds;
     Vec<vec_ZZ>     sig;
     long            mul;
@@ -468,22 +468,10 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
           
           
     // 5. P ← rot([1|a1|a2^T]) = rot(a),   P ∈ Z^(d×(m+2)d)_q      
-    A.SetDims(d0, m2d);
     P.SetDims(d0, (m2d + d_hat)); 
     // NOTE: zero padding of P (d_hat columns) anticipated here, from Preprocessing_ISIS   
+    rot_vect(P, a);
     
-    rot_vect(A, a);
-    
-    for(i=0; i<d0; i++)
-        {   
-        for(j=0; j<m2d; j++)
-        {
-            P[i][j] = A[i][j];
-        }
-    }    
-
-    A.kill();
-
 
     // 6. C ← [rot(c0^T)_(idx_pub) | rot(c0^T)_(idx_hid) | rot(c1^T)],   C ∈ Z_q^(d × (ℓm+ℓr)d)
     C.SetDims(d0, (lmlrd + d_hat));
