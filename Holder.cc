@@ -164,8 +164,10 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
     
                 
     // 7. s ← (Coeffs(m)_(idx_hid), Coeffs(r)),   s ∈ Z^(|idx_hid|·h + ℓr·d)
-    s.SetLength(idxhlrd);
+    s.SetLength(idxhlrd + d_hat);
+    // NOTE: zero padding of s (d_hat values) anticipated here, from Preprocessing_Com
     
+    coeffs_r.SetLength(lr0*d0);
     CoeffsX(coeffs_r, r, lr0);
     
     // NOTE: only first idx_hid*h0 coeffs of m (corresponding to undisclosed attributes) 
@@ -528,13 +530,18 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     }
 
 
-    // 8. s ← Coeffs(s),   s ∈ Z^((m+2)d)   
+    // 8. s ← Coeffs(s),   s ∈ Z^((m+2)d)
+    coeffs_s.SetLength(m2d + d_hat);
+    // NOTE: zero padding of coeffs_s (d_hat values) anticipated here, from Preprocessing_ISIS
     CoeffsX(coeffs_s, s, (m0+2));
     
-    // 9. r ← (Coeffs(m)_(idx_hid), Coeffs(r)),   r ∈ Z^(|idx_hid|·h + ℓr·d)
-    r_vect.SetLength(idxhlrd);    
     
-    CoeffsX(coeffs_r, r, lr0 );
+    // 9. r ← (Coeffs(m)_(idx_hid), Coeffs(r)),   r ∈ Z^(|idx_hid|·h + ℓr·d)
+    r_vect.SetLength(idxhlrd + d_hat);
+    // NOTE: zero padding of r_vect (d_hat values) anticipated here, from Preprocessing_ISIS
+    
+    coeffs_r.SetLength(lr0*d0);    
+    CoeffsX(coeffs_r, r, lr0);
     
     // NOTE: only first idx_hid*h0 coeffs of m (corresponding to undisclosed attributes) 
     //       are copied into r_vect, while coeffs of r is fully copied into r_vect.

@@ -290,10 +290,11 @@ void rot_vect( mat_zz_p& R, const vec_zz_pX& v )
 //==============================================================================
 void CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l)
 {
-    unsigned long   i, j, ld;
+    unsigned long i, j;
     
-    ld = l * d0;   
-    coeffs_x.SetLength(ld);
+    // unsigned long ld = l * d0;
+    // coeffs_x.SetLength(ld);
+    // NOTE: the size of the output vector coeffs_x must be at least (l * d0)
    
     for(i=0; i<l; i++)
     {

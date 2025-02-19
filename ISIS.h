@@ -35,7 +35,7 @@ typedef struct
 } PROOF_I_t;
 
 
-void Preprocessing_ISIS(vec_ZZ& s1, vec_ZZ& r1, const vec_ZZ& s0, const ZZ& B_goth_s2, const vec_ZZ& r0, const ZZ& B_goth_r2);
+void Preprocessing_ISIS(vec_ZZ& s0, vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& B_goth_r2);
 void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const ZZ& aux, const Vec<vec_ZZ>& w0);
 long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_I_t& Pi );
 
