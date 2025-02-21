@@ -572,6 +572,36 @@ ZZ  Norm2(const vec_ZZ& v)
 
 
 //==============================================================================
+// Computes the squared norm of a vector v of integers with modulo q.
+//==============================================================================
+ZZ  Norm2m(const vec_zz_p& v, const long& q)
+{
+    long    i;
+    ZZ      norm2, thresh, v_i;
+
+    thresh = q/2; 
+    // NOTE: thresh = floor(q/2);
+
+    norm2 = 0;
+
+    for(i=0; i<(v.length()); i++)
+    {
+        v_i = conv<ZZ>( v[i] );
+
+        if (v_i > thresh)
+        {
+            v_i -= q;
+        }
+        
+        // norm2 = norm2 + v[i]*v[i];
+        norm2 += sqr( v_i );
+    }   
+
+    return norm2;
+}
+
+
+//==============================================================================
 // Computes the squared norm of a vector v of polynomials with d coefficients.
 //==============================================================================
 ZZ  Norm2X(const vec_ZZX& v, const long& d)
@@ -587,6 +617,40 @@ ZZ  Norm2X(const vec_ZZX& v, const long& d)
         { 
             // norm2 = norm2 + v[i][j] * v[i][j];
             norm2 += sqr( coeff(v[i], j) );
+        }
+    }  
+
+    return norm2;
+}
+
+
+//==============================================================================
+// Computes the squared norm of a vector v of polynomials 
+// with d coefficients with modulo q.
+//==============================================================================
+ZZ  Norm2Xm(const vec_zz_pX& v, const long& d, const long& q)
+{
+    long    i, j;
+    ZZ      norm2, thresh, v_ij;
+
+    thresh = q/2; 
+    // NOTE: thresh = floor(q/2);
+
+    norm2 = 0;
+
+    for(i=0; i<(v.length()); i++)
+    {
+        for(j=0; j<d; j++)
+        { 
+            v_ij = conv<ZZ>( coeff(v[i], j) );
+
+            if (v_ij > thresh)
+            {
+                v_ij -= q;
+            }
+            
+            // norm2 = norm2 + v[i][j] * v[i][j];
+            norm2 += sqr( v_ij );
         }
     }  
 

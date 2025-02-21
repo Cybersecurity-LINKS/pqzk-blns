@@ -46,7 +46,9 @@ zz_pX       poly_mult_hat( const vec_zz_pX& f, const vec_zz_pX& g );
 zz_pX       Compute_f(     const mat_zz_p& B_f, const ZZ& x );
 
 ZZ          Norm2(         const vec_ZZ&  v );
+ZZ          Norm2m(        const vec_zz_p& v, const long& q);
 ZZ          Norm2X(        const vec_ZZX& v, const long& d );
+ZZ          Norm2Xm(       const vec_zz_pX& v, const long& d, const long& q);
 double      Norm2D(        const vec_D&   v );
 
 double      InnerProdD(    const vec_D& a, const vec_D& b );

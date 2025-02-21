@@ -27,10 +27,10 @@
 typedef struct
 {
     vec_zz_pX       t_A, t_y, t_g, w;    
-    vec_ZZ          z_3;
+    vec_zz_p        z_3;
     vec_zz_pX       h;
     zz_pX           t, f0;
-    vec_ZZX         z_1, z_2;
+    vec_zz_pX       z_1, z_2;
     long            valid;
 } PROOF_I_t;
 

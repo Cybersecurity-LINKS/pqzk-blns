@@ -194,7 +194,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     vec_zz_pX            h_part1, h_part2;
     vec_zz_pX            r_j, p_j, Beta_j, c_r_j, mu, m, s_hat, tmp_vec, y;
     vec_zz_pX            sigma_s_1, d_1, acc_vec, D2_y;
-    vec_ZZX              c_s1, c_s2;
+    vec_zz_pX            c_s1, c_s2;
     vec_ZZX              s, r, u, y_1, y_2, y_3, s_1, s_2;
     ZZX                  c;
     zz_pX                h_part3, h_part4, h_part5;
@@ -203,9 +203,9 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     Vec<vec_zz_pX>       sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream         ss;
     mat_L                R_goth;
-    vec_ZZ               s0, r0, u0, coeffs_s1, coeffs_y3, coeffs_R_goth_mult_s1;    
+    vec_ZZ               s0, r0, u0, coeffs_s1, coeffs_y3;    
     mat_zz_p             gamma, C_m, C_r;
-    vec_zz_p             ones;
+    vec_zz_p             ones, coeffs_R_goth_mult_s1;
     vec_zz_pX            s_mod, r_mod,  u_mod, coeffs_ones, u_m_ones, sigma_u_m_ones, sigma_ones;
     vec_zz_pX            sigma_s, sigma_r;
     vec_zz_p             e_tmp, m_C;   
@@ -644,15 +644,15 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
         for(i=0; i<256; i++)
         {
-            coeffs_R_goth_mult_s1[i] = ( conv<vec_ZZ>(R_goth[i]) * coeffs_s1 );       
+            coeffs_R_goth_mult_s1[i] = conv<vec_zz_p>(R_goth[i]) * conv<vec_zz_p>(coeffs_s1);       
             // NOTE: this term corresponds to InnerProduct(result, coeffs_R_goth[i], coeffs_s1);
 
-            Pi.z_3[i] = coeffs_y3[i] + coeffs_R_goth_mult_s1[i];
+            Pi.z_3[i] = conv<zz_p>( coeffs_y3[i] ) + coeffs_R_goth_mult_s1[i];
         }
 
         
         // 25. b3 ← Rej (z_3, R_goth * s_1, s3_goth, M_3),    b3 ∈ {0, 1}
-        b3 = Rej_v_ZZ(Pi.z_3, coeffs_R_goth_mult_s1, s3_goth, M_3);
+        b3 = Rej_v_zzp(Pi.z_3, coeffs_R_goth_mult_s1, q2_hat, s3_goth, M_3);
         
         // NOTE: if b3 == 0, continue the while loop (skip next rows until 53, then go to row 7)
         if (b3 == 0)
@@ -708,7 +708,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
                 sigma_r_u_[j][k] = sigma_r_[j][k + (m2d+d_hat)/d_hat + (idxhlrd+d_hat)/d_hat];
             }
 
-            h_part1[j] = poly_mult_hat(sigma_r_[j], s_1_mod) + poly_mult_hat(sigma_e_[j], conv<vec_zz_pX>( y_3 )) + (conv<zz_p>( - Pi.z_3[j] ));
+            h_part1[j] = poly_mult_hat(sigma_r_[j], s_1_mod) + poly_mult_hat(sigma_e_[j], conv<vec_zz_pX>( y_3 )) - Pi.z_3[j];
         }
 
        
@@ -1194,20 +1194,20 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         for(i=0; i<m1; i++)
         {
             Pi.z_1[i].SetLength(d_hat);
-            c_s1[i] = ModPhi_hat( c * s_1[i] );
-            Pi.z_1[i]  = y_1[i] + c_s1[i]; 
+            c_s1[i] = ModPhi_hat_q( conv<zz_pX>(c) * s_1_mod[i] );
+            Pi.z_1[i]  = conv<zz_pX>( y_1[i] ) + c_s1[i]; 
         }
             
         for(i=0; i<m2; i++)
         {
             Pi.z_2[i].SetLength(d_hat);
-            c_s2[i] = ModPhi_hat( c * s_2[i] );
-            Pi.z_2[i]  = y_2[i] + c_s2[i]; 
+            c_s2[i] = ModPhi_hat_q( conv<zz_pX>(c) * s_2_mod[i] );
+            Pi.z_2[i]  = conv<zz_pX>( y_2[i] ) + c_s2[i]; 
         }
             
 
         // 53. b_i ← Rej(z_i, c*s_i, s_i_goth, M_i),   b_i ∈ {0, 1} 
-        b1 = Rej_v_ZZX(Pi.z_1, c_s1, s1_goth, M_1);
+        b1 = Rej_v_zzpX(Pi.z_1, c_s1, q2_hat, s1_goth, M_1);
 
         // NOTE: if b1 == 0, continue the while loop (skip next rows until 53, then go to row 7)
         if (b1 == 0)
@@ -1216,7 +1216,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             continue;
         }
 
-        b2 = Rej_v_ZZX(Pi.z_2, c_s2, s2_goth, M_2); 
+        b2 = Rej_v_zzpX(Pi.z_2, c_s2, q2_hat, s2_goth, M_2); 
 
         // NOTE: if b2 == 0, continue the while loop (skip next rows until 53, then go to row 7)
         if (b2 == 0)
@@ -1282,7 +1282,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     unsigned long        i, j, k;
     Mat<zz_pX>           B, D2; //D2_2_1
     vec_zz_pX            t_B, z, d_1, acc_vec, coeffs_ones, sigma_ones;
-    vec_zz_pX            r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, z_1_mod, z_2_mod;
+    vec_zz_pX            r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2;
     ZZX                  c0;
     zz_pX                acc, delta_1, delta_2, delta_3, c, d_0;
     Vec<vec_zz_pX>       e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
@@ -1352,10 +1352,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
         cout << "ERROR! Pi does not contain a valid proof" << endl;
         return 0;
     }
-    // NOTE: to save memory, proof values will be directly accessed as Pi.{name},
-    //       apart z_1 and z_2, that are often used modulo q2_hat      
-    z_1_mod = conv<vec_zz_pX>( Pi.z_1 );
-    z_2_mod = conv<vec_zz_pX>( Pi.z_2 );
+    // NOTE: to save memory, proof values will be directly accessed as Pi.{name}
     
     // 6. a_1 ← (t_A, t_y, t_g, w)     
     // a_1 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
@@ -1416,10 +1413,10 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
 
     for(i=0; i<m1; i++) 
     {
-        z[i] = z_1_mod[i]; // z_1
+        z[i] = Pi.z_1[i]; // z_1
     }
 
-    sigma_map(tmp_vec, z_1_mod, d_hat);
+    sigma_map(tmp_vec, Pi.z_1, d_hat);
     k = 0;
 
     for(i=m1; i<(2*m1); i++) 
@@ -1445,7 +1442,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
         // − B*z_2
         for(j=0; j<m2; j++)        
         {
-            acc += ModPhi_hat_q(- B[i][j] * z_2_mod[j] );
+            acc += ModPhi_hat_q(- B[i][j] * Pi.z_2[j] );
         }           
         
         tmp_vec[i] = acc;
@@ -1831,7 +1828,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
         
         for(j=0; j<256; j++)
         {
-            sums += gamma[i][j] * conv<zz_p>(Pi.z_3[j]);
+            sums += gamma[i][j] * Pi.z_3[j];
         }
                     
         for(j=0; j<d0; j++)
@@ -1848,10 +1845,9 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     // 25.  if one of the 4 conditions below does not hold, then return 0
        
     // Compute ||z_i||, Euclidean norm of each z_i
-    norm_z1 = sqrt( conv<RR>( Norm2X(Pi.z_1, d_hat ) ) ); 
-    norm_z2 = sqrt( conv<RR>( Norm2X(Pi.z_2, d_hat ) ) ); 
-    norm_z3 = sqrt( conv<RR>( Norm2( Pi.z_3) ) );
-
+    norm_z1 = sqrt( conv<RR>( Norm2Xm(Pi.z_1, d_hat, q2_hat) ) );
+    norm_z2 = sqrt( conv<RR>( Norm2Xm(Pi.z_2, d_hat, q2_hat) ) );
+    norm_z3 = sqrt( conv<RR>( Norm2m( Pi.z_3, q2_hat ) ) );
     
     // 25.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
     // NOTE: equations in RR  
@@ -1902,12 +1898,12 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
         
         for(j=0; j<m1; j++)
         {
-            acc += ModPhi_hat_q( crs[0][i][j] * z_1_mod[j] ); 
+            acc += ModPhi_hat_q( crs[0][i][j] * Pi.z_1[j] ); 
         }        
 
         for(j=0; j<m2; j++)
         {
-            acc += ModPhi_hat_q( crs[1][i][j] * z_2_mod[j] ); 
+            acc += ModPhi_hat_q( crs[1][i][j] * Pi.z_2[j] ); 
         }  
 
         // A_1*z_1 + A_2*z_2
@@ -1964,7 +1960,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     acc += ModPhi_hat_q( ModPhi_hat_q( sqr(c) ) * d_0 );
       
     // 4rd addend −(c*t − b^T * z_2)
-    acc -= ( ModPhi_hat_q( c * Pi.t ) - poly_mult_hat(crs[4][0], z_2_mod) );
+    acc -= ( ModPhi_hat_q( c * Pi.t ) - poly_mult_hat(crs[4][0], Pi.z_2) );
     
     if (acc != Pi.f0)
     {

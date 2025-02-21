@@ -24,7 +24,9 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat
 
 long Rej(const long& index, const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M);
 long Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M);
+long Rej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s, const RR& M);
 long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M);
+long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR& s, const RR& M);
 
 void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_ZZX>& st);
 
