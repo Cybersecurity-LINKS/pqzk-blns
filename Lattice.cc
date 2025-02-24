@@ -579,3 +579,32 @@ void polySampler(ZZX& s, const double& sigma)
       
     // return s; // s ∈ R
 }
+
+
+//==============================================================================
+// polySampler_hat - Generates a random polynomial with d_hat elements 
+//                   and fixed standard deviation
+//
+// Input:
+// - sigma: standard deviation sigma > 0
+//
+// Output:
+// - s:     polynomial, s ∈ R^_q
+//==============================================================================
+void polySampler_hat(zz_pX& s, const double& sigma)
+{
+    long    i;
+    ZZ      x;
+
+    s.SetLength(d_hat);
+   
+    for(i=0; i<d_hat; i++)
+    {
+        ZSampler(x, sigma, 0);
+        SetCoeff(s, i, conv<zz_p>(x));
+    }
+
+    // return s; // s ∈ R^_q
+}
+
+

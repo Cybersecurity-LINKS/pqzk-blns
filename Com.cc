@@ -137,7 +137,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     RR                  alpha_i;
     Vec<vec_zz_pX>      e_, e_prime;
     Vec<vec_zz_pX>      sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_;
-    Vec<vec_ZZX>        st_1,  st_2;
+    Vec<vec_zz_pX>      st_1, st_2;
     stringstream        ss;         
     mat_L               R_goth;
     vec_ZZ              s0, coeffs_y3, coeffs_R_goth_mult_s1; //coeffs_s1;
@@ -452,10 +452,10 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
                                             
         // 17. (com_1, st_1) = LHC_Com(1, crs_LHC1, s_1, y_1)    
-        LHC_Com(Pi.com_1, st_1, 1, crs[5], crs[7], s_1, y_1);
+        LHC_Com(Pi.com_1, st_1, 1, crs[5], crs[7], conv<vec_zz_pX>(s_1), conv<vec_zz_pX>(y_1));
 
         // 18. (com_2, st_2) = LHC_Com(2, crs_LHC2, s_2, y_2)
-        LHC_Com(Pi.com_2, st_2, 2, crs[6], crs[8], s_2, y_2);
+        LHC_Com(Pi.com_2, st_2, 2, crs[6], crs[8], conv<vec_zz_pX>(s_2), conv<vec_zz_pX>(y_2));
 
         // 19. a1 ← (t_A, t_y, t_g, w, com_1, com_2) 
         ss.str("");    ss.clear();
@@ -916,7 +916,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
 
         // 50. op_i ← LHC.Open(i, c, st_i),    op_i ∈ {⊥} ∪ R^^(n_i) × R^^(m_i) × R^^(m_i)
-        LHC_Open(Pi.op_1, 1, c, st_1);        
+        LHC_Open(Pi.op_1, 1, conv<zz_pX>(c), st_1);        
 
         // 51. if op_i = ⊥ then b_bar_i = 0
         if (Pi.op_1.length() == 0)
@@ -932,7 +932,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             bbar1 = 1;
         }
 
-        LHC_Open(Pi.op_2, 2, c, st_2);
+        LHC_Open(Pi.op_2, 2, conv<zz_pX>(c), st_2);
 
         if (Pi.op_2.length() == 0)
         {
@@ -1523,8 +1523,8 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     
 
     // 21.5 Fifth condition: for i ∈ {1, 2}, LHC.Verify_i((A_i, B_i), (com_i, c), (z_i, op_i)) == 1
-    b1 = LHC_Verify(1, crs[5], crs[7], Pi.com_1, c, Pi.z_1, Pi.op_1);
-    b2 = LHC_Verify(2, crs[6], crs[8], Pi.com_2, c, Pi.z_2, Pi.op_2);
+    b1 = LHC_Verify(1, crs[5], crs[7], Pi.com_1, c_mod, conv<vec_zz_pX>(Pi.z_1), Pi.op_1);
+    b2 = LHC_Verify(2, crs[6], crs[8], Pi.com_2, c_mod, conv<vec_zz_pX>(Pi.z_2), Pi.op_2);
     
     if ((b1==0) || (b2==0))
     {

@@ -26,5 +26,6 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
 
 void ZSampler(ZZ& x, const double& sigma, const double& c);
 void polySampler(ZZX& s, const double& sigma);
+void polySampler_hat(zz_pX& s, const double& sigma);
 
 #endif

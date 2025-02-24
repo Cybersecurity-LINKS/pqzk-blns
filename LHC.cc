@@ -30,27 +30,27 @@
 // - com:       commitment structure    
 // - st:        status structure
 //==============================================================================
-void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_ZZX& s, const vec_ZZX& y) 
+void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_zz_pX>& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y) 
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
-    long        i, j, m, n, eta;
-    RR          alpha_i;    
-    vec_ZZX     e_1, e_2, e_3, f_1, f_2, f_3; 
+    long        i, m;
+    double      alpha_i;    
+    vec_zz_pX   e_1, e_2, e_3, f_1, f_2, f_3; 
     vec_zz_pX   t_1, t_2, w_1, w_2;
-    ZZX         acc_1, acc_2;
+    ZZX         x;
     
     // Manage the invocation with index 1 or 2
-    n   = n_i;
-    eta = eta_i; 
+    const long n   = n_i;
+    const long eta = eta_i; 
  
     if (index == 1) 
     {
-        alpha_i = RR(alpha_bar_1);
+        alpha_i = double(alpha_bar_1);
         m       = m1_Com;
     }
     else if (index == 2)
     {
-        alpha_i = RR(alpha_bar_2);
+        alpha_i = double(alpha_bar_2);
         m       = m2_Com;
     }
     else
@@ -60,70 +60,44 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat
         m = 0;
     }     
     // \overline{\mathfrak{s}}_1 (or 2)    
-    const RR     s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR((n + 2*m) * d0));
-    const double s_goth_d = conv<double>(s_goth);
-               
-    // Random generation of e_i        
-    e_1.SetLength(n);
-    e_2.SetLength(m);
-    e_3.SetLength(m);      
-
-    for(i=0; i<n; i++)
+    const double s_goth = alpha_i * double(eta_i * nu0) * sqrt(double((n + 2*m) * d0));
+    
+    
+    // 1. Retrieve A_i, B_i from crs
+    // NOTE: A_i, B_i directly provided as inputs
+        
+    // 2. Random generation of e_i
     {
-        e_1[i].SetLength(d_hat);
+        zz_pPush push(eta+1); 
+        // NOTE: backup current modulus q1_hat, temporarily set to eta+1 (i.e., zz_p::init(eta+1))
 
-        for(j=0; j<d_hat; j++)
+        e_1.SetLength(n);
+        e_2.SetLength(m);
+        e_3.SetLength(m);      
+
+        for(i=0; i<n; i++)
         {
-            e_1[i][j] = RandomBnd(eta+1);            
+            e_1[i] = random_zz_pX(d_hat);
+        }
+        for(i=0; i<m; i++)
+        {
+            e_2[i] = random_zz_pX(d_hat);
+            e_3[i] = random_zz_pX(d_hat);
         }
     }
-     for(i=0; i<m; i++)
-    {
-        e_2[i].SetLength(d_hat);
-        e_3[i].SetLength(d_hat);
+    // NOTE: e_1, e_2, e_3 coefficients are in the range [0, eta]
 
-        for(j=0; j<d_hat; j++)
-        {
-            e_2[i][j] = RandomBnd(eta+1);  
-            e_3[i][j] = RandomBnd(eta+1);          
-        }
-    }    
-
-    // Initialization of t_i
+    // 3. / 4. Compute t_i
     t_1.SetLength(m);
     t_2.SetLength(m);
-
-    for(i=0; i<m; i++)
-    {
-        t_1[i].SetLength(d_hat);
-        t_2[i].SetLength(d_hat);
-    }   
-    
-    // Other variables useful for computations
-    acc_1.SetLength(d_hat);
-    acc_2.SetLength(d_hat);   
        
     for(i=0; i<m; i++)
     {
-        // acc_1 = 0;        
-        // acc_2 = 0;          
-        clear(acc_1);
-        clear(acc_2);
-              
-        for(j=0; j<n; j++)
-        {
-            // acc_1 += A_i[i,j] * e_i,1[j]
-            acc_1 += ModPhi_hat(conv<ZZX>(A_i[i][j]) * e_1[j]); 
-            // acc_2 += B_i[i,j] * e_i,1[j]
-            acc_2 += ModPhi_hat(conv<ZZX>(B_i[i][j]) * e_1[j]);
-        }      
-        
-        t_1[i] = conv<zz_pX>( p_bar * (acc_1 + e_2[i]) );
-        t_2[i] = conv<zz_pX>( p_bar * (acc_2 + e_3[i]) + s[i] );         
-        // NOTE: modulo q_hat on all coefficients (zz_pX)        
+        t_1[i] = (poly_mult_hat(A_i[i], e_1) + e_2[i]) * p_bar;
+        t_2[i] = (poly_mult_hat(B_i[i], e_1) + e_3[i]) * p_bar + s[i];
     }
    
-    // Initialization of f_i
+    // 5. Initialization of f_i
     f_1.SetLength(n);
     f_2.SetLength(m);
     f_3.SetLength(m);  
@@ -131,60 +105,33 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat
     // Discrete gaussian random generation (using Zsampler) for f_i   
     for(i=0; i<n; i++)
     {
-        f_1[i].SetLength(d_hat);
-
-        for(j=0; j<d_hat; j++)
-        {
-            ZSampler(f_1[i][j], s_goth_d, 0);
-        }
+        polySampler_hat(f_1[i], s_goth);
     }
     for(i=0; i<m; i++)
     {
-        f_2[i].SetLength(d_hat);
-        f_3[i].SetLength(d_hat);
-
-        for(j=0; j<d_hat; j++)
-        {
-            ZSampler(f_2[i][j], s_goth_d, 0);
-            ZSampler(f_3[i][j], s_goth_d, 0);
-        }
+        polySampler_hat(f_2[i], s_goth);
+        polySampler_hat(f_3[i], s_goth);
     }
 
-    // Initialization of w_i    
+
+    // 6. / 7. Compute w_i
     w_1.SetLength(m);
     w_2.SetLength(m);
 
     for(i=0; i<m; i++)
     {
-        w_1[i].SetLength(d_hat);
-        w_2[i].SetLength(d_hat);
-    
-        // acc_1 = 0;
-        // acc_2 = 0; 
-        clear(acc_1);
-        clear(acc_2);  
-              
-        for(j=0; j<n; j++)
-        {
-            // acc_1 += A_i[i,j] * f_i,1[j]
-            acc_1 += ModPhi_hat(conv<ZZX>(A_i[i][j]) * f_1[j]); 
-            // acc_2 += B_i[i,j] * f_i,1[j]
-            acc_2 += ModPhi_hat(conv<ZZX>(B_i[i][j]) * f_1[j]);
-        }      
-        
-        w_1[i] = conv<zz_pX>( p_bar * (acc_1 + f_2[i]) );
-        w_2[i] = conv<zz_pX>( p_bar * (acc_2 + f_3[i]) + y[i] );       
-        // NOTE: modulo q_hat on all coefficients (zz_pX)
+        w_1[i] = (poly_mult_hat(A_i[i], f_1) + f_2[i]) * p_bar;
+        w_2[i] = (poly_mult_hat(B_i[i], f_1) + f_3[i]) * p_bar + y[i];
     }
         
-    // Store the results in com
+    // 8. Store the results in com
     com.SetLength(4);
     com[0] = t_1;
     com[1] = t_2;
     com[2] = w_1;
     com[3] = w_2;   
 
-    // Store the results in st
+    // 9. Store the results in st
     st.SetLength(6);
     st[0] = e_1;
     st[1] = e_2;
@@ -193,85 +140,12 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_ZZX>& st, const long& index, const Mat
     st[4] = f_2;
     st[5] = f_3;
   
-    // return(com, st)  
+    // 10. return(com, st)  
 }
 
 
 //==============================================================================
-// Rej  -   Rejection function. It takes as inputs the index (i),  
-//          2 vectors of the same length (z, v), and 2 scalars (s, M). 
-//          It returns as output “reject” (0) or “accept” (1).
-//
-// Inputs:
-// - index: i (1 or 2)
-// - z, v:  vectors of n+2*m polynomials of length d_hat
-// - s:     scalar, it is the standard deviation
-// - M:     scalar, it is a coefficient
-//
-// Output:
-// - 0 | 1: reject or accept
-//==============================================================================
-long Rej(const long& index, const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
-{
-    long i, j, m;
-    RR u, mul, den, eq;
-    ZZ dot_prod, norm2, v_ij;    
-
-    // Manage the invocation with index 1 or 2        
-    if (index == 1) 
-    {        
-        m = m1_Com;
-    }
-    else if (index == 2)
-    {
-        m = m2_Com;
-    }
-    else
-    {
-        cout << "ERROR! index must be 1 or 2" << endl;
-        assert((index == 1) || (index == 2));
-        m = 0;
-    }     
-            
-    // u <--[0,1), uniformly distributed
-    u = random_RR();
-
-    // <z, v> : Dot product between z and v    
-    dot_prod = 0;
-    // ||v||^2: Square of Euclidean norm of v 
-    norm2 = 0;
-
-    for(i=0; i<(n_i+2*m); i++)
-    {
-        for(j=0; j<d_hat; j++)
-        {
-            v_ij = coeff(v[i], j); // v[i][j]
-            
-            // dot_prod += z[i][j] * v[i][j];
-            dot_prod    += coeff(z[i], j) * v_ij;
-            // norm2    += v[i][j] * v[i][j];  
-            norm2       += sqr(v_ij); 
-        }
-    }
-
-    mul = 1.0 / M;
-    den = 2*sqr(s);
-    eq = mul * exp(conv<RR>(-2*dot_prod + norm2) / den);
-
-    // Condition for accepting or rejecting
-    if (u > eq)
-    {
-        return(0); // reject
-    }
-    else
-    {
-        return(1); // accept
-    }   
-}
-
-
-//==============================================================================
-// Rej_v_ZZ  -  Rejection function, modified version for vec_ZZ. 
+// Rej_v_ZZ  -  Rejection function, version for vec_ZZ. 
 //              It takes as inputs 2 vectors of the same length (z, v), and 2 scalars (s, M). 
 //              It returns as output “reject” (0) or “accept” (1).
 //
@@ -329,7 +203,7 @@ long Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M)
 
 
 //==============================================================================
-// Rej_v_zzp  - Rejection function, modified version for vec_zz_p. 
+// Rej_v_zzp  - Rejection function, version for vec_zz_p. 
 //              It takes as inputs 2 vectors of the same length (z, v), 
 //              their modulo q and 2 scalars (s, M). 
 //              It returns as output “reject” (0) or “accept” (1).
@@ -407,7 +281,7 @@ long Rej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s,
 
 
 //==============================================================================
-// Rej_v_ZZX  - Rejection function, modified version for vec_ZZX. 
+// Rej_v_ZZX  - Rejection function, version for vec_ZZX. 
 //              It takes as inputs 2 vectors of the same length (z, v), and 2 scalars (s, M). 
 //              It returns as output “reject” (0) or “accept” (1).
 //
@@ -423,7 +297,7 @@ long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 {
     long i, j, len;
     RR u, mul, den, eq;
-    ZZ dot_prod, norm2, z_ij, v_ij;    
+    ZZ dot_prod, norm2, v_ij;    
     
     len = z.length();    
    
@@ -445,11 +319,10 @@ long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
     {
         for(j=0; j<d_hat; j++)
         {
-            z_ij = coeff(z[i], j); // z[i][j]            
             v_ij = coeff(v[i], j); // v[i][j]            
             
             // dot_prod += z[i][j] * v[i][j];             
-            dot_prod    += z_ij    * v_ij;
+            dot_prod    += coeff(z[i], j) * v_ij;
             // norm2    += v[i][j] * v[i][j];
             norm2       += sqr(v_ij);  
         }
@@ -472,7 +345,7 @@ long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 
 
 //==============================================================================
-// Rej_v_zzpX - Rejection function, modified version for vec_zz_pX. 
+// Rej_v_zzpX - Rejection function, version for vec_zz_pX. 
 //              It takes as inputs 2 vectors of the same length (z, v), 
 //              their modulo q and 2 scalars (s, M). 
 //              It returns as output “reject” (0) or “accept” (1).
@@ -565,14 +438,15 @@ long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR&
 // - op:      list of (n + m + m) polynomials of d_hat length, if accept, 
 //            otherwise op = [] (i.e. op = ⊥, reject)
 //==============================================================================
-void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_ZZX>& st)
+void LHC_Open(Vec<vec_zz_pX>& op, const long& index, const zz_pX& c, const Vec<vec_zz_pX>& st)
 {
-    long    i, m, n, b;
-    RR      alpha_i;
-    vec_ZZX e_1, e_2, e_3, f_1, f_2, f_3, z_1, z_2, z_3, z, v;
-        
+    long        i, m, b;
+    RR          alpha_i;
+    vec_zz_pX   e_1, e_2, e_3, f_1, f_2, f_3;
+    vec_zz_pX   v_1, v_2, v_3, z_1, z_2, z_3, z, v;
+    
     // Manage the invocation with index 1 or 2  
-    n = n_i;
+    const long n   = n_i;    
 
     if (index == 1) 
     {
@@ -589,16 +463,17 @@ void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_Z
         cout << "ERROR! index must be 1 or 2" << endl;
         assert((index == 1) || (index == 2));
         m = 0;
-    }     
-    // \overline{\mathfrak{s}}_1 (or 2)
-    const RR s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR((n + 2*m) * d0));
-
-    // # \overline{M}_1 (or 2)
-    const RR M_bar = exp( sqrt( RR(2*(lambda0 + 1)) / log2e_Const ) * 1/alpha_i + 1/(2*sqr(alpha_i)));
+    }
 
     const long n2m = n + 2*m;
+    
+    // \overline{\mathfrak{s}}_1 (or 2)
+    const RR s_goth = alpha_i * RR(eta_i * nu0) * sqrt(RR(n2m * d0));
+
+    // \overline{M}_1 (or 2)
+    const RR M_bar = exp( sqrt( RR(2*(lambda0 + 1)) / log2e_Const ) * 1/alpha_i + 1/(2*sqr(alpha_i)));
    
-    // Initialize e_i, f_i, z_i, for i = 1, 2, 3
+    // Initialize e_i, f_i, z_i, v_i, for i = 1, 2, 3
     e_1.SetLength(n);
     e_2.SetLength(m);
     e_3.SetLength(m);   
@@ -607,24 +482,13 @@ void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_Z
     f_3.SetLength(m);    
     z_1.SetLength(n);
     z_2.SetLength(m);
-    z_3.SetLength(m);  
-    for(i=0; i<n; i++)
-    {
-        e_1[i].SetLength(d_hat);
-        f_1[i].SetLength(d_hat);
-        z_1[i].SetLength(d_hat);
-    }
-     for(i=0; i<m; i++)
-    {
-        e_2[i].SetLength(d_hat);
-        e_3[i].SetLength(d_hat);
-        f_2[i].SetLength(d_hat);
-        f_3[i].SetLength(d_hat);
-        z_2[i].SetLength(d_hat);
-        z_3[i].SetLength(d_hat);
-    }
+    z_3.SetLength(m);
+    v_1.SetLength(n);
+    v_2.SetLength(m);
+    v_3.SetLength(m);  
+    
 
-    // Retrieve e_i and f_i from st
+    // 1. Retrieve e_i and f_i from st
     e_1 = st[0];
     e_2 = st[1];
     e_3 = st[2];
@@ -632,15 +496,19 @@ void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_Z
     f_2 = st[4];
     f_3 = st[5];
     
-    // Compute z_i
+    // 2. / 3. Compute z_i
     for(i=0; i<n; i++)
     {
-        z_1[i] = f_1[i] + ModPhi_hat(c * e_1[i]);
+        v_1[i] = ModPhi_hat_q(c * e_1[i]);
+        z_1[i] = f_1[i] + v_1[i];
     }
-     for(i=0; i<m; i++)
+    for(i=0; i<m; i++)
     {
-        z_2[i] = f_2[i] + ModPhi_hat(c * e_2[i]);
-        z_3[i] = f_3[i] + ModPhi_hat(c * e_3[i]);
+        v_2[i] = ModPhi_hat_q(c * e_2[i]);
+        z_2[i] = f_2[i] + v_2[i];
+
+        v_3[i] = ModPhi_hat_q(c * e_3[i]);
+        z_3[i] = f_3[i] + v_3[i];
     }
     
     // Initialize v, z, to be passed to Rej  
@@ -651,42 +519,40 @@ void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_Z
     //                     n    m    m           n    m    m
     for(i=0; i<(n2m); i++)
     {
-        z[i].SetLength(d_hat);
-        v[i].SetLength(d_hat);
-        
         if (i < n)  // filling first n positions
         {
             z[i] = z_1[i];
-            v[i] = ModPhi_hat(c * e_1[i]);
+            v[i] = v_1[i];
         }
         else if (i < (n + m)) // filling m positions starting from the n-th 
         {
             z[i] = z_2[i-n];
-            v[i] = ModPhi_hat(c * e_2[i-n]);
+            v[i] = v_2[i-n];
         }
         else // filling last m positions
         {
-        z[i] = z_3[i-n-m];
-        v[i] = ModPhi_hat(c * e_3[i-n-m]);
+            z[i] = z_3[i-n-m];
+            v[i] = v_3[i-n-m];
         }        
     }
     
-    // Call Rej function to accept or reject
-    b = Rej(index, z, v, s_goth, M_bar);
-        
+    // 4. Call Rej function
+    b = Rej_v_zzpX(z, v, q1_hat, s_goth, M_bar);
+    
+    // 5. Reject or accept
     if (b == 0)
     {
-        //     op = [] (i.e. ⊥, reject)
+        // op = [] (i.e. ⊥, reject)
         op.kill();
     }
-    else //if (b == 1) // (accept)
+    else // (accept)
     {        
         op.SetLength(3);
         op[0] = z_1;
         op[1] = z_2;
         op[2] = z_3;
     }
-    // return(op);
+    // 6. return(op);
 }
 
 
@@ -706,16 +572,12 @@ void LHC_Open(Vec<vec_ZZX>& op, const long& index, const ZZX& c, const Vec<vec_Z
 // Output:
 // - 0 or 1:    reject or accept 
 //==============================================================================
-long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const Vec<vec_zz_pX>& com, const ZZX& c, const vec_ZZX& z, const Vec<vec_ZZX>& op)
+long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const Vec<vec_zz_pX>& com, const zz_pX& c, const vec_zz_pX& z, const Vec<vec_zz_pX>& op)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
-    long        i, j, m, n, flag;
-    RR          alpha_i, s_goth, thres;
-    vec_zz_pX   t_1, t_2, w_1, w_2, z_a, z_b, zi_mod; 
-    vec_ZZX     z_1, z_2, z_3;
-    ZZ          norm2_z1, norm2_z2, norm2_z3;
-    ZZX         acc_1, acc_2;
-    zz_pX       c_mod;
+    long        i, m, n, flag;
+    ZZ          alpha_i, s_goth2, thres, norm2_z1, norm2_z2, norm2_z3;
+    vec_zz_pX   t_1, t_2, w_1, w_2, z_a, z_b, z_1, z_2, z_3;
     
     if (op.length() == 0)
     {
@@ -723,7 +585,7 @@ long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i,
         cout << "\n Reject because op = []" << endl;
         return 0;
     }
-    
+
     // Manage the invocation with index 1 or 2  
     n = n_i;
     if (index == 1) 
@@ -742,9 +604,9 @@ long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i,
         assert((index == 1) || (index == 2));
         m = 0;
     }     
-    // \overline{\mathfrak{s}}_1 (or 2)    
-    s_goth = ((alpha_i * eta_i * nu0) * sqrt(conv<RR>((n + 2*m) * d0)));
-       
+    // Compute the square of \overline{\mathfrak{s}}_1 (or 2) 
+    s_goth2 = sqr(alpha_i * eta_i * nu0) * ((n + 2*m) * d0);
+
     // Initialize t_i, w_i, z_i
     t_1.SetLength(m);
     t_2.SetLength(m);
@@ -754,94 +616,62 @@ long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i,
     z_2.SetLength(m);
     z_3.SetLength(m);  
 
-    for(i=0; i<n; i++)
-    {
-        z_1[i].SetLength(d_hat);
-    }
-    for(i=0; i<m; i++)
-    {
-        t_1[i].SetLength(d_hat);
-        t_2[i].SetLength(d_hat);
-        w_1[i].SetLength(d_hat);
-        w_2[i].SetLength(d_hat);
-        z_2[i].SetLength(d_hat);
-        z_3[i].SetLength(d_hat);
-    }   
-
-    // Retrieve t_i, w_i, z_i from com and op   
+    
+    // 1. Retrieve t_i, w_i from com   
     t_1 = com[0];
     t_2 = com[1];
     w_1 = com[2];
     w_2 = com[3];
+
+    // 2. Retrieve z_i from op 
     z_1 = op[0];
     z_2 = op[1];
     z_3 = op[2];
    
     // Compute ||z_i||^2: Square of Euclidean norm of each z_i
-    norm2_z1 = Norm2X(z_1, d_hat);
-    norm2_z2 = Norm2X(z_2, d_hat);
-    norm2_z3 = Norm2X(z_3, d_hat);
+    norm2_z1 = Norm2Xm(z_1, d_hat, q1_hat);
+    norm2_z2 = Norm2Xm(z_2, d_hat, q1_hat);
+    norm2_z3 = Norm2Xm(z_3, d_hat, q1_hat);
        
-    // Check first conditions to reject (0)
-    thres = s_goth * sqrt(conv<RR>(2 * n * d0));
+    // 3. Check z_1 norm
+    thres = s_goth2 * (2 * n * d0);
 
-    if ( sqrt(conv<RR>(norm2_z1)) > thres)
+    if ( norm2_z1 > thres)
     { 
         cout << "\n Invalid z_1 norm!" << endl; 
         return 0;
     }
 
-    thres = s_goth * sqrt(conv<RR>(2 * m * d_hat));
+    // 4. Check z_2 norm
+    thres = s_goth2 * (2 * m * d_hat);
 
-    if ( sqrt(conv<RR>(norm2_z2)) > thres)
+    if ( norm2_z2 > thres)
     { 
         cout << "\n Invalid z_2 norm!" << endl; 
         return 0;
     }
 
-    if ( sqrt(conv<RR>(norm2_z3)) > thres)
+    // 5. Check z_3 norm
+    if ( norm2_z3 > thres)
     { 
         cout << "\n Invalid z_3 norm!" << endl; 
         return 0;
     }
 
-    // Initialize z_a, z_b
+
+    // 6. / 7. Compute z_a, z_b
     z_a.SetLength(m);
     z_b.SetLength(m);
+           
     for(i=0; i<m; i++)
     {
-        z_a[i].SetLength(d_hat);
-        z_b[i].SetLength(d_hat);
-    }
-
-    // Other variables useful for computations
-    acc_1.SetLength(d_hat);
-    acc_2.SetLength(d_hat); 
-    c_mod = conv<zz_pX>(c);
-       
-    for(i=0; i<m; i++)
-    {
-        // acc_1 = 0;
-        // acc_2 = 0; 
-        clear(acc_1);
-        clear(acc_2);
-              
-        for(j=0; j<n; j++)
-        {
-            // acc_1 += A_i[i,j] * z_i,1[j]
-            acc_1 += ModPhi_hat( conv<ZZX>(A_i[i][j]) * z_1[j] ); 
-            // acc_2 += B_i[i,j] * z_i,1[j]
-            acc_2 += ModPhi_hat( conv<ZZX>(B_i[i][j]) * z_1[j] );
-        }      
-        
-        z_a[i] = ModPhi_hat_q( c_mod * t_1[i] ) + w_1[i] - conv<zz_pX>(p_bar * (acc_1 + z_2[i]));
-        z_b[i] = ModPhi_hat_q( c_mod * t_2[i] ) + w_2[i] - conv<zz_pX>(p_bar * (acc_2 + z_3[i]));     
-        // NOTE: modulo q_hat on all coefficients (zz_pX)
+        z_a[i] = ModPhi_hat_q( c * t_1[i] ) + w_1[i] - (poly_mult_hat(A_i[i], z_1) + z_2[i]) * p_bar;
+        z_b[i] = ModPhi_hat_q( c * t_2[i] ) + w_2[i] - (poly_mult_hat(B_i[i], z_1) + z_3[i]) * p_bar;
     }
     
-    // Check final conditions to reject (0) or accept (1)
+
+    // 8. Check final conditions to reject (0) or accept (1)
     flag = 0;
-    zi_mod.SetLength(m);
 
     for(i=0; i<m; i++)
     {
@@ -849,13 +679,11 @@ long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i,
         z_a[i].normalize();
         flag += (z_a[i] != 0);
         
-        //  Check if (z_b[i] != z[i])  
-        zi_mod[i].SetLength(d_hat);      
-        zi_mod[i] = conv<zz_pX>(z[i]);        
-        flag += (z_b[i] != zi_mod[i]);
+        //  Check if (z_b[i] != z[i])
+        flag += (z_b[i] != z[i]);
     }    
 
-    // Return reject (0) or accept (1)
+    // 9. Return reject (0) or accept (1)
     if (flag != 0) // ((z_a != 0) | (z_b != z))
     {
         cout << "\n REJECT!" << endl;

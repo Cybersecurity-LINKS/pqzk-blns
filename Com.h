@@ -30,7 +30,7 @@ typedef struct
     vec_zz_pX       h;
     zz_pX           t, f0;
     vec_ZZX         z_1,  z_2;
-    Vec<vec_ZZX>    op_1, op_2;
+    Vec<vec_zz_pX>  op_1, op_2;
     long            valid;
 } PROOF_C_t;
 
