@@ -19,16 +19,32 @@
 #include "Lattice.h"
 #include "Utils.h"
 
+typedef struct
+{
+    vec_zz_pX   t_1, t_2, w_1, w_2;
+} LHC_COM_t;
 
-void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_zz_pX>& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y) ;
+typedef struct
+{
+    vec_zz_pX   e_1, e_2, e_3, f_1, f_2, f_3;
+} LHC_ST_t;
+
+typedef struct
+{
+    vec_zz_pX   z_1, z_2, z_3;
+    long        valid = 0;
+} LHC_OP_t;
+
+
+void LHC_Com(LHC_COM_t& com, LHC_ST_t& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y) ;
 
 long Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M);
 long Rej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s, const RR& M);
 long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M);
 long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR& s, const RR& M);
 
-void LHC_Open(Vec<vec_zz_pX>& op, const long& index, const zz_pX& c, const Vec<vec_zz_pX>& st);
+void LHC_Open(LHC_OP_t& op, const long& index, const zz_pX& c, const LHC_ST_t& st);
 
-long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const Vec<vec_zz_pX>& com, const zz_pX& c, const vec_zz_pX& z, const Vec<vec_zz_pX>& op);
+long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const LHC_COM_t& com, const zz_pX& c, const vec_zz_pX& z, const LHC_OP_t& op);
 
 #endif

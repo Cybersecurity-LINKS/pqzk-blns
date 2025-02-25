@@ -25,13 +25,13 @@
 typedef struct
 {
     vec_zz_pX       t_A, t_y, t_g, w;
-    Vec<vec_zz_pX>  com_1, com_2;
+    LHC_COM_t       com_1, com_2;
     vec_ZZ          z_3;
     vec_zz_pX       h;
     zz_pX           t, f0;
     vec_ZZX         z_1,  z_2;
-    Vec<vec_zz_pX>  op_1, op_2;
-    long            valid;
+    LHC_OP_t        op_1, op_2;
+    long            valid = 0;
 } PROOF_C_t;
 
 #include "Issuer.h"

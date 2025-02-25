@@ -137,7 +137,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     RR                  alpha_i;
     Vec<vec_zz_pX>      e_, e_prime;
     Vec<vec_zz_pX>      sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_;
-    Vec<vec_zz_pX>      st_1, st_2;
+    LHC_ST_t            st_1, st_2;
     stringstream        ss;         
     mat_L               R_goth;
     vec_ZZ              s0, coeffs_y3, coeffs_R_goth_mult_s1; //coeffs_s1;
@@ -460,7 +460,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         // 19. a1 ← (t_A, t_y, t_g, w, com_1, com_2) 
         ss.str("");    ss.clear();
         // ss << crs << P << u0 << B_goth2 << t_A << t_y << t_g << w << com_1 << com_2;
-        ss << inputStr << ipk.c0 << ipk.c1 << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
+        ss << inputStr << ipk.c0 << ipk.c1 << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
         // NOTE: using inputStr, ipk.c0, ipk.c1, instead of crs, P to speedup Hash_Init
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
@@ -919,7 +919,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         LHC_Open(Pi.op_1, 1, conv<zz_pX>(c), st_1);        
 
         // 51. if op_i = ⊥ then b_bar_i = 0
-        if (Pi.op_1.length() == 0)
+        if (Pi.op_1.valid == 0)
         {
             bbar1 = 0;
             // NOTE: if bbar1 == 0, continue the while loop (skip next rows until 53, then go to row 7)
@@ -934,7 +934,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
         LHC_Open(Pi.op_2, 2, conv<zz_pX>(c), st_2);
 
-        if (Pi.op_2.length() == 0)
+        if (Pi.op_2.valid == 0)
         {
             bbar2 = 0;
         }
@@ -1083,7 +1083,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
 
     // 9. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
     // ss << crs << P << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
-    ss << inputStr << ipk.c0 << ipk.c1 << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
+    ss << inputStr << ipk.c0 << ipk.c1 << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
     // NOTE: using inputStr, ipk.c0, ipk.c1, instead of crs, P to speedup Hash_Init
     
     // 10. R_goth = R_goth_0 - R_goth_1

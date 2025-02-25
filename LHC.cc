@@ -30,13 +30,11 @@
 // - com:       commitment structure    
 // - st:        status structure
 //==============================================================================
-void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_zz_pX>& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y) 
+void LHC_Com(LHC_COM_t& com, LHC_ST_t& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y) 
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long        i, m;
-    double      alpha_i;    
-    vec_zz_pX   e_1, e_2, e_3, f_1, f_2, f_3; 
-    vec_zz_pX   t_1, t_2, w_1, w_2;
+    double      alpha_i;
     ZZX         x;
     
     // Manage the invocation with index 1 or 2
@@ -71,74 +69,72 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_zz_pX>& st, const long& index, const M
         zz_pPush push(eta+1); 
         // NOTE: backup current modulus q1_hat, temporarily set to eta+1 (i.e., zz_p::init(eta+1))
 
-        e_1.SetLength(n);
-        e_2.SetLength(m);
-        e_3.SetLength(m);      
+        st.e_1.SetLength(n);
+        st.e_2.SetLength(m);
+        st.e_3.SetLength(m);      
 
         for(i=0; i<n; i++)
         {
-            e_1[i] = random_zz_pX(d_hat);
+            st.e_1[i] = random_zz_pX(d_hat);
         }
         for(i=0; i<m; i++)
         {
-            e_2[i] = random_zz_pX(d_hat);
-            e_3[i] = random_zz_pX(d_hat);
+            st.e_2[i] = random_zz_pX(d_hat);
+            st.e_3[i] = random_zz_pX(d_hat);
         }
     }
     // NOTE: e_1, e_2, e_3 coefficients are in the range [0, eta]
 
     // 3. / 4. Compute t_i
-    t_1.SetLength(m);
-    t_2.SetLength(m);
+    com.t_1.SetLength(m);
+    com.t_2.SetLength(m);
        
     for(i=0; i<m; i++)
     {
-        t_1[i] = (poly_mult_hat(A_i[i], e_1) + e_2[i]) * p_bar;
-        t_2[i] = (poly_mult_hat(B_i[i], e_1) + e_3[i]) * p_bar + s[i];
+        com.t_1[i] = (poly_mult_hat(A_i[i], st.e_1) + st.e_2[i]) * p_bar;
+        com.t_2[i] = (poly_mult_hat(B_i[i], st.e_1) + st.e_3[i]) * p_bar + s[i];
     }
    
     // 5. Initialization of f_i
-    f_1.SetLength(n);
-    f_2.SetLength(m);
-    f_3.SetLength(m);  
+    st.f_1.SetLength(n);
+    st.f_2.SetLength(m);
+    st.f_3.SetLength(m);  
     
     // Discrete gaussian random generation (using Zsampler) for f_i   
     for(i=0; i<n; i++)
     {
-        polySampler_hat(f_1[i], s_goth);
+        polySampler_hat(st.f_1[i], s_goth);
     }
     for(i=0; i<m; i++)
     {
-        polySampler_hat(f_2[i], s_goth);
-        polySampler_hat(f_3[i], s_goth);
+        polySampler_hat(st.f_2[i], s_goth);
+        polySampler_hat(st.f_3[i], s_goth);
     }
 
 
     // 6. / 7. Compute w_i
-    w_1.SetLength(m);
-    w_2.SetLength(m);
+    com.w_1.SetLength(m);
+    com.w_2.SetLength(m);
 
     for(i=0; i<m; i++)
     {
-        w_1[i] = (poly_mult_hat(A_i[i], f_1) + f_2[i]) * p_bar;
-        w_2[i] = (poly_mult_hat(B_i[i], f_1) + f_3[i]) * p_bar + y[i];
+        com.w_1[i] = (poly_mult_hat(A_i[i], st.f_1) + st.f_2[i]) * p_bar;
+        com.w_2[i] = (poly_mult_hat(B_i[i], st.f_1) + st.f_3[i]) * p_bar + y[i];
     }
         
     // 8. Store the results in com
-    com.SetLength(4);
-    com[0] = t_1;
-    com[1] = t_2;
-    com[2] = w_1;
-    com[3] = w_2;   
+    // com.t_1 = t_1;
+    // com.t_2 = t_2;
+    // com.w_1 = w_1;
+    // com.w_2 = w_2;   
 
     // 9. Store the results in st
-    st.SetLength(6);
-    st[0] = e_1;
-    st[1] = e_2;
-    st[2] = e_3;
-    st[3] = f_1;
-    st[4] = f_2;
-    st[5] = f_3;
+    // st.e_1 = e_1;
+    // st.e_2 = e_2;
+    // st.e_3 = e_3;
+    // st.f_1 = f_1;
+    // st.f_2 = f_2;
+    // st.f_3 = f_3;
   
     // 10. return(com, st)  
 }
@@ -159,9 +155,9 @@ void LHC_Com(Vec<vec_zz_pX>& com, Vec<vec_zz_pX>& st, const long& index, const M
 //==============================================================================
 long Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M)
 {
-    long i, len;
-    RR u, mul, den, eq;
-    ZZ dot_prod, norm2;    
+    long    i, len;
+    RR      u, mul, den, eq;
+    ZZ      dot_prod, norm2;    
 
     len = z.length();
    
@@ -295,9 +291,9 @@ long Rej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s,
 //==============================================================================
 long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
 {
-    long i, j, len;
-    RR u, mul, den, eq;
-    ZZ dot_prod, norm2, v_ij;    
+    long    i, j, len;
+    RR      u, mul, den, eq;
+    ZZ      dot_prod, norm2, v_ij;    
     
     len = z.length();    
    
@@ -438,12 +434,11 @@ long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR&
 // - op:      list of (n + m + m) polynomials of d_hat length, if accept, 
 //            otherwise op = [] (i.e. op = ⊥, reject)
 //==============================================================================
-void LHC_Open(Vec<vec_zz_pX>& op, const long& index, const zz_pX& c, const Vec<vec_zz_pX>& st)
+void LHC_Open(LHC_OP_t& op, const long& index, const zz_pX& c, const LHC_ST_t& st)
 {
     long        i, m, b;
     RR          alpha_i;
-    vec_zz_pX   e_1, e_2, e_3, f_1, f_2, f_3;
-    vec_zz_pX   v_1, v_2, v_3, z_1, z_2, z_3, z, v;
+    vec_zz_pX   v_1, v_2, v_3, z, v;
     
     // Manage the invocation with index 1 or 2  
     const long n   = n_i;    
@@ -473,42 +468,36 @@ void LHC_Open(Vec<vec_zz_pX>& op, const long& index, const zz_pX& c, const Vec<v
     // \overline{M}_1 (or 2)
     const RR M_bar = exp( sqrt( RR(2*(lambda0 + 1)) / log2e_Const ) * 1/alpha_i + 1/(2*sqr(alpha_i)));
    
-    // Initialize e_i, f_i, z_i, v_i, for i = 1, 2, 3
-    e_1.SetLength(n);
-    e_2.SetLength(m);
-    e_3.SetLength(m);   
-    f_1.SetLength(n);
-    f_2.SetLength(m);
-    f_3.SetLength(m);    
-    z_1.SetLength(n);
-    z_2.SetLength(m);
-    z_3.SetLength(m);
+    // Initialize z_i, v_i for i = 1, 2, 3
+    op.z_1.SetLength(n);
+    op.z_2.SetLength(m);
+    op.z_3.SetLength(m);
     v_1.SetLength(n);
     v_2.SetLength(m);
     v_3.SetLength(m);  
     
 
     // 1. Retrieve e_i and f_i from st
-    e_1 = st[0];
-    e_2 = st[1];
-    e_3 = st[2];
-    f_1 = st[3];
-    f_2 = st[4];
-    f_3 = st[5];
+    // e_1 = st.e_1;
+    // e_2 = st.e_2;
+    // e_3 = st.e_3;
+    // f_1 = st.f_1;
+    // f_2 = st.f_2;
+    // f_3 = st.f_3;
     
     // 2. / 3. Compute z_i
     for(i=0; i<n; i++)
     {
-        v_1[i] = ModPhi_hat_q(c * e_1[i]);
-        z_1[i] = f_1[i] + v_1[i];
+        v_1[i] = ModPhi_hat_q(c * st.e_1[i]);
+        op.z_1[i] = st.f_1[i] + v_1[i];
     }
     for(i=0; i<m; i++)
     {
-        v_2[i] = ModPhi_hat_q(c * e_2[i]);
-        z_2[i] = f_2[i] + v_2[i];
+        v_2[i] = ModPhi_hat_q(c * st.e_2[i]);
+        op.z_2[i] = st.f_2[i] + v_2[i];
 
-        v_3[i] = ModPhi_hat_q(c * e_3[i]);
-        z_3[i] = f_3[i] + v_3[i];
+        v_3[i] = ModPhi_hat_q(c * st.e_3[i]);
+        op.z_3[i] = st.f_3[i] + v_3[i];
     }
     
     // Initialize v, z, to be passed to Rej  
@@ -521,17 +510,17 @@ void LHC_Open(Vec<vec_zz_pX>& op, const long& index, const zz_pX& c, const Vec<v
     {
         if (i < n)  // filling first n positions
         {
-            z[i] = z_1[i];
+            z[i] = op.z_1[i];
             v[i] = v_1[i];
         }
         else if (i < (n + m)) // filling m positions starting from the n-th 
         {
-            z[i] = z_2[i-n];
+            z[i] = op.z_2[i-n];
             v[i] = v_2[i-n];
         }
         else // filling last m positions
         {
-            z[i] = z_3[i-n-m];
+            z[i] = op.z_3[i-n-m];
             v[i] = v_3[i-n-m];
         }        
     }
@@ -543,14 +532,16 @@ void LHC_Open(Vec<vec_zz_pX>& op, const long& index, const zz_pX& c, const Vec<v
     if (b == 0)
     {
         // op = [] (i.e. ⊥, reject)
-        op.kill();
+        op.z_1.kill();
+        op.z_2.kill();
+        op.z_3.kill();
+        // NOTE: additional flag, to identify an invalid op        
+        op.valid = 0;
     }
     else // (accept)
     {        
-        op.SetLength(3);
-        op[0] = z_1;
-        op[1] = z_2;
-        op[2] = z_3;
+        // NOTE: valid op
+        op.valid = 1;
     }
     // 6. return(op);
 }
@@ -572,14 +563,14 @@ void LHC_Open(Vec<vec_zz_pX>& op, const long& index, const zz_pX& c, const Vec<v
 // Output:
 // - 0 or 1:    reject or accept 
 //==============================================================================
-long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const Vec<vec_zz_pX>& com, const zz_pX& c, const vec_zz_pX& z, const Vec<vec_zz_pX>& op)
+long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const LHC_COM_t& com, const zz_pX& c, const vec_zz_pX& z, const LHC_OP_t& op)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long        i, m, n, flag;
     ZZ          alpha_i, s_goth2, thres, norm2_z1, norm2_z2, norm2_z3;
-    vec_zz_pX   t_1, t_2, w_1, w_2, z_a, z_b, z_1, z_2, z_3;
+    vec_zz_pX   z_a, z_b;
     
-    if (op.length() == 0)
+    if (op.valid == 0)
     {
         // NOTE: reject because op = [] (i.e. ⊥)
         cout << "\n Reject because op = []" << endl;
@@ -607,31 +598,22 @@ long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i,
     // Compute the square of \overline{\mathfrak{s}}_1 (or 2) 
     s_goth2 = sqr(alpha_i * eta_i * nu0) * ((n + 2*m) * d0);
 
-    // Initialize t_i, w_i, z_i
-    t_1.SetLength(m);
-    t_2.SetLength(m);
-    w_1.SetLength(m);
-    w_2.SetLength(m);    
-    z_1.SetLength(n);
-    z_2.SetLength(m);
-    z_3.SetLength(m);  
-
-    
+        
     // 1. Retrieve t_i, w_i from com   
-    t_1 = com[0];
-    t_2 = com[1];
-    w_1 = com[2];
-    w_2 = com[3];
+    // t_1 = com.t_1;
+    // t_2 = com.t_2;
+    // w_1 = com.w_1;
+    // w_2 = com.w_2;
 
     // 2. Retrieve z_i from op 
-    z_1 = op[0];
-    z_2 = op[1];
-    z_3 = op[2];
+    // z_1 = op.z_1;
+    // z_2 = op.z_2;
+    // z_3 = op.z_3;
    
     // Compute ||z_i||^2: Square of Euclidean norm of each z_i
-    norm2_z1 = Norm2Xm(z_1, d_hat, q1_hat);
-    norm2_z2 = Norm2Xm(z_2, d_hat, q1_hat);
-    norm2_z3 = Norm2Xm(z_3, d_hat, q1_hat);
+    norm2_z1 = Norm2Xm(op.z_1, d_hat, q1_hat);
+    norm2_z2 = Norm2Xm(op.z_2, d_hat, q1_hat);
+    norm2_z3 = Norm2Xm(op.z_3, d_hat, q1_hat);
        
     // 3. Check z_1 norm
     thres = s_goth2 * (2 * n * d0);
@@ -665,8 +647,8 @@ long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i,
            
     for(i=0; i<m; i++)
     {
-        z_a[i] = ModPhi_hat_q( c * t_1[i] ) + w_1[i] - (poly_mult_hat(A_i[i], z_1) + z_2[i]) * p_bar;
-        z_b[i] = ModPhi_hat_q( c * t_2[i] ) + w_2[i] - (poly_mult_hat(B_i[i], z_1) + z_3[i]) * p_bar;
+        z_a[i] = ModPhi_hat_q( c * com.t_1[i] ) + com.w_1[i] - (poly_mult_hat(A_i[i], op.z_1) + op.z_2[i]) * p_bar;
+        z_b[i] = ModPhi_hat_q( c * com.t_2[i] ) + com.w_2[i] - (poly_mult_hat(B_i[i], op.z_1) + op.z_3[i]) * p_bar;
     }
     
 

@@ -33,7 +33,7 @@ typedef struct
     vec_ZZX     s;
     vec_ZZX     r;
     ZZ          x;
-    long        valid;
+    long        valid = 0;
 } CRED_t;
 
 typedef struct
@@ -43,7 +43,7 @@ typedef struct
     Vec<string> attrs_prime;
     vec_ZZ      idx;
     PROOF_I_t   pi;
-    long        valid;
+    long        valid = 0;
 } VP_t;
 
 
