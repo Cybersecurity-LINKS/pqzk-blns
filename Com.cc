@@ -131,7 +131,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     vec_zz_pX           r_j, p_j, mu, m, s_hat, tmp_vec, y;
     vec_zz_pX           d_1, acc_vec, sigma_s_1, D2_y;
     vec_ZZX             s_1, s_2, y_1, y_2, y_3;
-    vec_ZZX             c_s1, c_s2;
+    vec_zz_pX           c_s1, c_s2;
     zz_pX               h_part3, acc, sum, f1; //d_0, sum_sigma_e_u;
     ZZX                 c;
     RR                  alpha_i;
@@ -140,9 +140,9 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     LHC_ST_t            st_1, st_2;
     stringstream        ss;         
     mat_L               R_goth;
-    vec_ZZ              s0, coeffs_y3, coeffs_R_goth_mult_s1; //coeffs_s1;
+    vec_ZZ              s0, coeffs_y3; //coeffs_s1;
     mat_zz_p            gamma;
-    vec_zz_p            e_tmp;
+    vec_zz_p            e_tmp, coeffs_R_goth_mult_s1;
     // zz_p             sum_z3, B_goth_p;
 
     // Initialise constants    
@@ -479,14 +479,14 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
         for(i=0; i<256; i++)
         {
-            coeffs_R_goth_mult_s1[i] = ( conv<vec_ZZ>(R_goth[i]) * s0 ); //coeffs_s1);
+            coeffs_R_goth_mult_s1[i] = conv<vec_zz_p>(R_goth[i]) * conv<vec_zz_p>(s0); //coeffs_s1);      
             // NOTE: this term corresponds to InnerProduct(result, coeffs_R_goth[i], coeffs_s1);
 
-            Pi.z_3[i] = coeffs_y3[i] + coeffs_R_goth_mult_s1[i];
+            Pi.z_3[i] = conv<zz_p>( coeffs_y3[i] ) + coeffs_R_goth_mult_s1[i];            
         }
         
         // 24. b3 ← Rej (z_3, R_goth * s, s3_goth, M_3),    b3 ∈ {0, 1}
-        b3 = Rej_v_ZZ(Pi.z_3, coeffs_R_goth_mult_s1, s3_goth, M_3);
+        b3 = Rej_v_zzp(Pi.z_3, coeffs_R_goth_mult_s1, q1_hat, s3_goth, M_3);
         
         // NOTE: if b3 == 0, continue the while loop (skip next rows until 53, then go to row 7)
         if (b3 == 0)
@@ -515,7 +515,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         {
             CoeffsInvHat(r_j,  conv<vec_zz_p>(R_goth[j]), m1 ); 
             sigma_map(sigma_r_[j], r_j, d_hat);  
-            h_part1[j] = poly_mult_hat(sigma_r_[j], s_1_mod) + poly_mult_hat(sigma_e_[j], conv<vec_zz_pX>( y_3 )) + (conv<zz_p>( - Pi.z_3[j] ));
+            h_part1[j] = poly_mult_hat(sigma_r_[j], s_1_mod) + poly_mult_hat(sigma_e_[j], conv<vec_zz_pX>( y_3 )) - Pi.z_3[j];
         }
 
 
@@ -792,7 +792,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             
         //     for(j=0; j<256; j++)
         //     {
-        //         sum_z3 += gamma[i][j] * conv<zz_p>(Pi.z_3[j]);
+        //         sum_z3 += gamma[i][j] * Pi.z_3[j];
         //     }
                 
         //     sum_sigma_e_u.SetLength(d_hat);
@@ -883,20 +883,20 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         for(i=0; i<m1; i++)
         {
             Pi.z_1[i].SetLength(d_hat);
-            c_s1[i] = ModPhi_hat( c * s_1[i] );
-            Pi.z_1[i]  = y_1[i] + c_s1[i]; 
+            c_s1[i] = ModPhi_hat_q( conv<zz_pX>(c) * s_1_mod[i] );
+            Pi.z_1[i]  = conv<zz_pX>( y_1[i] ) + c_s1[i];
         }
             
         for(i=0; i<m2; i++)
         {
             Pi.z_2[i].SetLength(d_hat);
-            c_s2[i] = ModPhi_hat( c * s_2[i] );
-            Pi.z_2[i]  = y_2[i] + c_s2[i]; 
+            c_s2[i] = ModPhi_hat_q( conv<zz_pX>(c) * s_2_mod[i] );
+            Pi.z_2[i]  = conv<zz_pX>( y_2[i] ) + c_s2[i];
         }
             
 
         // 49. b_i ← Rej(z_i, c*s_i, s_i_goth, M_i),   b_i ∈ {0, 1} 
-        b1 = Rej_v_ZZX(Pi.z_1, c_s1, s1_goth, M_1);
+        b1 = Rej_v_zzpX(Pi.z_1, c_s1, q1_hat, s1_goth, M_1);
 
         // NOTE: if b1 == 0, continue the while loop (skip next rows until 53, then go to row 7)
         if (b1 == 0)
@@ -905,7 +905,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             continue;
         }
 
-        b2 = Rej_v_ZZX(Pi.z_2, c_s2, s2_goth, M_2); 
+        b2 = Rej_v_zzpX(Pi.z_2, c_s2, q1_hat, s2_goth, M_2);
 
         // NOTE: if b2 == 0, continue the while loop (skip next rows until 53, then go to row 7)
         if (b2 == 0)
@@ -1007,7 +1007,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     long                b1, b2;
     Mat<zz_pX>          B, D2;
     vec_zz_pX           u, t_B, mu, z, tmp_vec, tmp_vec2, r_j, p_j;
-    vec_zz_pX           d_1, acc_vec, z_1_mod, z_2_mod;
+    vec_zz_pX           d_1, acc_vec;
     ZZX                 c;
     zz_pX               c_mod, acc, sum, d_0, sum_sigma_e_u;
     Vec<vec_zz_pX>      e_ , e_prime;
@@ -1064,10 +1064,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
         cout << "ERROR! Pi does not contain a valid proof" << endl;
         return 0;
     }
-    // NOTE: to save memory, proof values will be directly accessed as Pi.{name},
-    //       apart z_1 and z_2, that are often used modulo q1_hat      
-    z_1_mod = conv<vec_zz_pX>( Pi.z_1 );
-    z_2_mod = conv<vec_zz_pX>( Pi.z_2 );
+    // NOTE: to save memory, proof values will be directly accessed as Pi.{name}
 
     // 5. a1 ← (t_A, t_y, t_g, w, com_1, com_2) 
     // a_1 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
@@ -1128,10 +1125,10 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
 
     for(i=0; i<m1; i++) 
     {
-        z[i] = z_1_mod[i]; // z_1
+        z[i] = Pi.z_1[i]; // z_1
     }
 
-    sigma_map(tmp_vec, z_1_mod, d_hat);
+    sigma_map(tmp_vec, Pi.z_1, d_hat);
     k = 0;
 
     for(i=m1; i<(2*m1); i++) 
@@ -1157,7 +1154,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
         // − B*z_2
         for(j=0; j<m2; j++)        
         {
-            acc += ModPhi_hat_q(- B[i][j] * z_2_mod[j] );
+            acc += ModPhi_hat_q(- B[i][j] * Pi.z_2[j] );
         }           
         
         tmp_vec[i] = acc;
@@ -1379,7 +1376,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
         
         for(j=0; j<256; j++)
         {
-            sum_z3 += gamma[i][j] * conv<zz_p>(Pi.z_3[j]);
+            sum_z3 += gamma[i][j] * Pi.z_3[j];
         }
             
         sum_sigma_e_u.SetLength(d_hat);
@@ -1397,9 +1394,9 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     // 21.  if one of the 4 conditions below does not hold, then return 0
        
     // Compute ||z_i||, Euclidean norm of each z_i   
-    norm_z1 = sqrt( conv<RR>( Norm2X(Pi.z_1, d_hat) ) );
-    norm_z2 = sqrt( conv<RR>( Norm2X(Pi.z_2, d_hat) ) );
-    norm_z3 = sqrt( conv<RR>( Norm2( Pi.z_3) ) );
+    norm_z1 = sqrt( conv<RR>( Norm2Xm(Pi.z_1, d_hat, q1_hat) ) );
+    norm_z2 = sqrt( conv<RR>( Norm2Xm(Pi.z_2, d_hat, q1_hat) ) );
+    norm_z3 = sqrt( conv<RR>( Norm2m( Pi.z_3, q1_hat ) ) );
 
 
     // 21.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
@@ -1451,12 +1448,12 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
         
         for(j=0; j<m1; j++)
         {
-            acc += ModPhi_hat_q( crs[0][i][j] * z_1_mod[j] ); 
+            acc += ModPhi_hat_q( crs[0][i][j] * Pi.z_1[j] ); 
         }        
 
         for(j=0; j<m2; j++)
         {
-            acc += ModPhi_hat_q( crs[1][i][j] * z_2_mod[j] ); 
+            acc += ModPhi_hat_q( crs[1][i][j] * Pi.z_2[j] ); 
         }  
 
         // A_1*z_1 + A_2*z_2
@@ -1513,7 +1510,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     acc += ModPhi_hat_q( ModPhi_hat_q( sqr(c_mod) ) * d_0 );
       
     // 4rd addend −(c*t − b^T * z_2)
-    acc -= ( ModPhi_hat_q( c_mod * Pi.t ) - poly_mult_hat(crs[4][0], z_2_mod) );
+    acc -= ( ModPhi_hat_q( c_mod * Pi.t ) - poly_mult_hat(crs[4][0], Pi.z_2) );
     
     if (acc != Pi.f0)
     {

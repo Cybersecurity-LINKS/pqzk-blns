@@ -1101,7 +1101,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             
         //     for(j=0; j<256; j++)
         //     {
-        //         sums += gamma[i][j] * conv<zz_p>(Pi.z_3[j]);
+        //         sums += gamma[i][j] * Pi.z_3[j];
         //     }
                         
         //     for(j=0; j<d0; j++)

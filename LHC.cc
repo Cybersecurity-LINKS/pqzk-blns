@@ -141,64 +141,6 @@ void LHC_Com(LHC_COM_t& com, LHC_ST_t& st, const long& index, const Mat<zz_pX>& 
 
 
 //==============================================================================
-// Rej_v_ZZ  -  Rejection function, version for vec_ZZ. 
-//              It takes as inputs 2 vectors of the same length (z, v), and 2 scalars (s, M). 
-//              It returns as output “reject” (0) or “accept” (1).
-//
-// Inputs:
-// - z, v:  vectors of scalars
-// - s:     scalar, it is the standard deviation
-// - M:     scalar, it is a coefficient
-//
-// Output:
-// - 0 | 1: reject or accept
-//==============================================================================
-long Rej_v_ZZ(const vec_ZZ& z, const vec_ZZ& v, const RR& s, const RR& M)
-{
-    long    i, len;
-    RR      u, mul, den, eq;
-    ZZ      dot_prod, norm2;    
-
-    len = z.length();
-   
-    if (len != v.length())
-    {
-        cout << "ERROR! Two input vectors must have the same dimensions" << endl;
-        assert(len == v.length());
-    }
-            
-    // u <--[0,1), uniformly distributed
-    u = random_RR();
-
-    // <z, v> : Dot product between z and v    
-    dot_prod = 0;
-    // ||v||^2: Square of Euclidean norm of v 
-    norm2 = 0;
-
-    for(i=0; i<len; i++)
-    {
-        dot_prod += z[i] * v[i];
-        // norm2 += v[i] * v[i]; 
-        norm2    += sqr(v[i]);   
-    }    
-
-    mul = 1.0 / M;
-    den = 2*sqr(s);
-    eq = mul * exp(conv<RR>(-2*dot_prod + norm2) / den);
-
-    // Condition for accepting or rejecting
-    if (u > eq)
-    {
-        return(0); // reject
-    }
-    else
-    {
-        return(1); // accept
-    }   
-}
-
-
-//==============================================================================
 // Rej_v_zzp  - Rejection function, version for vec_zz_p. 
 //              It takes as inputs 2 vectors of the same length (z, v), 
 //              their modulo q and 2 scalars (s, M). 
@@ -260,70 +202,6 @@ long Rej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s,
         norm2       += sqr(v_i);
     }    
 
-    mul = 1.0 / M;
-    den = 2*sqr(s);
-    eq = mul * exp(conv<RR>(-2*dot_prod + norm2) / den);
-
-    // Condition for accepting or rejecting
-    if (u > eq)
-    {
-        return(0); // reject
-    }
-    else
-    {
-        return(1); // accept
-    }   
-}
-
-
-//==============================================================================
-// Rej_v_ZZX  - Rejection function, version for vec_ZZX. 
-//              It takes as inputs 2 vectors of the same length (z, v), and 2 scalars (s, M). 
-//              It returns as output “reject” (0) or “accept” (1).
-//
-// Inputs:
-// - z, v:  vectors of (m1 or m2) polynomials of length d_hat
-// - s:     scalar, it is the standard deviation
-// - M:     scalar, it is a coefficient
-//
-// Output:
-// - 0 | 1: reject or accept
-//==============================================================================
-long Rej_v_ZZX(const vec_ZZX& z, const vec_ZZX& v, const RR& s, const RR& M)
-{
-    long    i, j, len;
-    RR      u, mul, den, eq;
-    ZZ      dot_prod, norm2, v_ij;    
-    
-    len = z.length();    
-   
-    if (len != v.length())
-    {
-        cout << "ERROR! Two input vectors must have the same dimensions" << endl;
-        assert(len == v.length());
-    }
-            
-    // u <--[0,1), uniformly distributed
-    u = random_RR();
-   
-    // <z, v> : Dot product between z and v    
-    dot_prod = 0;
-    // ||v||^2: Square of Euclidean norm of v 
-    norm2 = 0;
-
-    for(i=0; i<len; i++)
-    {
-        for(j=0; j<d_hat; j++)
-        {
-            v_ij = coeff(v[i], j); // v[i][j]            
-            
-            // dot_prod += z[i][j] * v[i][j];             
-            dot_prod    += coeff(z[i], j) * v_ij;
-            // norm2    += v[i][j] * v[i][j];
-            norm2       += sqr(v_ij);  
-        }
-    }
-    
     mul = 1.0 / M;
     den = 2*sqr(s);
     eq = mul * exp(conv<RR>(-2*dot_prod + norm2) / den);
