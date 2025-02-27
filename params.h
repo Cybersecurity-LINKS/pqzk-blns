@@ -73,6 +73,7 @@ typedef Mat<long>   mat_L;
 #define alpha_bar_1 44          // \overline{α}_1 ∈ O(√λ)
 #define alpha_bar_2 44          // \overline{α}_2 ∈ O(√λ)
 #define w_max       sqrt(337)   // ω_max(λ)
+#define w_max2      337         // ω_max(λ)^2
 // NOTE: ω_max is a scalar defined for three specific values of the security level λ, in particular
 //       ω_max(λ = 128) = √337, ω_max(λ = 192) = √530, ω_max(λ =256) = √767.
 #define N1          128         // \textsf{N} ∈ O(λ)      NOTE: it is different from N0, domain size of the function f

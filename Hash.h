@@ -31,6 +31,7 @@ HASH_STATE_t* Hash_Init(const string& inputStr);
 void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, const size_t& b_coeffs);
 void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, const size_t& b_num);
 void Hash_R_goth(vec_L& out, HASH_STATE_t *state, const long& n_elems);
+void Hash_R_goth_p(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems);
 void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num);
 
 void Hcrs(CRS2_t& crs, const string& inputStr);
@@ -40,10 +41,10 @@ void HCom2(mat_zz_p& gamma, const string& inputStr);
 void HCom3(vec_zz_pX& mu, const string& inputStr);
 void HCom4(ZZX& c, const string& inputStr);
 
-void HISIS1(mat_L& R_goth, const string& inputStr);
+void HISIS1(mat_zz_p& R_goth, const string& inputStr);
 void HISIS2(mat_zz_p& gamma, const string& inputStr);
 void HISIS3(vec_zz_pX& mu, const string& inputStr);
-void HISIS4(ZZX& c, const string& inputStr);
+void HISIS4(zz_pX& c, const string& inputStr);
 
 void HM(vec_ZZ& m_i, const string& a_i);
 
