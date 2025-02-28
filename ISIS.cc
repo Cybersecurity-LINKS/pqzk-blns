@@ -190,15 +190,15 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     unsigned long   idx, i, j, k;
     long            rst, b1, b2, b3;
     vec_ZZ          s0, r0;
-    Mat<zz_pX>      B, D2; //D2_2_1
-    vec_zz_pX       g; //t_B;
+    Mat<zz_pX>      B, D2_2_1;
+    vec_zz_pX       g;
     vec_zz_pX       h_part1, h_part2;
-    vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, m, s_hat, tmp_vec, y;
-    vec_zz_pX       sigma_s_1, d_1, acc_vec, D2_y;
+    vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, m, tmp_vec, y;
+    vec_zz_pX       sigma_s_1, d_1, acc_vec, D2_y, sigma_y_1;
     vec_zz_pX       s, r, u, s_1, s_2, y_1, y_2, y_3, c_s1, c_s2;
     zz_pX           c;
     zz_pX           h_part3, h_part4, h_part5;
-    zz_pX           acc, delta_1, delta_2, delta_3, f1; //d_0;
+    zz_pX           acc, delta_1, delta_2, delta_3, f1;
     Mat<zz_pX>      e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
     Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream    ss;    
@@ -209,7 +209,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     vec_zz_p        e_tmp, m_C;   
     RR              alpha_i,     B_goth;
     ZZ              B_goth_s2,   B_goth_r2;
-    zz_p            B_goth_s2_p, B_goth_r2_p; //sums;
+    zz_p            B_goth_s2_p, B_goth_r2_p;
 
     // Initialise constants
     const unsigned long n           = n_ISIS;
@@ -298,8 +298,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     s_1.SetLength(m1);
     // NOTE: m1 := ((m + 2)·d + d_hat      + (|idx_hid|·h + ℓr·d + d_hat)    + t) / d_hat
     //           = ((m0+2)*d0+d_hat)/d_hat + (idx_hid*h0+lr0*d0+d_hat)/d_hat + t0/d_hat
-    //           =   m2ddd                 + idxhlrddd                       + t_d
-    
+    //           =   m2ddd                 +  idxhlrddd                      + t_d
     k = 0;
 
     for(i=0; i<(m2ddd); i++) 
@@ -320,7 +319,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         k++;      
     }
 
-    // coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)   
+    // Precompute coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)   
     CoeffsHat_q(coeffs_s1, s_1, m1);
     // NOTE: coeffs_s1 contains the same coefficients listed in w0
 
@@ -566,7 +565,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // 25. b3 ← Rej (z_3, R_goth * s_1, s3_goth, M_3),    b3 ∈ {0, 1}
         b3 = Rej_v_zzp(Pi.z_3, coeffs_R_goth_mult_s1, q2_hat, s3_goth, M_3);
         
-        // NOTE: if b3 == 0, continue the while loop (skip next rows until 54, then go to row 11)
+        // NOTE: if b3 == 0, continue the while loop (skip next rows until 51, then go to row 11)
         if (b3 == 0)
         {            
             rst = 0;
@@ -595,7 +594,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             CoeffsInvHat(r_j,  R_goth[j], m1 );
             sigma_map(sigma_r_[j], r_j, d_hat);
 
-            // NOTE: (r_s,j , r_r,j , r_u,j ) ← r_j  at row 42, where:   
+            // NOTE: (r_s,j , r_r,j , r_u,j ) ← r_j  at row 40, where:   
             //       r_s,j ∈ R^^(((m+2)d+d_hat)/d_hat)_(q_hat)
             //       r_r,j ∈ R^^((|idx_hid|·h+ℓr·d+d_hat)/d_hat)_(q_hat)
             //       r_u,j ∈ R^^(t/d_hat)_(q_hat)
@@ -657,60 +656,24 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // 33. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
         B.SetDims((n256 + tau0), m2);
 
-        // 34. t_B ← [t_y; t_g],   t_B ∈ R^^(256/d_hat + tau)_(q_hat)
-        // t_B.SetLength(n256 + tau0);
-        // NOTE: t_B is unused in Prove_ISIS
-
-        // 35. m   ← [y_3; g],     m ∈ R^^(256/d_hat + tau)_(q_hat)
+        
+        // 34. m   ← [y_3; g],     m ∈ R^^(256/d_hat + tau)_(q_hat)
         m.SetLength(n256 + tau0);
 
         for(i=0; i<n256; i++) 
         {
             B[i]   = crs[2][i];
-            // t_B[i] = t_y[i];
             m[i]   = y_3[i];
         }
 
         for(i=n256; i<(n256 + tau0); i++) 
         {
             B[i]   = crs[3][i-n256];
-            // t_B[i] = t_g[i-n256];
             m[i]   = g[i-n256];
         }
 
-        // 36. s_hat ← (s1; σ(s1); m; σ(m)),     s_hat ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
-        s_hat.SetLength( m1_n256_tau );
-        for(i=0; i<m1; i++) 
-        {
-            s_hat[i] = s_1[i];        
-        }
-
-        k = 0;
-
-        for(i=m1; i<(2*m1); i++) 
-        {
-            s_hat[i] = sigma_s_1[k];  
-            k++;      
-        }
-
-        k = 0;
-
-        for(i=(2*m1); i<(2*m1 + n256 + tau0); i++) 
-        {
-            s_hat[i] = m[k];
-            k++; 
-        }
-
-        sigma_map(tmp_vec, m, d_hat);
-        k = 0;
-
-        for(i=(2*m1 + n256 + tau0); i<(m1_n256_tau); i++)  
-        {
-            s_hat[i] = tmp_vec[k];    
-            k++;    
-        }
         
-        // 37. y ← (y1; σ(y1); −B*y2; σ(-B*y2)),     y ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
+        // 35. y ← (y1; σ(y1); −B*y2; σ(-B*y2)),     y ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
         y.SetLength( m1_n256_tau );
 
         for(i=0; i<m1; i++) 
@@ -718,12 +681,12 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             y[i] = y_1[i];        
         }
 
-        sigma_map(tmp_vec, y_1, d_hat);
+        sigma_map(sigma_y_1, y_1, d_hat);
         k = 0;
 
         for(i=m1; i<(2*m1); i++) 
         {
-            y[i] = tmp_vec[k];  
+            y[i] = sigma_y_1[k];  
             k++;      
         }
             
@@ -752,9 +715,9 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             k++;    
         }
         
-        // 38. δ_1 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+1) },   δ_1 ∈ R^^_(q_hat)
-        // 39. δ_2 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+2) },   δ_2 ∈ R^^_(q_hat)
-        // 40. δ_3 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+3) },   δ_3 ∈ R^^_(q_hat)
+        // 36. δ_1 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+1) },   δ_1 ∈ R^^_(q_hat)
+        // 37. δ_2 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+2) },   δ_2 ∈ R^^_(q_hat)
+        // 38. δ_3 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+3) },   δ_3 ∈ R^^_(q_hat)
         clear(delta_1);
         clear(delta_2);
         clear(delta_3);
@@ -766,36 +729,30 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             delta_3 += mu[i]*gamma[i][256+d0+2];
         }
 
-        // 41. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)
-        // NOTE: removed D2_2_1, D2 matrix directly filled using delta_1,2,3
-        
-        // 42. Construction of D_2 ∈ R^^((2*m1+2(256/d_hat+τ))×(2*m1+2(256/d_hat+τ)))_(q_hat)
-        D2.SetDims(m1_n256_tau, m1_n256_tau);    
-                
-        // NOTE: D2_2_1 in position (2,1), zeros in the rest
-        // NOTE: m1 = m1_ISIS = (((m+2)*d+d_hat)/d_hat) + (|idx_hid|·h + ℓr·d + d_hat)/d_hat + t/d_hat
-        k = m1;
+        // 39. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)
+        D2_2_1.SetDims(m1, m1);
         
         for(i=0; i<(m2ddd); i++)
         {
-            D2[k][i] = delta_1;
-            k++;
+            D2_2_1[i][i] = delta_1;
         }
+        
+        k = m2ddd;
 
         for(i=(m2ddd); i<(m2ddd + idxhlrddd); i++)
         {
-            D2[k][i] = delta_2;
+            D2_2_1[k][i] = delta_2;
             k++;
         }
 
         for(i=(m2ddd + idxhlrddd); i<m1; i++)
         {
-            D2[k][i] = delta_3;
+            D2_2_1[k][i] = delta_3;
             k++;
         }
 
-
-        // 43.  (r_s,j , r_r,j , r_u,j ) ← r_j,   
+        
+        // 40.  (r_s,j , r_r,j , r_u,j ) ← r_j,   
         //       r_s,j ∈ R^^(((m+2)d+d_hat)/d_hat)_(q_hat)
         //       r_r,j ∈ R^^((|idx_hid|·h+ℓr·d+d_hat)/d_hat)_(q_hat)
         //       r_u,j ∈ R^^(t/d_hat)_(q_hat)
@@ -803,7 +760,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // NOTE: σ(r_s,j), σ(r_r,j), σ(r_u,j), σ(c_r,j) already pre-computed
         
              
-        // 44. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
+        // 41. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
         d_1.SetLength(m1_n256_tau);
 
         for(i=0; i<m1_n256_tau; i++)
@@ -957,84 +914,60 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
 
         // NOTE: skip 7th entry of d_1 (tau0 + 256/d_hat zeros)
-           
-        
-        // // 45. Definition of d_0 ∈ R^_(q_hat)    
-        // clear(d_0);        
-        // // NOTE: d_0 (not d0 parameter) despite being in the pseudocode, it is not used in Prove_ISIS         
-           
-        // for(i=0; i<tau0; i++)
-        // {            
-        //     sums = 0;
-            
-        //     for(j=0; j<256; j++)
-        //     {
-        //         sums += gamma[i][j] * Pi.z_3[j];
-        //     }
-                        
-        //     for(j=0; j<d0; j++)
-        //     {
-        //         sums += gamma[i][256+j] * m_C[j];  
-        //     }
-
-        //     sums += gamma[i][256+d0] * B_goth_s2_p + gamma[i][256+d0+1] * B_goth_r2_p;
-        
-        //     d_0 = d_0 - ModPhi_hat_q( mu[i] * ( sums + Pi.h[i] ));
-        // }
 
         
-        // 46. Definition of f1 ∈ R^_(q_hat)
+        // 42. Definition of f1 ∈ R^_(q_hat)
         clear(f1);
 
-        // 1st addend of f1, (s_hat^T * D2 * y)
-        D2_y.SetLength(m1_n256_tau);
+        // 1st addend of f1, (σ(s_1)^T * D2_2_1 * y_1)
+        D2_y.SetLength(m1);
 
-        // Compute  (D2 * y),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
-        for(i=0; i<m1_n256_tau; i++)
+        // Compute  (D2_2_1 * y_1),  m1 polynomials
+        for(i=0; i<m1; i++)    
         {
-            D2_y[i] = poly_mult_hat(D2[i], y);
+            D2_y[i] = poly_mult_hat(D2_2_1[i], y_1);
         }
 
-        // Accumulate  s_hat^T * (D2 * y)
-        f1 += poly_mult_hat(s_hat, D2_y);
+        // Accumulate  σ(s_1)^T * (D2_2_1 * y_1)
+        f1 += poly_mult_hat(sigma_s_1, D2_y);
 
-        // 2nd addend of f1,  (y^T * D2 * s_hat)
-        acc_vec.SetLength(m1_n256_tau);
+        // 2nd addend of f1,  (σ(y_1)^T * D2_2_1 * s_1)
+        acc_vec.SetLength(m1);
 
-        // Compute  (D2 * s_hat),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
-        for(i=0; i<m1_n256_tau; i++)    
+        // Compute  (D2_2_1 * s_1),  m1 polynomials
+        for(i=0; i<m1; i++)    
         {
-            acc_vec[i] = poly_mult_hat(D2[i], s_hat);
+            acc_vec[i] = poly_mult_hat(D2_2_1[i], s_1);
         }
 
-        // Accumulate  y^T * (D2 * s_hat)    
-        f1 += poly_mult_hat(y, acc_vec);
+        // Accumulate  σ(y_1)^T * (D2_2_1 * s_1)    
+        f1 += poly_mult_hat(sigma_y_1, acc_vec);
 
         // 3rd addend of f1,   (d_1^T * y)
         f1 += poly_mult_hat(d_1, y);
 
 
-        // 47. Definition of f0 ∈ R^_(q_hat)
-        Pi.f0 = poly_mult_hat(y, D2_y) + poly_mult_hat(crs[4][0], y_2);
-        // NOTE: D2_y = (D2 * y) was already computed in row 45 (1st addend of f1) 
-    
-        
-        // 48. Definition of t ∈ R^_(q_hat)
+        // 43. Definition of f0 ∈ R^_(q_hat)
+        Pi.f0 = poly_mult_hat(sigma_y_1, D2_y) + poly_mult_hat(crs[4][0], y_2);
+        // NOTE: D2_y = (D2_2_1 * y_1) was already computed in row 42 (1st addend of f1) 
+
+
+        // 44. Definition of t ∈ R^_(q_hat)
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
 
-        // 49. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
+        // 45. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
         ss << Pi.t << Pi.f0;
 
 
-        // 50. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^
+        // 46. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^
         HISIS4(c, "4" + ss.str());
 
 
-        // 51. for i ∈ {1, 2} do
+        // 47. for i ∈ {1, 2} do
         // NOTE: for simplicity, next operations are duplicated with suffixes _1 and _2
 
-        // 52. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)    
+        // 48. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)    
         Pi.z_1.SetLength(m1);
         Pi.z_2.SetLength(m2);
         c_s1.SetLength(m1);
@@ -1053,10 +986,10 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
             
 
-        // 53. b_i ← Rej(z_i, c*s_i, s_i_goth, M_i),   b_i ∈ {0, 1} 
+        // 49. b_i ← Rej(z_i, c*s_i, s_i_goth, M_i),   b_i ∈ {0, 1} 
         b1 = Rej_v_zzpX(Pi.z_1, c_s1, q2_hat, s1_goth, M_1);
 
-        // NOTE: if b1 == 0, continue the while loop (skip next rows until 53, then go to row 7)
+        // NOTE: if b1 == 0, continue the while loop (skip next rows until 51, then go to row 11)
         if (b1 == 0)
         {            
             rst = 0;
@@ -1065,23 +998,14 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
         b2 = Rej_v_zzpX(Pi.z_2, c_s2, q2_hat, s2_goth, M_2); 
 
-        // NOTE: if b2 == 0, continue the while loop (skip next rows until 53, then go to row 7)
+        // NOTE: if b2 == 0, continue the while loop (skip next rows until 51, then go to row 11)
         if (b2 == 0)
         {            
             rst = 0;
             continue;
         }
 
-        
-        // 55. rst ← b1*b2*b3
-        rst = b1*b2*b3;        
-    
-    } // End of while loop (row 9)
-
-    // 56. if rst = 1 then return π
-    if (rst == 1)
-    {
-        // 54. π ← (t_A, t_y, t_g, w, z_3, h, t, f0, z_1, z_2)
+        // 50. π ← (t_A, t_y, t_g, w, z_3, h, t, f0, z_1, z_2)
         // Pi.t_A   = t_A;
         // Pi.t_y   = t_y;
         // Pi.t_g   = t_g;
@@ -1092,10 +1016,19 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // Pi.f0    = f0;
         // Pi.z_1   = z_1;
         // Pi.z_2   = z_2;
+        
+        // 51. rst ← b1*b2*b3
+        rst = b1*b2*b3;        
+    
+    } // End of while loop (row 10)
+
+    // 52. if rst = 1 then return π
+    if (rst == 1)
+    {
         // NOTE: additional flag, to identify a valid proof
         Pi.valid = 1;
     }
-    // 57. else return ⊥
+    // 53. else return ⊥
     else // (rst == 0)      
     {
         // NOTE: invalid proof, other data fields in PROOF_I_t structure are empty

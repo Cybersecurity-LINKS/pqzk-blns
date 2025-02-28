@@ -125,14 +125,14 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
     unsigned long       i, j, k, idx;
     long                rst, b1, b2, b3, bbar1, bbar2;
-    Mat<zz_pX>          B, D2;
-    vec_zz_pX           u, s_1_mod, s_2_mod, g; //t_B;
+    Mat<zz_pX>          B, D2_2_1;
+    vec_zz_pX           u, s_1_mod, s_2_mod, g;
     vec_zz_pX           h_part1, h_part2;
-    vec_zz_pX           r_j, p_j, mu, m, s_hat, tmp_vec, y;
-    vec_zz_pX           d_1, acc_vec, sigma_s_1, D2_y;
+    vec_zz_pX           r_j, p_j, mu, m, tmp_vec, y;
+    vec_zz_pX           d_1, acc_vec, sigma_s_1, D2_y, sigma_y_1;
     vec_ZZX             s_1, s_2, y_1, y_2, y_3;
     vec_zz_pX           c_s1, c_s2;
-    zz_pX               h_part3, acc, sum, f1; //d_0, sum_sigma_e_u;
+    zz_pX               h_part3, acc, sum, f1;
     ZZX                 c;
     RR                  alpha_i;
     Vec<vec_zz_pX>      e_, e_prime;
@@ -204,7 +204,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     // 6. Initialize idx ∈ N, scalar
     idx     = 0;
 
-    // (3.) 7.1 Convert vector s0 into polynomial vector s_1 ∈ R^^(m1)
+    // 7.1 Convert vector s0 into polynomial vector s_1 ∈ R^^(m1)
     CoeffsInvHatX(s_1, s0, m1);
     s_1_mod = conv<vec_zz_pX>( s_1 );    
 
@@ -488,7 +488,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         // 24. b3 ← Rej (z_3, R_goth * s, s3_goth, M_3),    b3 ∈ {0, 1}
         b3 = Rej_v_zzp(Pi.z_3, coeffs_R_goth_mult_s1, q1_hat, s3_goth, M_3);
         
-        // NOTE: if b3 == 0, continue the while loop (skip next rows until 53, then go to row 7)
+        // NOTE: if b3 == 0, continue the while loop (skip next rows until 49, then go to row 8)
         if (b3 == 0)
         {            
             rst = 0;
@@ -543,69 +543,33 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             Pi.h[i] = acc;
         }
 
-        // 31. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)    
+        // 30. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)    
         ss << Pi.h;
 
-        // 32. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(tau)_(q_hat)        
+        // 31. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(tau)_(q_hat)        
         HCom3(mu, "3" + ss.str());
 
-        // 33. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
+        // 32. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
         B.SetDims((n256 + tau0), m2);
 
-        // 34. t_B ← [t_y; t_g],   t_B ∈ R^^(256/d_hat + tau)_(q_hat)
-        // t_B.SetLength(n256 + tau0);
-        // NOTE: t_B is unused in Prove_Com
-
-        // 35. m   ← [y_3; g],     m ∈ R^^(256/d_hat + tau)_(q_hat)
+        
+        // 33. m   ← [y_3; g],     m ∈ R^^(256/d_hat + tau)_(q_hat)
         m.SetLength(n256 + tau0);
 
         for(i=0; i<n256; i++) 
         {
             B[i]   = crs[2][i];
-            // t_B[i] = t_y[i];
             m[i]   = conv<zz_pX>( y_3[i] );
         }
 
         for(i=n256; i<(n256 + tau0); i++) 
         {
             B[i]   = crs[3][i-n256];
-            // t_B[i] = t_g[i-n256];
             m[i]   = g[i-n256];
         }
 
-        // 36. s_hat ← (s1; σ(s1); m; σ(m)),     s_hat ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
-        s_hat.SetLength( m1_n256_tau );
-        for(i=0; i<m1; i++) 
-        {
-            s_hat[i] = s_1_mod[i];        
-        }
 
-        k = 0;
-
-        for(i=m1; i<(2*m1); i++) 
-        {
-            s_hat[i] = sigma_s_1[k];  
-            k++;      
-        }
-
-        k = 0;
-
-        for(i=(2*m1); i<(2*m1 + n256 + tau0); i++) 
-        {
-            s_hat[i] = m[k];
-            k++; 
-        }
-
-        sigma_map(tmp_vec, m, d_hat);
-        k = 0;
-
-        for(i=(2*m1 + n256 + tau0); i<(m1_n256_tau); i++)  
-        {
-            s_hat[i] = tmp_vec[k];    
-            k++;    
-        }
-        
-        // 37. y ← (y1; σ(y1); −B*y2; σ(-B*y2)),     y ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
+        // 34. y ← (y1; σ(y1); −B*y2; σ(-B*y2)),     y ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
         y.SetLength( m1_n256_tau );
 
         for(i=0; i<m1; i++) 
@@ -613,12 +577,12 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             y[i] = conv<zz_pX>( y_1[i] );        
         }
 
-        sigma_map(tmp_vec, conv<vec_zz_pX>(y_1), d_hat);
+        sigma_map(sigma_y_1, conv<vec_zz_pX>(y_1), d_hat);
         k = 0;
 
         for(i=m1; i<(2*m1); i++) 
         {
-            y[i] = tmp_vec[k];  
+            y[i] = sigma_y_1[k];  
             k++;      
         }
             
@@ -661,8 +625,8 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
 
 
-        // 38. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)           
-        sum.SetLength(d_hat);
+        // 35. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat) 
+        D2_2_1.SetDims(m1, m1);        
         // sum = 0;
         clear(sum);
                 
@@ -670,28 +634,14 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         {
             sum += ( mu[i] * gamma[i][256+d0] );           
         }
-        // NOTE: removed D2_2_1, D2 matrix directly filled using sum
-    
-        
-        // 39. Construction of D_2 ∈ R^^((2*m1+2(256/d_hat+τ))×(2*m1+2(256/d_hat+τ)))_(q_hat)
-        D2.SetDims(m1_n256_tau, m1_n256_tau);    
-        
-        for(i=0; i<m1_n256_tau; i++)
-        {
-            for(j=0; j<m1_n256_tau; j++)        
-            {
-                D2[i][j].SetLength(d_hat);
-            }
-        }   
-        
         for(i=0; i<m1; i++)
         {
-            D2[m1 + i][i] = sum;
+            D2_2_1[i][i] = sum;
         }
-        // NOTE: D2_2_1 in position (2,1), zeros in the rest
-        
+        // NOTE: sum in the diagonal of D2_2_1, zeros in the rest
 
-        // 40. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
+
+        // 36. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
         d_1.SetLength(m1_n256_tau);
 
         for(i=0; i<m1_n256_tau; i++)
@@ -778,102 +728,59 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
         // NOTE: skip 5th entry of d_1 (256/d_hat + tau0 zeros)
         
-        
-        // // 41. Definition of d_0 ∈ R^_(q_hat)    
-        // d_0.SetLength(d_hat);
-        // clear(d_0);
-        // // NOTE: d_0 (not d0 parameter) despite being in the pseudocode, it is not used in Prove_Com        
-           
-        // B_goth_p = conv<zz_p>(B_goth2);
-
-        // for(i=0; i<tau0; i++)
-        // {            
-        //     sum_z3 = 0;
-            
-        //     for(j=0; j<256; j++)
-        //     {
-        //         sum_z3 += gamma[i][j] * Pi.z_3[j];
-        //     }
-                
-        //     sum_sigma_e_u.SetLength(d_hat);
-        //     clear(sum_sigma_e_u);
-            
-        //     for(j=0; j<d0; j++)
-        //     {
-        //         sum_sigma_e_u += gamma[i][256+j] * poly_mult_hat(sigma_e_prime_[j], u);        
-        //     }
-        
-        //    d_0 = d_0 - ModPhi_hat_q( mu[i] * ( sum_z3 + sum_sigma_e_u + gamma[i][256+d0] * B_goth_p + Pi.h[i] )); 
-        // }
-
-        
-        // 42. Definition of f1 ∈ R^_(q_hat)
-        f1.SetLength(d_hat);
+                        
+        // 37. Definition of f1 ∈ R^_(q_hat)
         clear(f1);
 
-        // 1st addend of f1, (s_hat^T * D2 * y)
-        acc_vec.SetLength(m1_n256_tau);
+        // 1st addend of f1, (σ(s_1)^T * D2_2_1 * y_1)
+        D2_y.SetLength(m1);
 
-        // Compute  (D2 * y),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
-        for(i=0; i<m1_n256_tau; i++)    
+        // Compute  (D2_2_1 * y_1),  m1 polynomials
+        for(i=0; i<m1; i++)    
         {
-            acc_vec[i].SetLength(d_hat); 
-
-            // acc_vec[i] = 0;
-            clear(acc_vec[i]);
-
-            acc_vec[i] = poly_mult_hat(D2[i], y);
+            D2_y[i] = poly_mult_hat(D2_2_1[i], conv<vec_zz_pX>(y_1));
         }
 
-        // Accumulate  s_hat^T * (D2 * y)
-        D2_y = acc_vec;
-        f1 += poly_mult_hat(s_hat, acc_vec);
+        // Accumulate  σ(s_1)^T * (D2_2_1 * y_1)
+        f1 += poly_mult_hat(sigma_s_1, D2_y);
 
-        // 2nd addend of f1,  (y^T * D2 * s_hat)
-        acc_vec.SetLength(m1_n256_tau);
+        // 2nd addend of f1,  (σ(y_1)^T * D2_2_1 * s_1)
+        acc_vec.SetLength(m1);
 
-        // Compute  (D2 * s_hat),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
-        for(i=0; i<m1_n256_tau; i++)    
+        // Compute  (D2_2_1 * s_1),  m1 polynomials
+        for(i=0; i<m1; i++)    
         {
-            acc_vec[i].SetLength(d_hat); 
-
-            // acc_vec[i] = 0;
-            clear(acc_vec[i]);     
-
-            acc_vec[i] = poly_mult_hat(D2[i], s_hat);
+            acc_vec[i] = poly_mult_hat(D2_2_1[i], s_1_mod);
         }
 
-        // Accumulate  y^T * (D2 * s_hat)    
-        f1 += poly_mult_hat(y, acc_vec);
+        // Accumulate  σ(y_1)^T * (D2_2_1 * s_1)    
+        f1 += poly_mult_hat(sigma_y_1, acc_vec);
 
         // 3rd addend of f1,   (d_1^T * y)
         f1 += poly_mult_hat(d_1, y);
 
 
-        // 43. Definition of f0 ∈ R^_(q_hat)
-        Pi.f0.SetLength(d_hat);
-        clear(Pi.f0);
-        
-        Pi.f0 = poly_mult_hat(y, D2_y) + poly_mult_hat(crs[4][0], conv<vec_zz_pX>(y_2));
-        // NOTE: D2_y = (D2 * y) was already computed in row 41 (1st addend of f1) 
+        // 38. Definition of f0 ∈ R^_(q_hat)
+        Pi.f0 = poly_mult_hat(sigma_y_1, D2_y) + poly_mult_hat(crs[4][0], conv<vec_zz_pX>(y_2));
+        // NOTE: D2_y = (D2_2_1 * y_1) was already computed in row 37 (1st addend of f1) 
     
         
-        // 44. Definition of t ∈ R^_(q_hat)
+        // 39. Definition of t ∈ R^_(q_hat)
         Pi.t.SetLength(d_hat);
         clear(Pi.t);
         Pi.t = poly_mult_hat(crs[4][0], s_2_mod) + f1;
 
-        // 45. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
+        // 40. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
         ss << Pi.t << Pi.f0;
 
-        // 46. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^       
+        // 41. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^       
         HCom4(c, "4" + ss.str());
 
 
-        // 47. for i ∈ {1, 2} do
+        // 42. for i ∈ {1, 2} do
         // NOTE: for simplicity, next operations are duplicated with suffixes _1 and _2
 
-        // 48. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)   
+        // 43. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)   
         Pi.z_1.SetLength(m1);
         Pi.z_2.SetLength(m2);
 
@@ -895,10 +802,10 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
             
 
-        // 49. b_i ← Rej(z_i, c*s_i, s_i_goth, M_i),   b_i ∈ {0, 1} 
+        // 44. b_i ← Rej(z_i, c*s_i, s_i_goth, M_i),   b_i ∈ {0, 1} 
         b1 = Rej_v_zzpX(Pi.z_1, c_s1, q1_hat, s1_goth, M_1);
 
-        // NOTE: if b1 == 0, continue the while loop (skip next rows until 53, then go to row 7)
+        // NOTE: if b1 == 0, continue the while loop (skip next rows until 49, then go to row 8)
         if (b1 == 0)
         {            
             rst = 0;
@@ -907,7 +814,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
         b2 = Rej_v_zzpX(Pi.z_2, c_s2, q1_hat, s2_goth, M_2);
 
-        // NOTE: if b2 == 0, continue the while loop (skip next rows until 53, then go to row 7)
+        // NOTE: if b2 == 0, continue the while loop (skip next rows until 49, then go to row 8)
         if (b2 == 0)
         {            
             rst = 0;
@@ -915,18 +822,18 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
 
 
-        // 50. op_i ← LHC.Open(i, c, st_i),    op_i ∈ {⊥} ∪ R^^(n_i) × R^^(m_i) × R^^(m_i)
+        // 45. op_i ← LHC.Open(i, c, st_i),    op_i ∈ {⊥} ∪ R^^(n_i) × R^^(m_i) × R^^(m_i)
         LHC_Open(Pi.op_1, 1, conv<zz_pX>(c), st_1);        
 
-        // 51. if op_i = ⊥ then b_bar_i = 0
+        // 46. if op_i = ⊥ then b_bar_i = 0
         if (Pi.op_1.valid == 0)
         {
             bbar1 = 0;
-            // NOTE: if bbar1 == 0, continue the while loop (skip next rows until 53, then go to row 7)
+            // NOTE: if bbar1 == 0, continue the while loop (skip next rows until 49, then go to row 8)
             rst = 0;
             continue;
         }
-        // 52. else b_bar_i = 1
+        // 47. else b_bar_i = 1
         else
         {
             bbar1 = 1;
@@ -941,18 +848,9 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         else
         {
             bbar2 = 1;
-        }    
+        }
 
-        // 54. rst ← b1*b2*b3*b_bar_1*b_bar_2
-        rst = b1*b2*b3*bbar1*bbar2;        
-    
-    } // End of while loop (row 7)
-
-
-    // 55. if rst = 1 then return π
-    if (rst == 1)
-    {
-        // 53. π ← (t_A, t_y, t_g, w, com_1, com_2, z_3, h, t, f0, z_1, z_2, op_1, op_2)    
+        // 48. π ← (t_A, t_y, t_g, w, com_1, com_2, z_3, h, t, f0, z_1, z_2, op_1, op_2)    
         // Pi.t_A   = t_A;
         // Pi.t_y   = t_y;
         // Pi.t_g   = t_g;
@@ -966,11 +864,20 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         // Pi.z_1   = z_1;
         // Pi.z_2   = z_2;
         // Pi.op_1  = op_1;
-        // Pi.op_2  = op_2;
+        // Pi.op_2  = op_2;        
+
+        // 49. rst ← b1*b2*b3*b_bar_1*b_bar_2
+        rst = b1*b2*b3*bbar1*bbar2;        
+    
+    } // End of while loop (row 8)
+
+    // 50. if rst = 1 then return π
+    if (rst == 1)
+    {
         // NOTE: additional flag, to identify a valid proof
         Pi.valid = 1;
     }
-    // 56. else return ⊥
+    // 51. else return ⊥
     else // (rst == 0)      
     {
         // NOTE: invalid proof
@@ -1051,7 +958,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
 
     // 2. Retrieve (P, u, B_goth) ← x
     // NOTE: (P, u0, B_goth) already provided as inputs, so we just need to 
-    //       convert u0 ∈ Z^(d)_q_hat  to  u ∈ R^^(d/d_hat)_(q_hat), needed at row 19
+    //       convert u0 ∈ Z^(d)_q_hat  to  u ∈ R^^(d/d_hat)_(q_hat), needed at row 20
     CoeffsInvHat(u, u0, d_d_hat);
 
     // 3. P ← [P1,  0_(d × d_hat)],   P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)    
