@@ -384,6 +384,30 @@ void CoeffsHat(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l)
 
 
 //==============================================================================
+// CoeffsHat_q(x) - For an input polynomial vector x ∈ R_hat^l_(q_hat), 
+//                  it returns the coefficient vector of x, Coeffs(x) ∈ Z^(l*d_hat)_(q_hat)
+//==============================================================================
+void CoeffsHat_q(vec_zz_p& coeffs_x, const vec_zz_pX& x, const unsigned long& l)
+{
+    unsigned long   i, j, ld;
+    
+    ld = l * d_hat;   
+    coeffs_x.SetLength(ld);    
+   
+    for(i=0; i<l; i++)
+    {
+        for(j=0; j<d_hat; j++)     
+        {
+            // coeffs_x[d_hat*i + j] = x[i][j];
+            coeffs_x[d_hat*i + j] = coeff(x[i], j);
+        }        
+    }      
+
+    // return coeffs_x;
+}
+
+
+//==============================================================================
 // CoeffsInvHat(c) - For an input vector of coefficients c ∈ Z^(l*d_hat)_(q_hat),
 //                   it returns the polynomial vector x = Coeffs^{−1}(c) ∈ R_hat^l_(q_hat)
 //==============================================================================
