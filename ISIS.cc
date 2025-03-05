@@ -1060,9 +1060,9 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     // NOTE: assuming that current modulus is q2_hat (not q0) 
    
     unsigned long   i, j, k;
-    Mat<zz_pX>      B, D2; //D2_2_1
+    Mat<zz_pX>      B, D2_2_1;
     vec_zz_pX       t_B, z, d_1, acc_vec, coeffs_ones, sigma_ones;
-    vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2;
+    vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, sigma_z_1;
     zz_pX           acc, delta_1, delta_2, delta_3, c, d_0;
     Mat<zz_pX>      e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
     Mat<zz_pX>      sigma_r_, sigma_r_s_ , sigma_r_r_, sigma_r_u_;    
@@ -1194,12 +1194,12 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
         z[i] = Pi.z_1[i]; // z_1
     }
 
-    sigma_map(tmp_vec, Pi.z_1, d_hat);
+    sigma_map(sigma_z_1, Pi.z_1, d_hat);
     k = 0;
 
     for(i=m1; i<(2*m1); i++) 
     {
-        z[i] = tmp_vec[k]; // σ(z_1)
+        z[i] = sigma_z_1[k]; // σ(z_1)
         k++;      
     }
 
@@ -1245,35 +1245,29 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
     // 20. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)
-    // NOTE: removed D2_2_1, D2 matrix directly filled using delta_1,2,3
-    
-    // 21. Construction of D_2 ∈ R^^((2*m1+2(256/d_hat+τ))×(2*m1+2(256/d_hat+τ)))_(q_hat)
-    D2.SetDims(m1_n256_tau, m1_n256_tau);    
+    D2_2_1.SetDims(m1, m1);
         
-    // NOTE: D2_2_1 in position (2,1), zeros in the rest
-    // NOTE: m1 = m1_ISIS = (((m+2)*d+d_hat)/d_hat) + (|idx_hid|·h + ℓr·d + d_hat)/d_hat + t/d_hat
-    k = m1;
-
     for(i=0; i<(m2ddd); i++)
     {
-        D2[k][i] = delta_1;
-        k++;
+        D2_2_1[i][i] = delta_1;
     }
+    
+    k = m2ddd;
 
     for(i=(m2ddd); i<(m2ddd + idxhlrddd); i++)
     {
-        D2[k][i] = delta_2;
+        D2_2_1[k][i] = delta_2;
         k++;
     }
 
     for(i=(m2ddd + idxhlrddd); i<m1; i++)
     {
-        D2[k][i] = delta_3;
+        D2_2_1[k][i] = delta_3;
         k++;
     }
 
 
-    // 22.  (r_s,j , r_r,j , r_u,j ) ← r_j,
+    // 21.  (r_s,j , r_r,j , r_u,j ) ← r_j,
     //       r_s,j ∈ R^^(((m+2)d+d_hat)/d_hat)_(q_hat)
     //       r_r,j ∈ R^^((|idx_hid|·h+ℓr·d+d_hat)/d_hat)_(q_hat)
     //       r_u,j ∈ R^^(t/d_hat)_(q_hat)
@@ -1398,7 +1392,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     sigma_map(sigma_ones , coeffs_ones, d_hat);
 
 
-    // 23. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
+    // 22. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
     d_1.SetLength(m1_n256_tau);
 
     // 1st entry of d_1: ((m+2)d+d_hat)/d_hat polynomials
@@ -1549,7 +1543,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     // NOTE: skip 7th entry of d_1 (tau0 + 256/d_hat zeros)
 
 
-    // 24. Definition of d_0 ∈ R^_(q_hat)    
+    // 23. Definition of d_0 ∈ R^_(q_hat)    
     clear(d_0);
     // NOTE: d_0 (not d0 parameter) 
         
@@ -1573,14 +1567,14 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 25.  if one of the 4 conditions below does not hold, then return 0
+    // 24.  if one of the 4 conditions below does not hold, then return 0
        
     // Compute ||z_i||^2, squared Euclidean norm of each z_i
     norm2_z1 = Norm2Xm(Pi.z_1, d_hat, q2_hat);
     norm2_z2 = Norm2Xm(Pi.z_2, d_hat, q2_hat);
     norm2_z3 = Norm2m( Pi.z_3, q2_hat );
     
-    // 25.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
+    // 24.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
     // NOTE: equations in RR  
     if ( norm2_z1 > B_goth2_1)
     { 
@@ -1601,7 +1595,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 25.2 Second condition: h˜_i == 0 for i ∈ [τ] 
+    // 24.2 Second condition: h˜_i == 0 for i ∈ [τ] 
     // NOTE: equations in R^^_(q_hat)
     for(i=0; i<tau0; i++)
     {
@@ -1613,7 +1607,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 25.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
+    // 24.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
     // NOTE: equations in R^^(n)_(q_hat)    
     tmp_vec.SetLength(n);
     tmp_vec2.SetLength(n);
@@ -1634,24 +1628,25 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 25.4 Fourth condition: z^T*D2*z + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
+    // 24.4 Fourth condition: σ(z_1)^T*D2_2_1*z_1 + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
     // NOTE: equations in R^^_(q_hat)
     // acc = 0;
-    clear(acc);  
-
-    // 1st addend (z^T * D2 * z)  
-    // Compute  (D2 * z),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
-    acc_vec.SetLength(m1_n256_tau);
+    clear(acc);
     
-    for(i=0; i<m1_n256_tau; i++)    
+    // 1st addend σ(z_1)^T * (D2_2_1 * z_1)
+    // Compute  (D2_2_1 * z_1),  m1 polynomials
+    acc_vec.SetLength(m1);
+    
+    for(i=0; i<m1; i++)    
     {
-        acc_vec[i] = poly_mult_hat(D2[i], z);
+        acc_vec[i] = poly_mult_hat(D2_2_1[i], Pi.z_1);
     }
 
-    // Accumulate  z^T * (D2 * z)    
-    acc += poly_mult_hat(z, acc_vec); 
+    // Accumulate  σ(z_1)^T * (D2_2_1 * z_1)    
+    acc += poly_mult_hat(sigma_z_1, acc_vec);
     
-    // 2nd addend (c * d_1^T * z)   
+    // 2nd addend (c * d_1^T * z)
+    acc_vec.SetLength(m1_n256_tau);
     // Compute  (c * d_1^T),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
     for(i=0; i<m1_n256_tau; i++)    
     {
@@ -1676,6 +1671,6 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     
     // cout << "# Verify_ISIS: OK!" << endl;
 
-    // 26. else, return 1
+    // 25. else, return 1
     return 1;
 }

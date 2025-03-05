@@ -912,9 +912,9 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
 
     unsigned long       i, j, k;
     long                b1, b2;
-    Mat<zz_pX>          B, D2;
+    Mat<zz_pX>          B, D2_2_1;
     vec_zz_pX           u, t_B, mu, z, tmp_vec, tmp_vec2, r_j, p_j;
-    vec_zz_pX           d_1, acc_vec;
+    vec_zz_pX           d_1, acc_vec, sigma_z_1;
     ZZX                 c;
     zz_pX               c_mod, acc, sum, d_0, sum_sigma_e_u;
     Vec<vec_zz_pX>      e_ , e_prime;
@@ -1035,12 +1035,12 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
         z[i] = Pi.z_1[i]; // z_1
     }
 
-    sigma_map(tmp_vec, Pi.z_1, d_hat);
+    sigma_map(sigma_z_1, Pi.z_1, d_hat);
     k = 0;
 
     for(i=m1; i<(2*m1); i++) 
     {
-        z[i] = tmp_vec[k]; // σ(z_1)
+        z[i] = sigma_z_1[k]; // σ(z_1)
         k++;      
     }
 
@@ -1087,8 +1087,8 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     }
 
 
-    // 17. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)    
-    sum.SetLength(d_hat);
+    // 17. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat) 
+    D2_2_1.SetDims(m1, m1);        
     // sum = 0;
     clear(sum);
             
@@ -1096,27 +1096,13 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     {
         sum += ( mu[i] * gamma[i][256+d0] );           
     }
-    // NOTE: removed D2_2_1, D2 matrix directly filled using sum
-
-    
-    // 18. Construction of D_2 ∈ R^^((2*m1+2(256/d_hat+τ))×(2*m1+2(256/d_hat+τ)))_(q_hat)
-    D2.SetDims(m1_n256_tau, m1_n256_tau);    
-    
-    for(i=0; i<m1_n256_tau; i++)
-    {
-        for(j=0; j<m1_n256_tau; j++)        
-        {
-            D2[i][j].SetLength(d_hat);
-        }
-    }   
-    
     for(i=0; i<m1; i++)
     {
-        D2[m1 + i][i] = sum;
+        D2_2_1[i][i] = sum;
     }
-    // NOTE: D2_2_1 in position (2,1), zeros in the rest
+    // NOTE: sum in the diagonal of D2_2_1, zeros in the rest
 
-
+    
     // Initialize e ∈ R^^(256 x 256/d_hat)_(q_hat)
     e_.SetLength(256);    
     // NOTE: defined as e_ to distinguish it from the Euler constant e 
@@ -1182,7 +1168,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     }
 
     
-    // 19. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
+    // 18. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
     d_1.SetLength(m1_n256_tau);
 
     for(i=0; i<m1_n256_tau; i++)
@@ -1270,7 +1256,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     // NOTE: skip 5th entry of d_1 (256/d_hat + tau0 zeros)
 
 
-    // 20. Definition of d_0 ∈ R^_(q_hat)    
+    // 19. Definition of d_0 ∈ R^_(q_hat)    
     d_0.SetLength(d_hat);
     clear(d_0);
     // NOTE: d_0, not d0 parameter
@@ -1298,7 +1284,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     }
 
 
-    // 21.  if one of the 4 conditions below does not hold, then return 0
+    // 20.  if one of the 4 conditions below does not hold, then return 0
        
     // Compute ||z_i||, Euclidean norm of each z_i   
     norm_z1 = sqrt( conv<RR>( Norm2Xm(Pi.z_1, d_hat, q1_hat) ) );
@@ -1306,7 +1292,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     norm_z3 = sqrt( conv<RR>( Norm2m( Pi.z_3, q1_hat ) ) );
 
 
-    // 21.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
+    // 20.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
     // NOTE: equations in RR  
     if ( norm_z1 > B_goth_1)
     { 
@@ -1327,7 +1313,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     }
 
 
-    // 21.2 Second condition: h˜_i == 0 for i ∈ [τ] 
+    // 20.2 Second condition: h˜_i == 0 for i ∈ [τ] 
     // NOTE: equations in R^^_(q_hat)
     for(i=0; i<tau0; i++)
     {
@@ -1339,7 +1325,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     }
 
 
-    // 21.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
+    // 20.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
     // NOTE: equations in R^^(n)_(q_hat)    
     tmp_vec.SetLength(n);
     tmp_vec2.SetLength(n);
@@ -1377,36 +1363,28 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     }
 
 
-    // 21.4 Fourth condition: z^T*D2*z + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
+    // 20.4 Fourth condition: σ(z_1)^T*D2_2_1*z_1 + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
     // NOTE: equations in R^^_(q_hat)
-    acc.SetLength(d_hat);
     // acc = 0;
     clear(acc);  
 
-    // 1st addend (z^T * D2 * z)  
-    // Compute  (D2 * z),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
-    acc_vec.SetLength(m1_n256_tau);
+    // 1st addend σ(z_1)^T * (D2_2_1 * z_1)
+    // Compute  (D2_2_1 * z_1),  m1 polynomials
+    acc_vec.SetLength(m1);
     
-    for(i=0; i<m1_n256_tau; i++)    
+    for(i=0; i<m1; i++)    
     {
-        acc_vec[i].SetLength(d_hat); 
-
-        // acc_vec[i] = 0;
-        clear(acc_vec[i]);
-
-        acc_vec[i] = poly_mult_hat(D2[i], z);
+        acc_vec[i] = poly_mult_hat(D2_2_1[i], Pi.z_1);
     }
 
-    // Accumulate  z^T * (D2 * z)    
-    acc += poly_mult_hat(z, acc_vec); 
+    // Accumulate  σ(z_1)^T * (D2_2_1 * z_1)    
+    acc += poly_mult_hat(sigma_z_1, acc_vec);
     
-    // 2nd addend (c * d_1^T * z)   
+    // 2nd addend (c * d_1^T * z)
+    acc_vec.SetLength(m1_n256_tau);
     // Compute  (c * d_1^T),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
     for(i=0; i<m1_n256_tau; i++)    
     {
-        // acc_vec[i] = 0;
-        clear(acc_vec[i]);
-
         acc_vec[i] = ModPhi_hat_q( c_mod * d_1[i] );
     }
 
@@ -1426,7 +1404,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     }
     
 
-    // 21.5 Fifth condition: for i ∈ {1, 2}, LHC.Verify_i((A_i, B_i), (com_i, c), (z_i, op_i)) == 1
+    // 20.5 Fifth condition: for i ∈ {1, 2}, LHC.Verify_i((A_i, B_i), (com_i, c), (z_i, op_i)) == 1
     b1 = LHC_Verify(1, crs[5], crs[7], Pi.com_1, c_mod, conv<vec_zz_pX>(Pi.z_1), Pi.op_1);
     b2 = LHC_Verify(2, crs[6], crs[8], Pi.com_2, c_mod, conv<vec_zz_pX>(Pi.z_2), Pi.op_2);
     
@@ -1439,6 +1417,6 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     // cout << "# Verify_Com: OK!" << endl;
 
 
-    // 22. else, return 1
+    // 21. else, return 1
     return 1;
 }
