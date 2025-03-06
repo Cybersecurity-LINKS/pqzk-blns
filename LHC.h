@@ -36,7 +36,7 @@ typedef struct
 } LHC_OP_t;
 
 
-void LHC_Com(LHC_COM_t& com, LHC_ST_t& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y) ;
+void LHC_Com(LHC_COM_t& com, LHC_ST_t& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y);
 
 long Rej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s, const RR& M);
 long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR& s, const RR& M);

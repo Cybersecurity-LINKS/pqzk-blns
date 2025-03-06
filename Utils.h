@@ -32,12 +32,10 @@ void        rot_T(    mat_zz_p& M, const zz_pX& f );
 void        rot_vect( mat_zz_p& R, const vec_zz_pX& v );
 
 void        CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l);
-void        CoeffsInv(vec_zz_pX& x, const vec_ZZ& c, const unsigned long& l);
+void        CoeffsInv(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l);
 void        CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const unsigned long& l);
-void        CoeffsHat(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l);
-void        CoeffsHat_q(vec_zz_p& coeffs_x, const vec_zz_pX& x, const unsigned long& l);
+void        CoeffsHat(vec_zz_p& coeffs_x, const vec_zz_pX& x, const unsigned long& l);
 void        CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l);
-void        CoeffsInvHatX(vec_ZZX& x, const vec_ZZ& c, const unsigned long& l);
 
 void        sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const unsigned long& d);
 

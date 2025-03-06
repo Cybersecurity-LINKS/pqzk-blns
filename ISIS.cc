@@ -207,7 +207,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     vec_zz_pX       coeffs_ones, u_m_ones, sigma_u_m_ones, sigma_ones;
     vec_zz_pX       sigma_s, sigma_r;
     vec_zz_p        e_tmp, m_C;   
-    RR              alpha_i,     B_goth;
+    RR              alpha_i;
     ZZ              B_goth_s2,   B_goth_r2;
     zz_p            B_goth_s2_p, B_goth_r2_p;
 
@@ -249,7 +249,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     B_goth_r2 = Bounds[1];
 
     // B_goth = sqrt(B_goth_s^2 + B_goth_r^2 + t0)
-    B_goth = sqrt( conv<RR>( B_goth_s2 + B_goth_r2 + t0 ) );
+    const RR B_goth = sqrt( conv<RR>( B_goth_s2 + B_goth_r2 + t0 ) );
 
     B_goth_s2_p = conv<zz_p>(B_goth_s2);
     B_goth_r2_p = conv<zz_p>(B_goth_r2);
@@ -320,7 +320,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     }
 
     // Precompute coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)   
-    CoeffsHat_q(coeffs_s1, s_1, m1);
+    CoeffsHat(coeffs_s1, s_1, m1);
     // NOTE: coeffs_s1 contains the same coefficients listed in w0
 
 
@@ -546,7 +546,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // NOTE: precomputed after row 9
                 
         // 23. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)   
-        CoeffsHat_q(coeffs_y3, y_3, n256);
+        CoeffsHat(coeffs_y3, y_3, n256);
         
         // 24.  z_3 = y_3 + R_goth*s_1,   z_3 ∈ Z^(256)   
         coeffs_R_goth_mult_s1.SetLength(256);
@@ -591,7 +591,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
         for(j=0; j<256; j++)        
         {
-            CoeffsInvHat(r_j,  R_goth[j], m1 );
+            CoeffsInvHat(r_j,  R_goth[j], m1);
             sigma_map(sigma_r_[j], r_j, d_hat);
 
             // NOTE: (r_s,j , r_r,j , r_u,j ) ← r_j  at row 40, where:   
@@ -917,8 +917,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
         
         // 42. Definition of f1 ∈ R^_(q_hat)
-        clear(f1);
-
+        
         // 1st addend of f1, (σ(s_1)^T * D2_2_1 * y_1)
         D2_y.SetLength(m1);
 
@@ -929,7 +928,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
 
         // Accumulate  σ(s_1)^T * (D2_2_1 * y_1)
-        f1 += poly_mult_hat(sigma_s_1, D2_y);
+        f1 = poly_mult_hat(sigma_s_1, D2_y);
 
         // 2nd addend of f1,  (σ(y_1)^T * D2_2_1 * s_1)
         acc_vec.SetLength(m1);
@@ -1575,7 +1574,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     norm2_z3 = Norm2m( Pi.z_3, q2_hat );
     
     // 24.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
-    // NOTE: equations in RR  
+    // NOTE: equations in ZZ, with squared norms and thresholds
     if ( norm2_z1 > B_goth2_1)
     { 
         cout << "First condition failed - Invalid z_1 norm!" << endl; 
@@ -1630,8 +1629,6 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
 
     // 24.4 Fourth condition: σ(z_1)^T*D2_2_1*z_1 + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
     // NOTE: equations in R^^_(q_hat)
-    // acc = 0;
-    clear(acc);
     
     // 1st addend σ(z_1)^T * (D2_2_1 * z_1)
     // Compute  (D2_2_1 * z_1),  m1 polynomials
@@ -1643,7 +1640,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
     // Accumulate  σ(z_1)^T * (D2_2_1 * z_1)    
-    acc += poly_mult_hat(sigma_z_1, acc_vec);
+    acc = poly_mult_hat(sigma_z_1, acc_vec);
     
     // 2nd addend (c * d_1^T * z)
     acc_vec.SetLength(m1_n256_tau);

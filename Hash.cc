@@ -112,62 +112,10 @@ void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, co
 // - n_elems:   number of elements of the random vector (i.e. m1*d_hat)
 //
 // Output:
-// - out:       random vector with n_elems elements in {-1, 0, 1},
-//              equivalent to the pair (R_goth_0 - R_goth_1) in BLNS
-//==============================================================================
-void Hash_R_goth(vec_L& out, HASH_STATE_t *state, const long& n_elems)
-{    
-    long            i, j, k, curr_byte, R_goth_0, R_goth_1;
-    unsigned char*  y_arr;
-    
-    // Compute the minimum number of bytes needed to fill the vector  
-    const long n_bytes = ceil(2*n_elems / 8.0);
-
-    y_arr = new unsigned char[n_bytes];
-
-    _shake128_squeeze(state, y_arr, n_bytes);
-           
-    // out.SetLength(n_elems);
-    k = 0;
-
-    for(i=0; i < n_bytes; i++)
-    {
-        curr_byte = (long)(y_arr[i]);
-        
-        // NOTE: each byte will fill 4 elements, 2 bits per element (R_goth_0, R_goth_1)
-        for(j=0; j < 4; j++)
-        {
-            if(k < n_elems)
-            {
-                R_goth_0 = ( curr_byte & 1 );
-                curr_byte = curr_byte >> 1;
-                R_goth_1 = ( curr_byte & 1 );
-                curr_byte = curr_byte >> 1;
-                out[k] = R_goth_0 - R_goth_1;                
-                // NOTE: each element is in {-1, 0, 1}
-            }
-            k++;
-        }
-    } 
-    
-    delete[] y_arr;
-
-    // return out;
-}
-
-
-//==============================================================================
-// Hash_R_goth_p - Generate a random vector for R_goth using the Custom Hash function
-// 
-// Inputs:
-// - state:     status structure
-// - n_elems:   number of elements of the random vector (i.e. m1*d_hat)
-//
-// Output:
 // - out:       random vector with n_elems elements in {-1, 0, 1} mod q_hat,
 //              equivalent to the pair (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
-void Hash_R_goth_p(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems)
+void Hash_R_goth(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems)
 {    
     long            i, j, k, curr_byte, R_goth_0, R_goth_1;
     unsigned char*  y_arr;
@@ -450,9 +398,10 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
 // - inputStr:  string containing the input messages
 //
 // Output:
-// - R_goth:    matrix of {-1, 0, 1} values, equivalent to (R_goth_0 - R_goth_1) in BLNS
+// - R_goth:    matrix of {-1, 0, 1} mod q_hat values values,
+//              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
-void HCom1(mat_L& R_goth, const string& inputStr)
+void HCom1(mat_zz_p& R_goth, const string& inputStr)
 {
     long         i;
     HASH_STATE_t *state;
@@ -464,7 +413,7 @@ void HCom1(mat_L& R_goth, const string& inputStr)
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
     
-    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) 
+    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat
     for(i=0; i<256; i++)
     { 
         Hash_R_goth(R_goth[i], state, m1*d_hat);
@@ -560,12 +509,12 @@ void HCom3(vec_zz_pX& mu, const string& inputStr)
 // - c:         polynomial with d_hat coefficients, c ∈ C ⊂ R^
 // NOTE: c without modulo (q1_hat)
 //==============================================================================
-void HCom4(ZZX& c, const string& inputStr)
+void HCom4(zz_pX& c, const string& inputStr)
 {
     long         i;
     HASH_STATE_t *state;    
     ZZ           norm1_c, c_i;    
-    ZZX          c_2k;
+    ZZX          c0, c_2k;
         
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(xi0+1) / 8.0);
@@ -578,8 +527,7 @@ void HCom4(ZZX& c, const string& inputStr)
     
     state = Hash_Init(inputStr); 
 
-    c.SetLength(d_hat);
-    c_2k.SetLength(d_hat*2*k0);
+    c0.SetLength(d_hat);
 
     // Loop to ensure that (2k)√(||c^(2k)||_1 ≤ nu0,  
     // i.e.  ||c^(2k)||_1 ≤ (nu0)^(2k)
@@ -590,35 +538,37 @@ void HCom4(ZZX& c, const string& inputStr)
         // NOTE: generate each coefficient c[i] ∈ [0, xi0], to ensure ||c||∞ ≤ ξ
         
         // c[0] = c_i;
-        SetCoeff(c, 0, c_i);       
+        SetCoeff(c0, 0, c_i);       
                 
         for(i=1; i<(d_hat/2); i++)
         {
             Hash_ZZ_xi0(c_i, state, b_coeffs);
             
             // c[i] = c_i;
-            SetCoeff(c, i, c_i);
+            SetCoeff(c0, i, c_i);
 
             // c[d_hat-i] = -c[i];
-            SetCoeff(c, (d_hat-i), -c_i);
+            SetCoeff(c0, (d_hat-i), -c_i);
             // NOTE: this ensures that σ(c) = c
         }
-        c.normalize();
+        c0.normalize();
+
+        c = conv<zz_pX>(c0);
         
         // NOTE: avoid (rare) cases with c == 0
-        if (IsZero(conv<zz_pX>(c)))
+        if (IsZero(c))
         {
             continue;
         }
         
         // c_2k = power(c, (2*k0));
-        c_2k = c;
+        c_2k = c0;
 
         for(i=0; i<(2*k0 - 1); i++)
         {
-            // c_2k *= c;
-            // c_2k = (c_2k * c) % phi_hat; 
-            c_2k = ModPhi_hat(c_2k * c);
+            // c_2k *= c0;
+            // c_2k = (c_2k * c0) % phi_hat; 
+            c_2k = ModPhi_hat(c_2k * c0);
         }
 
         // Compute ||c^(2k)||_1
@@ -664,7 +614,7 @@ void HISIS1(mat_zz_p& R_goth, const string& inputStr)
     // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat
     for(i=0; i<256; i++)
     { 
-        Hash_R_goth_p(R_goth[i], state, m1*d_hat);
+        Hash_R_goth(R_goth[i], state, m1*d_hat);
     }
     
     delete(state);
@@ -778,7 +728,6 @@ void HISIS4(zz_pX& c, const string& inputStr)
     state = Hash_Init(inputStr); 
 
     c0.SetLength(d_hat);
-    c_2k.SetLength(d_hat);
 
     // Loop to ensure that (2k)√(||c^(2k)||_1 ≤ nu0,  
     // i.e.  ||c^(2k)||_1 ≤ (nu0)^(2k)

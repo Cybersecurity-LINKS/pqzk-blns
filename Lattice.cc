@@ -292,13 +292,11 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const double& sigma, const vec_ZZ& c
 
     // NOTE: loop to find a valid s = c - v  (i.e. small norm, see Holder.VerCred2, row 5)
     valid = 0;
-    v.SetLength(2*d0);
-    ci.SetLength(2*d0);
         
     while(valid == 0) 
     {
         // 2. v_(2d) ← 0,   v_(2d) ∈ Z^(2d)    
-        clear(v);
+        // clear(v);
 
         // 3. c_(2d) ← c,  c_(2d) ∈ Z^(2d)    
         ci = c;

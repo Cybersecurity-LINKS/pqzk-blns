@@ -35,7 +35,6 @@ void LHC_Com(LHC_COM_t& com, LHC_ST_t& st, const long& index, const Mat<zz_pX>& 
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long        i, m;
     double      alpha_i;
-    ZZX         x;
     
     // Manage the invocation with index 1 or 2
     const long n   = n_i;
