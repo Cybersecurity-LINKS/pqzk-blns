@@ -193,7 +193,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     Mat<zz_pX>      B, D2_2_1;
     vec_zz_pX       g;
     vec_zz_pX       h_part1, h_part2;
-    vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, m, tmp_vec, y;
+    vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, y;
     vec_zz_pX       sigma_s_1, d_1, acc_vec, D2_y, sigma_y_1;
     vec_zz_pX       s, r, u, s_1, s_2, y_1, y_2, y_3, c_s1, c_s2;
     zz_pX           c;
@@ -655,30 +655,24 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
         // 33. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
         B.SetDims((n256 + tau0), m2);
-
-        
-        // 34. m   ← [y_3; g],     m ∈ R^^(256/d_hat + tau)_(q_hat)
-        m.SetLength(n256 + tau0);
-
+       
         for(i=0; i<n256; i++) 
         {
             B[i]   = crs[2][i];
-            m[i]   = y_3[i];
         }
 
         for(i=n256; i<(n256 + tau0); i++) 
         {
             B[i]   = crs[3][i-n256];
-            m[i]   = g[i-n256];
         }
 
         
-        // 35. y ← (y1; σ(y1); −B*y2; σ(-B*y2)),     y ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
+        // 34. y ← (y1; σ(y1); −B*y2; σ(-B*y2)),     y ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
         y.SetLength( m1_n256_tau );
 
         for(i=0; i<m1; i++) 
         {
-            y[i] = y_1[i];        
+            y[i] = y_1[i];
         }
 
         sigma_map(sigma_y_1, y_1, d_hat);
@@ -715,9 +709,9 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             k++;    
         }
         
-        // 36. δ_1 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+1) },   δ_1 ∈ R^^_(q_hat)
-        // 37. δ_2 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+2) },   δ_2 ∈ R^^_(q_hat)
-        // 38. δ_3 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+3) },   δ_3 ∈ R^^_(q_hat)
+        // 35. δ_1 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+1) },   δ_1 ∈ R^^_(q_hat)
+        // 36. δ_2 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+2) },   δ_2 ∈ R^^_(q_hat)
+        // 37. δ_3 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+3) },   δ_3 ∈ R^^_(q_hat)
         clear(delta_1);
         clear(delta_2);
         clear(delta_3);
@@ -729,7 +723,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             delta_3 += mu[i]*gamma[i][256+d0+2];
         }
 
-        // 39. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)
+        // 38. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)
         D2_2_1.SetDims(m1, m1);
         
         for(i=0; i<(m2ddd); i++)
@@ -752,7 +746,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
 
         
-        // 40.  (r_s,j , r_r,j , r_u,j ) ← r_j,   
+        // 39.  (r_s,j , r_r,j , r_u,j ) ← r_j,   
         //       r_s,j ∈ R^^(((m+2)d+d_hat)/d_hat)_(q_hat)
         //       r_r,j ∈ R^^((|idx_hid|·h+ℓr·d+d_hat)/d_hat)_(q_hat)
         //       r_u,j ∈ R^^(t/d_hat)_(q_hat)
@@ -760,7 +754,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // NOTE: σ(r_s,j), σ(r_r,j), σ(r_u,j), σ(c_r,j) already pre-computed
         
              
-        // 41. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
+        // 40. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
         d_1.SetLength(m1_n256_tau);
 
         for(i=0; i<m1_n256_tau; i++)
@@ -916,7 +910,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // NOTE: skip 7th entry of d_1 (tau0 + 256/d_hat zeros)
 
         
-        // 42. Definition of f1 ∈ R^_(q_hat)
+        // 41. Definition of f1 ∈ R^_(q_hat)
         
         // 1st addend of f1, (σ(s_1)^T * D2_2_1 * y_1)
         D2_y.SetLength(m1);
@@ -946,27 +940,23 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         f1 += poly_mult_hat(d_1, y);
 
 
-        // 43. Definition of f0 ∈ R^_(q_hat)
+        // 42. Definition of f0 ∈ R^_(q_hat)
         Pi.f0 = poly_mult_hat(sigma_y_1, D2_y) + poly_mult_hat(crs[4][0], y_2);
         // NOTE: D2_y = (D2_2_1 * y_1) was already computed in row 42 (1st addend of f1) 
 
-
-        // 44. Definition of t ∈ R^_(q_hat)
+        // 43. Definition of t ∈ R^_(q_hat)
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
-
-        // 45. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
+        // 44. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
         ss << Pi.t << Pi.f0;
 
-
-        // 46. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^
+        // 45. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^
         HISIS4(c, "4" + ss.str());
 
-
-        // 47. for i ∈ {1, 2} do
+        // 46. for i ∈ {1, 2} do
         // NOTE: for simplicity, next operations are duplicated with suffixes _1 and _2
 
-        // 48. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)    
+        // 47. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)    
         Pi.z_1.SetLength(m1);
         Pi.z_2.SetLength(m2);
         c_s1.SetLength(m1);
@@ -985,7 +975,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
             
 
-        // 49. b_i ← Rej(z_i, c*s_i, s_i_goth, M_i),   b_i ∈ {0, 1} 
+        // 48. b_i ← Rej(z_i, c*s_i, s_i_goth, M_i),   b_i ∈ {0, 1} 
         b1 = Rej_v_zzpX(Pi.z_1, c_s1, q2_hat, s1_goth, M_1);
 
         // NOTE: if b1 == 0, continue the while loop (skip next rows until 51, then go to row 11)
@@ -1004,7 +994,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
             continue;
         }
 
-        // 50. π ← (t_A, t_y, t_g, w, z_3, h, t, f0, z_1, z_2)
+        // 49. π ← (t_A, t_y, t_g, w, z_3, h, t, f0, z_1, z_2)
         // Pi.t_A   = t_A;
         // Pi.t_y   = t_y;
         // Pi.t_g   = t_g;
@@ -1016,18 +1006,18 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // Pi.z_1   = z_1;
         // Pi.z_2   = z_2;
         
-        // 51. rst ← b1*b2*b3
+        // 50. rst ← b1*b2*b3
         rst = b1*b2*b3;        
     
     } // End of while loop (row 10)
 
-    // 52. if rst = 1 then return π
+    // 51. if rst = 1 then return π
     if (rst == 1)
     {
         // NOTE: additional flag, to identify a valid proof
         Pi.valid = 1;
     }
-    // 53. else return ⊥
+    // 52. else return ⊥
     else // (rst == 0)      
     {
         // NOTE: invalid proof, other data fields in PROOF_I_t structure are empty

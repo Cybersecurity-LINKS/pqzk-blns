@@ -14,7 +14,7 @@ For installation instructions and additional information, see [./Docs/INSTALL.md
 ## Usage
 After cloning this repository, build and run the ```BLNS``` executable as follows:
 ```sh
-make
+make -j$(nproc)
 
 ./BLNS
 ```

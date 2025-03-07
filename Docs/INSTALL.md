@@ -46,7 +46,7 @@ cd  pqzk-blns-main
 
 clear && make clean
 
-make -j10 && ./BLNS
+make -j$(nproc) && ./BLNS
 ```
 
 ## Additional information
