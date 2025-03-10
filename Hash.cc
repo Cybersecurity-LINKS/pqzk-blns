@@ -61,21 +61,21 @@ void Hash_Update(HASH_STATE_t *state, const string& inputStr)
 // Hash_Copy  - Copy the status structure of the Custom Hash function
 // 
 // Inputs:
-// - state:     current status structure
+// - state0:    initial status structure
 //
 // Output:
-// - state2:    copy of the status structure
+// - state:     copy of the status structure
 //==============================================================================
-HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state)
+HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state0)
 {
-    HASH_STATE_t *state2 = new HASH_STATE_t();
+    HASH_STATE_t *state = new HASH_STATE_t();
 
-    copy(state->s, state->s + 25, state2->s);
-    // state2->s[25] = state->s[25];
-    state2->pos      = state->pos;
-    state2->final    = state->final;
+    copy(state0->s, state0->s + 25, state->s);
+    // state->s[25] = state0->s[25];
+    state->pos      = state0->pos;
+    state->final    = state0->final;
      
-    return state2;
+    return state;
 }
 
 
@@ -430,7 +430,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         }
     }
 
-    delete(state);
+    delete state;
     
     // return crs;    
 }
@@ -465,7 +465,7 @@ void HCom1(mat_zz_p& R_goth, const string& inputStr)
         Hash_R_goth(R_goth[i], state, m1*d_hat);
     }
     
-    delete(state);
+    delete state;
 
     // return R_goth;
 }
@@ -503,7 +503,7 @@ void HCom2(mat_zz_p& gamma, const string& inputStr)
         Hash_v_zz_p(gamma[i], state, n257, b_coeffs);
     }
 
-    delete(state);
+    delete state;
     
     // return gamma;
 }
@@ -538,7 +538,7 @@ void HCom3(vec_zz_pX& mu, const string& inputStr)
         Hash_zz_pX(mu[i], state, d_hat, b_coeffs);
     }
     
-    delete(state);
+    delete state;
         
     // return mu;
 }
@@ -627,7 +627,7 @@ void HCom4(zz_pX& c, const string& inputStr)
         }
     }
     
-    delete(state);
+    delete state;
          
     // return c;
 }
@@ -638,6 +638,7 @@ void HCom4(zz_pX& c, const string& inputStr)
 //              It generates the 1st challenge used in the NIZK proof system.
 // 
 // Input:
+// - state0:    initial status structure
 // - inputStr:  string containing the input messages
 //
 // Output:
@@ -645,14 +646,15 @@ void HCom4(zz_pX& c, const string& inputStr)
 //              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
 // NOTE: HISIS1 is identical to HCom1, apart m1
-void HISIS1(mat_zz_p& R_goth, const string& inputStr)
+void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr)
 {
     long         i;
     HASH_STATE_t *state;
 
     const long  m1 = m1_ISIS;
 
-    state = Hash_Init(inputStr);  
+    state = Hash_Copy(state0);
+    Hash_Update(state, inputStr);
     
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
@@ -663,7 +665,7 @@ void HISIS1(mat_zz_p& R_goth, const string& inputStr)
         Hash_R_goth(R_goth[i], state, m1*d_hat);
     }
     
-    delete(state);
+    delete state;
 
     // return R_goth;
 }
@@ -674,18 +676,20 @@ void HISIS1(mat_zz_p& R_goth, const string& inputStr)
 //              It generates the 2nd challenge used in the NIZK proof system.
 // 
 // Input:
+// - state0:    initial status structure
 // - inputStr:  string containing the input messages
 //
 // Output:
 // - gamma:     matrix of integers modulo q2_hat
 //==============================================================================
-void HISIS2(mat_zz_p& gamma, const string& inputStr)
+void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
     long         i, n259;       
     HASH_STATE_t *state; 
     
-    state = Hash_Init(inputStr); 
+    state = Hash_Copy(state0);
+    Hash_Update(state, inputStr); 
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat) ) / 8.0);    
@@ -701,7 +705,7 @@ void HISIS2(mat_zz_p& gamma, const string& inputStr)
         Hash_v_zz_p(gamma[i], state, n259, b_coeffs);
     }
     
-    delete(state);
+    delete state;
 
     // return gamma;
 }
@@ -712,12 +716,13 @@ void HISIS2(mat_zz_p& gamma, const string& inputStr)
 //              It generates the 3rd challenge used in the NIZK proof system.
 // 
 // Input:
+// - state0:    initial status structure
 // - inputStr:  string containing the input messages
 //
 // Output:
 // - mu:        vector with tau0 polynomials with d_hat coefficients modulo q2_hat
 //==============================================================================
-void HISIS3(vec_zz_pX& mu, const string& inputStr)
+void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
 // NOTE: HISIS3 is identical to HCom3, apart the modulo  
 {     
     // NOTE: assuming that current modulus is q2_hat (not q0)
@@ -727,7 +732,8 @@ void HISIS3(vec_zz_pX& mu, const string& inputStr)
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat) ) / 8.0);   
 
-    state = Hash_Init(inputStr);  
+    state = Hash_Copy(state0);
+    Hash_Update(state, inputStr); 
 
     // Random generation of mu ∈ R^(tau0)_q_hat
     mu.SetLength(tau0);
@@ -737,7 +743,7 @@ void HISIS3(vec_zz_pX& mu, const string& inputStr)
         Hash_zz_pX(mu[i], state, d_hat, b_coeffs);
     }
     
-    delete(state);
+    delete state;
         
     // return mu;
 }
@@ -748,13 +754,14 @@ void HISIS3(vec_zz_pX& mu, const string& inputStr)
 //              It generates the 4th challenge used in the NIZK proof system.
 // 
 // Input:
+// - state0:    initial status structure
 // - inputStr:  string containing the input messages
 //
 // Output:
 // - c:         polynomial with d_hat coefficients 
 // NOTE: c without modulo (q2_hat)
 //==============================================================================
-void HISIS4(zz_pX& c, const string& inputStr)
+void HISIS4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
 // NOTE: HISIS4 is identical to HCom4, apart the modulo
 {
     long         i;
@@ -771,7 +778,8 @@ void HISIS4(zz_pX& c, const string& inputStr)
     // Initialize the variable norm1_c = ||c^(2k)||_1
     norm1_c = 2*nu0_2k;
     
-    state = Hash_Init(inputStr); 
+    state = Hash_Copy(state0);
+    Hash_Update(state, inputStr);
 
     c0.SetLength(d_hat);
 
@@ -827,7 +835,7 @@ void HISIS4(zz_pX& c, const string& inputStr)
         }
     }
     
-    delete(state);
+    delete state;
          
     // return c;
 }
@@ -871,7 +879,7 @@ void HM(vec_ZZ& m_i, const string& a_i)
         // NOTE: now each coefficient is in the range [−psi0, psi0]
     }
     
-    delete(state);
+    delete state;
 
     // return m_i;
 }

@@ -28,7 +28,7 @@ typedef  shake128_state_t      HASH_STATE_t;
 
 HASH_STATE_t* Hash_Init(const string& inputStr);
 void Hash_Update(HASH_STATE_t *state, const string& inputStr);
-HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state);
+HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state0);
 
 void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, const size_t& b_coeffs);
 void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, const size_t& b_num);
@@ -42,10 +42,10 @@ void HCom2(mat_zz_p& gamma, const string& inputStr);
 void HCom3(vec_zz_pX& mu, const string& inputStr);
 void HCom4(zz_pX& c, const string& inputStr);
 
-void HISIS1(mat_zz_p& R_goth, const string& inputStr);
-void HISIS2(mat_zz_p& gamma, const string& inputStr);
-void HISIS3(vec_zz_pX& mu, const string& inputStr);
-void HISIS4(zz_pX& c, const string& inputStr);
+void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr);
+void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr);
+void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr);
+void HISIS4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr);
 
 void HM(vec_ZZ& m_i, const string& a_i);
 

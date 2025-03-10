@@ -210,6 +210,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     RR              alpha_i;
     ZZ              B_goth_s2,   B_goth_r2;
     zz_p            B_goth_s2_p, B_goth_r2_p;
+    HASH_STATE_t   *state0, *state;
 
     // Initialise constants
     const unsigned long n           = n_ISIS;
@@ -432,6 +433,13 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     h_part3 = poly_mult_hat(sigma_s, s) - B_goth_s2_p;
     h_part4 = poly_mult_hat(sigma_r, r) - B_goth_r2_p;
     h_part5 = poly_mult_hat(sigma_u_m_ones, u);
+    
+
+    // Initialize the custom Hash function
+    // ss << crs << P << C << mex << B_f << Bounds << aux;
+    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << mex << B_f << Bounds << aux;
+    // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init    
+    state0 = Hash_Init(ss.str());
 
 
     // 10. while (rst == 0 ∧ idx < N) do
@@ -530,14 +538,15 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
 
         // 19. a_1 ← (t_A, t_y, t_g, w) 
-        ss.str("");    ss.clear();
-        // ss << crs << P << C << mex << B_f << Bounds << aux << t_A << t_y << t_g << w;
-        ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << mex << B_f << Bounds << aux << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
-        // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init
-
+        ss.str("");
+        ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
+        // NOTE: copy the initial status structure, already initialized with (crs, x) before row 10        
+        state = Hash_Copy(state0);
+        Hash_Update(state, ss.str());
+        
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
         // 21. R_goth = R_goth_0 - R_goth_1
-        HISIS1(R_goth, "1" + ss.str());
+        HISIS1(R_goth, state, "1");
         // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat,
         //       equivalent to (R_goth_0 - R_goth_1) in BLNS
         
@@ -573,11 +582,13 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
 
         
-        // 26. a_2 ← z_3,   a2 ∈ Z^256    
+        // 26. a_2 ← z_3,   a2 ∈ Z^256
+        ss.str("");
         ss << Pi.z_3;
+        Hash_Update(state, ss.str());
 
         // 27. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
-        HISIS2(gamma, "2" + ss.str());    
+        HISIS2(gamma, state, "2");
         // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
         
@@ -647,11 +658,13 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
 
 
-        // 31. a_3 ← h,   a_3 ∈ R^^(τ)_(q_hat)    
+        // 31. a_3 ← h,   a_3 ∈ R^^(τ)_(q_hat)
+        ss.str("");
         ss << Pi.h;
+        Hash_Update(state, ss.str());
 
         // 32. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
-        HISIS3(mu, "3" + ss.str());
+        HISIS3(mu, state, "3");
 
         // 33. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
         B.SetDims((n256 + tau0), m2);
@@ -947,11 +960,13 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // 43. Definition of t ∈ R^_(q_hat)
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
-        // 44. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
+        // 44. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)
+        ss.str("");
         ss << Pi.t << Pi.f0;
+        Hash_Update(state, ss.str());
 
         // 45. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^
-        HISIS4(c, "4" + ss.str());
+        HISIS4(c, state, "4");
 
         // 46. for i ∈ {1, 2} do
         // NOTE: for simplicity, next operations are duplicated with suffixes _1 and _2
@@ -1011,6 +1026,9 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     
     } // End of while loop (row 10)
 
+    delete  state0;
+    delete  state;
+
     // 51. if rst = 1 then return π
     if (rst == 1)
     {
@@ -1061,6 +1079,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     ZZ              B_goth_s2, B_goth_r2, B_goth2;
     zz_p            B_goth_s2_p, B_goth_r2_p, sums;
     ZZ              norm2_z1, norm2_z2, norm2_z3;
+    HASH_STATE_t*   state;
 
     // Initialise constants
     const unsigned long n           = n_ISIS;
@@ -1123,8 +1142,17 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
     // NOTE: to save memory, proof values will be directly accessed as Pi.{name}
     
+    // Initialize the custom Hash function
+    // ss << crs << P << C << mex << B_f << Bounds << aux;
+    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << mex << B_f << Bounds << aux;
+    // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init    
+    state = Hash_Init(ss.str());
+
     // 6. a_1 ← (t_A, t_y, t_g, w)     
     // a_1 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
+    ss.str("");
+    ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
+    Hash_Update(state, ss.str());
     
     // 7. a_2 ← z_3,   a2 ∈ Z^256    
     // a_2 << Pi.z_3;
@@ -1136,25 +1164,30 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     // a_4 << Pi.t << Pi.f0;
     
     // 10. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
-    // ss << crs << P << C << mex << B_f << Bounds << aux << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
-    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << mex << B_f << Bounds << aux << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
-    // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init
-    HISIS1(R_goth, "1" + ss.str());
+    HISIS1(R_goth, state, "1");
     // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat,
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
     // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
+    ss.str("");
     ss << Pi.z_3;
-    HISIS2(gamma, "2" + ss.str());    
+    Hash_Update(state, ss.str());
+    HISIS2(gamma, state, "2");   
     // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
     // 12. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
+    ss.str("");
     ss << Pi.h;
-    HISIS3(mu, "3" + ss.str());
+    Hash_Update(state, ss.str());
+    HISIS3(mu, state, "3");
 
     // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
+    ss.str("");
     ss << Pi.t << Pi.f0;
-    HISIS4(c, "4" + ss.str());
+    Hash_Update(state, ss.str());
+    HISIS4(c, state, "4");
+
+    delete  state;
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
     B.SetDims((n256 + tau0), m2);
