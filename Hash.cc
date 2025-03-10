@@ -17,7 +17,7 @@
 
 
 //==============================================================================
-// Hash_Init -  Initialize the Custom Hash function, implemented using SHAKE128
+// Hash_Init  - Initialize the Custom Hash function, implemented using SHAKE128
 // 
 // Inputs:
 // - inputStr:  string containing the input message (initial seed)
@@ -38,6 +38,48 @@ HASH_STATE_t* Hash_Init(const string& inputStr)
 
 
 //==============================================================================
+// Hash_Update - Update the Custom Hash function with a new input message
+// 
+// Inputs:
+// - state:      status structure
+// - inputStr:   string containing a new input message
+//
+// Output:
+// - state:      updated status structure
+//==============================================================================
+void Hash_Update(HASH_STATE_t *state, const string& inputStr)
+{
+    const size_t in_len = inputStr.length();
+    
+    _shake128_absorb(state, reinterpret_cast<const uint8_t*>(&inputStr[0]), in_len); 
+
+    // return state;
+}
+
+
+//==============================================================================
+// Hash_Copy  - Copy the status structure of the Custom Hash function
+// 
+// Inputs:
+// - state:     current status structure
+//
+// Output:
+// - state2:    copy of the status structure
+//==============================================================================
+HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state)
+{
+    HASH_STATE_t *state2 = new HASH_STATE_t();
+
+    copy(state->s, state->s + 25, state2->s);
+    // state2->s[25] = state->s[25];
+    state2->pos      = state->pos;
+    state2->final    = state->final;
+     
+    return state2;
+}
+
+
+//==============================================================================
 // Hash_zz_pX - Generate a random polynomial using the Custom Hash function
 // 
 // Inputs:
@@ -47,6 +89,7 @@ HASH_STATE_t* Hash_Init(const string& inputStr)
 //
 // Output:
 // - out_poly:  random polynomial with n_coeffs coefficients (mod q_hat)
+// - state:     updated status structure
 //==============================================================================
 void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, const size_t& b_coeffs)
 {    
@@ -82,6 +125,7 @@ void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, cons
 //
 // Output:
 // - out_vec:   vector of random numbers (modulo q_hat)
+// - state:     updated status structure
 //==============================================================================
 void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, const size_t& b_num)
 {    
@@ -114,6 +158,7 @@ void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, co
 // Output:
 // - out:       random vector with n_elems elements in {-1, 0, 1} mod q_hat,
 //              equivalent to the pair (R_goth_0 - R_goth_1) in BLNS
+// - state:     updated status structure
 //==============================================================================
 void Hash_R_goth(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems)
 {    
@@ -166,6 +211,7 @@ void Hash_R_goth(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems)
 //
 // Output:
 // - out:        random integer modulo (xi0+1), i.e. from 0 to xi0
+// - state:      updated status structure
 //==============================================================================
 void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num)
 {    
