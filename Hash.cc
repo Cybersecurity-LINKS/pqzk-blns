@@ -441,20 +441,22 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
 //              It generates the 1st challenge used in the NIZK proof system.
 // 
 // Input:
+// - state0:    initial status structure
 // - inputStr:  string containing the input messages
 //
 // Output:
 // - R_goth:    matrix of {-1, 0, 1} mod q_hat values values,
 //              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
-void HCom1(mat_zz_p& R_goth, const string& inputStr)
+void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr)
 {
     long         i;
     HASH_STATE_t *state;
 
     const long   m1 = m1_Com;
 
-    state = Hash_Init(inputStr);  
+    state = Hash_Copy(state0);
+    Hash_Update(state, inputStr);
     
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
@@ -476,18 +478,20 @@ void HCom1(mat_zz_p& R_goth, const string& inputStr)
 //              It generates the 2nd challenge used in the NIZK proof system.
 // 
 // Input:
+// - state0:    initial status structure
 // - inputStr:  string containing the input messages
 //
 // Output:
 // - gamma:     matrix of integers modulo q1_hat
 //==============================================================================
-void HCom2(mat_zz_p& gamma, const string& inputStr)
+void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long         i, n257;
     HASH_STATE_t *state; 
     
-    state = Hash_Init(inputStr); 
+    state = Hash_Copy(state0);
+    Hash_Update(state, inputStr);
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat) ) / 8.0);    
@@ -514,12 +518,13 @@ void HCom2(mat_zz_p& gamma, const string& inputStr)
 //              It generates the 3rd challenge used in the NIZK proof system.
 // 
 // Input:
+// - state0:    initial status structure
 // - inputStr:  string containing the input messages
 //
 // Output:
 // - mu:        vector with tau0 polynomials with d_hat coefficients modulo q1_hat
 //==============================================================================
-void HCom3(vec_zz_pX& mu, const string& inputStr)
+void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long         i;
@@ -528,7 +533,8 @@ void HCom3(vec_zz_pX& mu, const string& inputStr)
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat) ) / 8.0);   
 
-    state = Hash_Init(inputStr);  
+    state = Hash_Copy(state0);
+    Hash_Update(state, inputStr);
 
     // Random generation of mu ∈ R^(tau0)_q_hat
     mu.SetLength(tau0);
@@ -549,13 +555,14 @@ void HCom3(vec_zz_pX& mu, const string& inputStr)
 //              It generates the 4th challenge used in the NIZK proof system.
 // 
 // Input:
+// - state0:    initial status structure
 // - inputStr:  string containing the input messages
 //
 // Output:
 // - c:         polynomial with d_hat coefficients, c ∈ C ⊂ R^
 // NOTE: c without modulo (q1_hat)
 //==============================================================================
-void HCom4(zz_pX& c, const string& inputStr)
+void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
 {
     long         i;
     HASH_STATE_t *state;    
@@ -571,7 +578,8 @@ void HCom4(zz_pX& c, const string& inputStr)
     // Initialize the variable norm1_c = ||c^(2k)||_1
     norm1_c = 2*nu0_2k;
     
-    state = Hash_Init(inputStr); 
+    state = Hash_Copy(state0);
+    Hash_Update(state, inputStr);
 
     c0.SetLength(d_hat);
 

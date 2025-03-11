@@ -141,6 +141,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     stringstream        ss;
     mat_zz_p            R_goth, gamma;
     vec_zz_p            coeffs_s0, e_tmp, coeffs_R_goth_mult_s1, coeffs_y3;
+    HASH_STATE_t       *state0, *state;
 
     // Initialise constants    
     const unsigned long n           = n_Com;
@@ -276,6 +277,12 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     sigma_map(sigma_s_1, s_1, d_hat);
     h_part3   = poly_mult_hat(sigma_s_1, s_1) + conv<zz_p>(-B_goth2);
 
+    // Initialize the custom Hash function
+    // ss << crs << P << u0 << B_goth2;
+    ss << inputStr << ipk.c0 << ipk.c1 << idx_hid << u0 << B_goth2;
+    // NOTE: using inputStr, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init
+    state0 = Hash_Init(ss.str());
+
     
     // 8. while (rst == 0 ∧ idx < N) do
     while((rst == 0) && (idx < N1))
@@ -374,14 +381,15 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         LHC_Com(Pi.com_2, st_2, 2, crs[6], crs[8], s_2, y_2);
 
         // 19. a1 ← (t_A, t_y, t_g, w, com_1, com_2) 
-        ss.str("");    ss.clear();
-        // ss << crs << P << u0 << B_goth2 << t_A << t_y << t_g << w << com_1 << com_2;
-        ss << inputStr << ipk.c0 << ipk.c1 << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
-        // NOTE: using inputStr, ipk.c0, ipk.c1, instead of crs, P to speedup Hash_Init
+        ss.str("");
+        ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
+        // NOTE: copy the initial status structure, already initialized with (crs, x) before row 8        
+        state = Hash_Copy(state0);
+        Hash_Update(state, ss.str());
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
         // 21. R_goth = R_goth_0 - R_goth_1
-        HCom1(R_goth, "1" + ss.str());
+        HCom1(R_goth, state, "1");
         // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat,
         //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
@@ -411,11 +419,13 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             continue;
         }
         
-        // 25. a2 ← z_3,   a2 ∈ Z^256    
+        // 25. a2 ← z_3,   a2 ∈ Z^256
+        ss.str("");
         ss << Pi.z_3;
+        Hash_Update(state, ss.str());
         
         // 26. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat
-        HCom2(gamma, "2" + ss.str());
+        HCom2(gamma, state, "2");
 
 
         // Initialize h ∈ R^^(tau)_(q_hat)
@@ -455,11 +465,13 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             Pi.h[i] = acc;
         }
 
-        // 30. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)    
+        // 30. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)
+        ss.str("");
         ss << Pi.h;
+        Hash_Update(state, ss.str());
 
         // 31. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(tau)_(q_hat)        
-        HCom3(mu, "3" + ss.str());
+        HCom3(mu, state, "3");
 
         // 32. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
         B.SetDims((n256 + tau0), m2);
@@ -655,11 +667,13 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         // 38. Definition of t ∈ R^_(q_hat)
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
-        // 39. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
+        // 39. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)
+        ss.str("");
         ss << Pi.t << Pi.f0;
+        Hash_Update(state, ss.str());
 
         // 40. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^       
-        HCom4(c, "4" + ss.str());
+        HCom4(c, state, "4");
 
 
         // 41. for i ∈ {1, 2} do
@@ -754,6 +768,9 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     
     } // End of while loop (row 8)
 
+    delete  state0;
+    delete  state;
+
     // 49. if rst = 1 then return π
     if (rst == 1)
     {
@@ -806,6 +823,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     vec_zz_p            e_tmp;
     zz_p                sum_z3, B_goth_p;
     ZZ                  norm2_z1, norm2_z2, norm2_z3;
+    HASH_STATE_t*       state;
 
     // Initialise constants and variables
     const unsigned long n           = n_Com;
@@ -854,8 +872,17 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     }
     // NOTE: to save memory, proof values will be directly accessed as Pi.{name}
 
+    // Initialize the custom Hash function
+    // ss << crs << P << u0 << B_goth2;
+    ss << inputStr << ipk.c0 << ipk.c1 << idx_hid << u0 << B_goth2;
+    // NOTE: using inputStr, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init
+    state = Hash_Init(ss.str());
+
     // 5. a1 ← (t_A, t_y, t_g, w, com_1, com_2) 
     // a_1 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
+    ss.str("");
+    ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
+    Hash_Update(state, ss.str());
 
     // 6. a2 ← z_3,   a2 ∈ Z^256    
     // a_2 << Pi.z_3;
@@ -866,27 +893,29 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     // 8. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
     // a_4 << Pi.t << Pi.f0;
 
-    // 9. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
-    // ss << crs << P << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
-    ss << inputStr << ipk.c0 << ipk.c1 << u0 << B_goth2 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
-    // NOTE: using inputStr, ipk.c0, ipk.c1, instead of crs, P to speedup Hash_Init
-    
+    // 9. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)    
     // 10. R_goth = R_goth_0 - R_goth_1
-    HCom1(R_goth, "1" + ss.str());
+    HCom1(R_goth, state, "1");
     // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat,
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
     // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat     
-    ss << Pi.z_3;    
-    HCom2(gamma, "2" + ss.str());
+    ss.str("");
+    ss << Pi.z_3;
+    Hash_Update(state, ss.str());
+    HCom2(gamma, state, "2");
 
     // 12. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(tau)_(q_hat)        
-    ss << Pi.h;    
-    HCom3(mu, "3" + ss.str());
+    ss.str("");
+    ss << Pi.h;
+    Hash_Update(state, ss.str());
+    HCom3(mu, state, "3");
 
     // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^           
-    ss << Pi.t << Pi.f0;       
-    HCom4(c, "4" + ss.str());
+    ss.str("");
+    ss << Pi.t << Pi.f0;
+    Hash_Update(state, ss.str());
+    HCom4(c, state, "4");
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
     B.SetDims((n256 + tau0), m2);

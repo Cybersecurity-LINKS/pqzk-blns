@@ -437,8 +437,8 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
     // Initialize the custom Hash function
     // ss << crs << P << C << mex << B_f << Bounds << aux;
-    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << mex << B_f << Bounds << aux;
-    // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init    
+    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << idx_hid << mex << B_f << Bounds << aux;
+    // NOTE: using inputStr, ipk, idx_hid, instead of crs, P, C to speedup Hash_Init    
     state0 = Hash_Init(ss.str());
 
 
@@ -1144,8 +1144,8 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     
     // Initialize the custom Hash function
     // ss << crs << P << C << mex << B_f << Bounds << aux;
-    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << mex << B_f << Bounds << aux;
-    // NOTE: using inputStr, ipk, instead of crs, P, C to speedup Hash_Init    
+    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << idx_hid << mex << B_f << Bounds << aux;
+    // NOTE: using inputStr, ipk, idx_hid, instead of crs, P, C to speedup Hash_Init    
     state = Hash_Init(ss.str());
 
     // 6. a_1 ← (t_A, t_y, t_g, w)     

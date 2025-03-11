@@ -37,10 +37,10 @@ void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num);
 
 void Hcrs(CRS2_t& crs, const string& inputStr);
 
-void HCom1(mat_zz_p& R_goth, const string& inputStr);
-void HCom2(mat_zz_p& gamma, const string& inputStr);
-void HCom3(vec_zz_pX& mu, const string& inputStr);
-void HCom4(zz_pX& c, const string& inputStr);
+void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr);
+void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr);
+void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr);
+void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr);
 
 void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr);
 void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr);
