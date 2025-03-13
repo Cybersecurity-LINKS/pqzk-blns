@@ -467,7 +467,7 @@ void ZSampler(ZZ& x, const double& sigma, const double& c)
 {
     long    b;
     ZZ      left, right, range, c_int;    
-    double  delta, iden, val, p, u, c_floor, c_frac;
+    double  iden, val, p, u, c_floor, c_frac;
 
     if (sigma<=0)
     {
@@ -479,12 +479,12 @@ void ZSampler(ZZ& x, const double& sigma, const double& c)
     c_floor = floor(c);
     c_frac  = c - c_floor;
     c_int   = conv<ZZ>(c_floor);
-               
-    b = 0;
-    delta = sigma * log2(lambda0);
+    
+    const double delta = sigma * log2(lambda0);
     left  = conv<ZZ>(ceil ( c_frac - delta ));
     right = conv<ZZ>(floor( c_frac + delta ));
     range = right - left + 1;
+    b = 0;
     
     if (range < 2)
     {

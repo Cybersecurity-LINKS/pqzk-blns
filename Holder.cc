@@ -398,7 +398,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     vec_zz_pX       a2, c0, c1, a; 
     vec_ZZX         s, r; //mex
     ZZ              x;   
-    vec_ZZ          m_i, coeffs_m, coeffs_s, coeffs_r, r_vect, enc_x, coeffs_u;
+    vec_ZZ          m_i, coeffs_m, coeffs_s, coeffs_r, r_vect, coeffs_u;
     vec_zz_p        coeffs_m_idx;
     mat_zz_p        P, C0, C1, C; 
     vec_ZZ          Bounds;
@@ -562,14 +562,12 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
 
     // 10. u ← enc(x) ∈ {0, 1}^t  
     // Compute enc(x), the binary decomposition of (x−1) 
-    enc_x.SetLength(t0);
+    coeffs_u.SetLength(t0);
 
     for(i=0; i<t0; i++)
     {
-        enc_x[i] = bit(x-1, i);
+        coeffs_u[i] = bit(x-1, i);
     }
-    
-    coeffs_u = enc_x;
     
 
     // 11. Bounds ← ( sigma0·√((m + 2)d), ψ·√(h·|idx| + ℓr·d) ),    Bounds ∈ Z^2

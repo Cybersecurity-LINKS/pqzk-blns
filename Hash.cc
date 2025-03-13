@@ -121,7 +121,7 @@ void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, cons
 // Inputs:
 // - state:     status structure
 // - n_elems:   number of elements of the random vector (i.e. 256+n+1)
-// - b_num:     number of bytes for each random number (i.e. |q_hat|)
+// - b_num:     number of bytes for each random number (i.e. |q_hat-1|)
 //
 // Output:
 // - out_vec:   vector of random numbers (modulo q_hat)
@@ -257,7 +257,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat))    
 
         // Compute the minimum number of bytes to represent each coefficient
-        b_coeffs = ceil(log2( conv<double>(q2_hat) ) / 8.0);    
+        b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);    
         
         n    = n_ISIS;
         m1   = m1_ISIS;
@@ -334,7 +334,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
 
         // Compute the minimum number of bytes to represent each coefficient
-        b_coeffs = ceil(log2( conv<double>(q1_hat) ) / 8.0);
+        b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);
 
         n    = n_Com;
         m1   = m1_Com;
@@ -494,7 +494,7 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
     Hash_Update(state, inputStr);
 
     // Compute the minimum number of bytes to represent each coefficient
-    const size_t b_coeffs = ceil(log2( conv<double>(q1_hat) ) / 8.0);    
+    const size_t b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);    
     
     n257 = 256 + d0 + 1; 
     // NOTE: gamma has 256+d+1 columns in Com, while 256+d+3 in ISIS   
@@ -531,7 +531,7 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
     HASH_STATE_t *state;
 
     // Compute the minimum number of bytes to represent each coefficient
-    const size_t b_coeffs = ceil(log2( conv<double>(q1_hat) ) / 8.0);   
+    const size_t b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);   
 
     state = Hash_Copy(state0);
     Hash_Update(state, inputStr);
@@ -560,7 +560,7 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
 //
 // Output:
 // - c:         polynomial with d_hat coefficients, c ∈ C ⊂ R^
-// NOTE: c without modulo (q1_hat)
+// NOTE: c coefficients are modulo (q1_hat)
 //==============================================================================
 void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
 {
@@ -570,7 +570,7 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
     ZZX          c0, c_2k;
         
     // Compute the minimum number of bytes to represent each coefficient
-    const size_t b_coeffs = ceil(log2(xi0+1) / 8.0);
+    const size_t b_coeffs = ceil(log2(xi0) / 8.0);
     
     // Compute (nu0)^(2*k0)
     const ZZ    nu0_2k = power(conv<ZZ>(nu0), 2*k0);
@@ -700,7 +700,7 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
     Hash_Update(state, inputStr); 
 
     // Compute the minimum number of bytes to represent each coefficient
-    const size_t b_coeffs = ceil(log2( conv<double>(q2_hat) ) / 8.0);    
+    const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);    
     
     n259 = 256 + d0 + 3;
     // NOTE: gamma has 256+d+3 columns in ISIS, while 256+d+1 in Com 
@@ -738,7 +738,7 @@ void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
     HASH_STATE_t *state;
 
     // Compute the minimum number of bytes to represent each coefficient
-    const size_t b_coeffs = ceil(log2( conv<double>(q2_hat) ) / 8.0);   
+    const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);   
 
     state = Hash_Copy(state0);
     Hash_Update(state, inputStr); 
@@ -767,7 +767,7 @@ void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
 //
 // Output:
 // - c:         polynomial with d_hat coefficients 
-// NOTE: c without modulo (q2_hat)
+// NOTE: c coefficients are modulo (q2_hat)
 //==============================================================================
 void HISIS4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
 // NOTE: HISIS4 is identical to HCom4, apart the modulo
@@ -778,7 +778,7 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
     ZZX          c0, c_2k;
         
     // Compute the minimum number of bytes to represent each coefficient
-    const size_t b_coeffs = ceil(log2(xi0+1) / 8.0);
+    const size_t b_coeffs = ceil(log2(xi0) / 8.0);
     
     // Compute (nu0)^(2*k0)
     const ZZ    nu0_2k = power(conv<ZZ>(nu0), 2*k0);
@@ -873,7 +873,7 @@ void HM(vec_ZZ& m_i, const string& a_i)
     vec_zz_p    tmp;
     
     // Compute the minimum number of bytes to represent each coefficient
-    const size_t b_coeffs = ceil(log2(range) / 8.0);
+    const size_t b_coeffs = ceil(log2(range-1) / 8.0);
 
     state = Hash_Init(a_i);
 
