@@ -85,7 +85,7 @@ HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state0)
 // Inputs:
 // - state:     status structure
 // - n_coeffs:  number of coefficients of the random polynomial (i.e. d_hat)
-// - b_coeffs:  number of bytes for each coefficient (i.e. |q_hat|)
+// - b_coeffs:  number of bytes for each coefficient (i.e. |q_hat-1|)
 //
 // Output:
 // - out_poly:  random polynomial with n_coeffs coefficients (mod q_hat)
@@ -277,8 +277,8 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         // crs[0][3] = B_g;
         // crs[0][4] = b;
             
-        // Random generation of A_1 ∈ R^(n x m_1)_q_hat   
-        //                      A_2 ∈ R^(n x m_2)_q_hat      
+        // Random generation of A_1 ∈ R^(n x m_1)_(q_hat)   
+        //                      A_2 ∈ R^(n x m_2)_(q_hat)      
         crs[0][0].SetDims(n, m1);    
         crs[0][1].SetDims(n, m2);
 
@@ -294,7 +294,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
             }
         }       
 
-        // Random generation of B_y ∈ R^(256/d_hat x m_2)_q_hat  
+        // Random generation of B_y ∈ R^(256/d_hat x m_2)_(q_hat)  
         crs[0][2].SetDims(n256, m2);
 
         for(i=0; i<n256; i++)
@@ -305,7 +305,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
             }
         }
 
-        // Random generation of B_g ∈ R^(tau0^ x m_2)_q_hat
+        // Random generation of B_g ∈ R^(tau0^ x m_2)_(q_hat)
         crs[0][3].SetDims(tau0, m2);
 
         for(i=0; i<tau0; i++)
@@ -316,7 +316,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
             }
         }
 
-        // Random generation of b ∈ R^(m_2)_q_hat
+        // Random generation of b ∈ R^(m_2)_(q_hat)
         crs[0][4].SetDims(1, m2);
         // NOTE: b is (1 x m_2) matrix, not a vector!
 
@@ -352,8 +352,8 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
         // crs[1][7] = B_bar_1;
         // crs[1][8] = B_bar_2;
             
-        // Random generation of A_1 ∈ R^(n x m_1)_q_hat   
-        //                      A_2 ∈ R^(n x m_2)_q_hat      
+        // Random generation of A_1 ∈ R^(n x m_1)_(q_hat)   
+        //                      A_2 ∈ R^(n x m_2)_(q_hat)      
         crs[1][0].SetDims(n, m1);    
         crs[1][1].SetDims(n, m2); 
         
@@ -369,7 +369,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
             }
         }       
 
-        // Random generation of B_y ∈ R^(256/d_hat x m_2)_q_hat  
+        // Random generation of B_y ∈ R^(256/d_hat x m_2)_(q_hat)  
         crs[1][2].SetDims(n256, m2);
 
         for(i=0; i<n256; i++)
@@ -380,7 +380,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
             }
         }
 
-        // Random generation of B_g ∈ R^(tau0^ x m_2)_q_hat
+        // Random generation of B_g ∈ R^(tau0^ x m_2)_(q_hat)
         crs[1][3].SetDims(tau0, m2);
 
         for(i=0; i<tau0; i++)
@@ -391,7 +391,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
             }
         }
 
-        // Random generation of b ∈ R^(m_2)_q_hat
+        // Random generation of b ∈ R^(m_2)_(q_hat)
         crs[1][4].SetDims(1, m2);
         // NOTE: b is (1 x m_2) matrix, not a vector!
 
@@ -403,7 +403,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
             }
         }
         
-        // Random generation of A_bar_1, B_bar_1 ∈ R^(m_1 x n_1)_q_hat
+        // Random generation of A_bar_1, B_bar_1 ∈ R^(m_1 x n_1)_(q_hat)
         crs[1][5].SetDims(m1, n_i);
         crs[1][7].SetDims(m1, n_i);       
         
@@ -416,7 +416,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
             }
         }
 
-        // Random generation of A_bar_2, B_bar_2 ∈ R^(m_2 x n_2)_q_hat
+        // Random generation of A_bar_2, B_bar_2 ∈ R^(m_2 x n_2)_(q_hat)
         crs[1][6].SetDims(m2, n_i);
         crs[1][8].SetDims(m2, n_i);       
         
@@ -445,7 +445,7 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
 // - inputStr:  string containing the input messages
 //
 // Output:
-// - R_goth:    matrix of {-1, 0, 1} mod q_hat values values,
+// - R_goth:    matrix of {-1, 0, 1} mod q1_hat values values,
 //              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
 void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr)
@@ -461,7 +461,7 @@ void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr)
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
     
-    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat
+    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q1_hat
     for(i=0; i<256; i++)
     { 
         Hash_R_goth(R_goth[i], state, m1*d_hat);
@@ -499,7 +499,7 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
     n257 = 256 + d0 + 1; 
     // NOTE: gamma has 256+d+1 columns in Com, while 256+d+3 in ISIS   
 
-    // Random generation of gamma ∈ Z^(tau0 x 256+d0+1)_q_hat
+    // Random generation of gamma ∈ Z^(tau0 x 256+d0+1)_q1_hat
     gamma.SetDims(tau0, n257);
 
     for(i=0; i<tau0; i++)
@@ -536,7 +536,7 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
     state = Hash_Copy(state0);
     Hash_Update(state, inputStr);
 
-    // Random generation of mu ∈ R^(tau0)_q_hat
+    // Random generation of mu ∈ R^(tau0)_q1_hat
     mu.SetLength(tau0);
 
     for(i=0; i<tau0; i++)
@@ -559,8 +559,7 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
 // - inputStr:  string containing the input messages
 //
 // Output:
-// - c:         polynomial with d_hat coefficients, c ∈ C ⊂ R^
-// NOTE: c coefficients are modulo (q1_hat)
+// - c:         polynomial with d_hat coefficients, c ∈ C ⊂ R^_(q1_hat)
 //==============================================================================
 void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
 {
@@ -650,7 +649,7 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
 // - inputStr:  string containing the input messages
 //
 // Output:
-// - R_goth:    matrix of {-1, 0, 1} mod q_hat values, 
+// - R_goth:    matrix of {-1, 0, 1} mod q2_hat values, 
 //              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
 // NOTE: HISIS1 is identical to HCom1, apart m1
@@ -667,7 +666,7 @@ void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
     
-    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat
+    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q2_hat
     for(i=0; i<256; i++)
     { 
         Hash_R_goth(R_goth[i], state, m1*d_hat);
@@ -705,7 +704,7 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
     n259 = 256 + d0 + 3;
     // NOTE: gamma has 256+d+3 columns in ISIS, while 256+d+1 in Com 
 
-    // Random generation of gamma ∈ R^(tau0 x 256+d+3)_q_hat
+    // Random generation of gamma ∈ R^(tau0 x 256+d+3)_q2_hat
     gamma.SetDims(tau0, n259);
 
     for(i=0; i<tau0; i++)
@@ -743,7 +742,7 @@ void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
     state = Hash_Copy(state0);
     Hash_Update(state, inputStr); 
 
-    // Random generation of mu ∈ R^(tau0)_q_hat
+    // Random generation of mu ∈ R^(tau0)_q2_hat
     mu.SetLength(tau0);
 
     for(i=0; i<tau0; i++)
@@ -766,8 +765,7 @@ void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
 // - inputStr:  string containing the input messages
 //
 // Output:
-// - c:         polynomial with d_hat coefficients 
-// NOTE: c coefficients are modulo (q2_hat)
+// - c:         polynomial with d_hat coefficients, c ∈ C ⊂ R^_(q2_hat)
 //==============================================================================
 void HISIS4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
 // NOTE: HISIS4 is identical to HCom4, apart the modulo

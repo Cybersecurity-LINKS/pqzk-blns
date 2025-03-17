@@ -23,12 +23,12 @@
 // 
 // Inputs:
 // - P:             matrix P  ∈ Z^[d x (|idx_hid|·h + ℓr·d)]_(q_hat)
-// - s:             vector s  ∈ Z^(|idx_hid|·h + ℓr·d)_q_hat
+// - s:             vector s  ∈ Z^(|idx_hid|·h + ℓr·d)_(q_hat)
 // - B_goth2:       bound  B_goth^2 ∈ Z≥0 (it is a scalar)
 //  
 // Output:
 // - P1:            matrix P1 ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
-// - s0:            vector s0 ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_q_hat
+// - s0:            vector s0 ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
 //==============================================================================
 // NOTE: zero padding of P, s already done in H_VerCred1
 void  Preprocessing_Com(vec_ZZ& s0, const ZZ& B_goth2)
@@ -111,9 +111,9 @@ void  Preprocessing_Com(vec_ZZ& s0, const ZZ& B_goth2)
 // - ipk:           Issuer public key
 // - (P,u,B_goth2): this triplet corresponds to x, with:
 //                  P ∈ Z^[d x (m1*d_hat)]_(q_hat)
-//                  u ∈ Z^(d)_q_hat
+//                  u ∈ Z^(d)_(q_hat)
 //                  B_goth^2 ∈ Z≥0 (it is a scalar)
-// - w0:            it contains the vector s ∈ Z^(m1*d_hat)_q_hat
+// - w0:            it contains the vector s ∈ Z^(m1*d_hat)
 //                  NOTE: (|idx_hid|*h + l_r*d + d_hat) == (m1 * d_hat)
 //  
 // Output:
@@ -193,7 +193,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     
     // 4. (P, s) ← PreprocessingProve^HCom_Com (P, s, B_goth)
     // P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
-    // s ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)
+    // s ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
     Preprocessing_Com(s0, B_goth2);
     coeffs_s0 = conv<vec_zz_p>(s0);
     
@@ -203,10 +203,10 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     // 6. Initialize idx ∈ N, scalar
     idx     = 0;
 
-    // 7.1 Convert vector s0 into polynomial vector s_1 ∈ R^^(m1)
+    // 7.1 Convert vector s0 into polynomial vector s_1 ∈ R^^(m1)_(q_hat)
     CoeffsInvHat(s_1, coeffs_s0, m1);
 
-    // 7.2 Convert vector u0 into polynomial vector u ∈ R^^(d/d_hat)_(q_hat) 
+    // 7.2 Convert vector u0 into polynomial vector u ∈ R^^(d/d_hat)_(q_hat)
     CoeffsInvHat(u, u0, d_d_hat);
 
 
@@ -294,7 +294,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         idx = idx + 1;
         // cout << "idx = " << idx << endl;
         
-        // 10. Random generation of s_2 ∈ R^^(m2)
+        // 10. Random generation of s_2 ∈ R^^(m2)_(q_hat) 
         s_2.SetLength(m2);
 
         for(i=0; i<m2; i++)
@@ -310,7 +310,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
 
 
-        // 11. t_A = A_1*s_1 + A_2*s_2,  tA ∈ R^^(n)_(q_hat)
+        // 11. t_A = A_1*s_1 + A_2*s_2,  t_A ∈ R^^(n)_(q_hat)
         Pi.t_A.SetLength(n);
         
         for(i=0; i<n; i++)
@@ -318,7 +318,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             Pi.t_A[i] = poly_mult_hat(crs[0][i], s_1) + poly_mult_hat(crs[1][i], s_2);
         }
         
-        // 12. Random generation of the y_1 ∈ R^^m1,  y_2 ∈ R^^m2,  y_3 ∈ R^^(256/d_hat)
+        // 12. Random generation of the y_1 ∈ R^^m1_(q_hat),  y_2 ∈ R^^m2_(q_hat),  y_3 ∈ R^^(256/d_hat)_(q_hat)
         y_1.SetLength(m1);
         y_2.SetLength(m2);
         y_3.SetLength(n256);
@@ -390,13 +390,13 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
         // 21. R_goth = R_goth_0 - R_goth_1
         HCom1(R_goth, state, "1");
-        // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat,
+        // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
         //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
-        // 22. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)   
+        // 22. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)_(q_hat)   
         CoeffsHat(coeffs_y3, y_3, n256);
         
-        // 23.  z_3 = y_3 + R_goth*s,   z_3 ∈ Z^(256)   
+        // 23.  z_3 = y_3 + R_goth*s,   z_3 ∈ Z^(256)_(q_hat)
         coeffs_R_goth_mult_s1.SetLength(256);
         Pi.z_3.SetLength(256);
         // NOTE: This equation is performed in Z not in polynomials, needing Coeffs() transformation of y_3, R_goth, and s_1
@@ -419,12 +419,12 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             continue;
         }
         
-        // 25. a2 ← z_3,   a2 ∈ Z^256
+        // 25. a2 ← z_3,   a2 ∈ Z^256_(q_hat)
         ss.str("");
         ss << Pi.z_3;
         Hash_Update(state, ss.str());
         
-        // 26. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat
+        // 26. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_(q_hat)
         HCom2(gamma, state, "2");
 
 
@@ -667,19 +667,19 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         // 38. Definition of t ∈ R^_(q_hat)
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
-        // 39. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)
+        // 39. a_4 ← (t, f0),   a_4 ∈ R^^2_(q_hat)
         ss.str("");
         ss << Pi.t << Pi.f0;
         Hash_Update(state, ss.str());
 
-        // 40. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^       
+        // 40. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
         HCom4(c, state, "4");
 
 
         // 41. for i ∈ {1, 2} do
         // NOTE: for simplicity, next operations are duplicated with suffixes _1 and _2
 
-        // 42. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)   
+        // 42. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)_(q_hat)
         Pi.z_1.SetLength(m1);
         Pi.z_2.SetLength(m2);
 
@@ -719,7 +719,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
 
 
-        // 44. op_i ← LHC.Open(i, c, st_i),    op_i ∈ {⊥} ∪ R^^(n_i) × R^^(m_i) × R^^(m_i)
+        // 44. op_i ← LHC.Open(i, c, st_i),    op_i ∈ {⊥} ∪ R^^(n_i)_(q_hat) × R^^(m_i)_(q_hat) × R^^(m_i)_(q_hat)
         LHC_Open(Pi.op_1, 1, c, st_1);        
 
         // 45. if op_i = ⊥ then b_bar_i = 0
@@ -799,7 +799,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 // - ipk:           Issuer public key
 // - (P,u,B_goth2): this triplet corresponds to x, with:
 //                  P ∈ Z^[d x (m1*d_hat)]_(q_hat)
-//                  u ∈ Z^(d)_q_hat
+//                  u ∈ Z^(d)_(q_hat)
 //                  B_goth^2 ∈ Z≥0 (it is a scalar)
 // - Pi:            proof (π) structure 
 //  
@@ -857,7 +857,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
 
     // 2. Retrieve (P, u, B_goth) ← x
     // NOTE: (P, u0, B_goth) already provided as inputs, so we just need to 
-    //       convert u0 ∈ Z^(d)_q_hat  to  u ∈ R^^(d/d_hat)_(q_hat), needed at row 19
+    //       convert u0 ∈ Z^(d)_(q_hat)  to  u ∈ R^^(d/d_hat)_(q_hat), needed at row 19
     CoeffsInvHat(u, u0, d_d_hat);
 
     // 3. P ← [P1,  0_(d × d_hat)],   P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)    
@@ -884,22 +884,22 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
     Hash_Update(state, ss.str());
 
-    // 6. a2 ← z_3,   a2 ∈ Z^256    
+    // 6. a2 ← z_3,   a2 ∈ Z^256_(q_hat)
     // a_2 << Pi.z_3;
     
     // 7. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)    
     // a_3 << Pi.h;
     
-    // 8. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
+    // 8. a_4 ← (t, f0),   a_4 ∈ R^^2_(q_hat)
     // a_4 << Pi.t << Pi.f0;
 
     // 9. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)    
     // 10. R_goth = R_goth_0 - R_goth_1
     HCom1(R_goth, state, "1");
-    // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat,
+    // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
-    // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_q_hat     
+    // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_(q_hat)     
     ss.str("");
     ss << Pi.z_3;
     Hash_Update(state, ss.str());
@@ -911,7 +911,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     Hash_Update(state, ss.str());
     HCom3(mu, state, "3");
 
-    // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^           
+    // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
     ss.str("");
     ss << Pi.t << Pi.f0;
     Hash_Update(state, ss.str());
@@ -1145,7 +1145,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     // NOTE: skip 5th entry of d_1 (256/d_hat + tau0 zeros)
 
 
-    // 19. Definition of d_0 ∈ R^_(q_hat)    
+    // 19. Definition of d_0 ∈ R^_(q_hat)
     clear(d_0);
     // NOTE: d_0, not d0 parameter
 
@@ -1177,6 +1177,7 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     norm2_z1 = Norm2Xm(Pi.z_1, d_hat, q1_hat);
     norm2_z2 = Norm2Xm(Pi.z_2, d_hat, q1_hat);
     norm2_z3 = Norm2m( Pi.z_3, q1_hat );
+    // NOTE: norms computed using values in {-(q-1)/2, ..., (q-1)/2}
 
 
     // 20.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3

@@ -267,15 +267,15 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
 
     // 4. (s0, r0, u0) ← w0    
-    s0 = w0[0]; // ∈ Z^((m+2)·d)
-    r0 = w0[1]; // ∈ Z^(|idx_hid|·h + ℓr·d)
-    // u0 = w0[2]; // ∈ {0,1}^t
+    s0 = w0[0];     // s0 ∈ Z^((m+2)·d)
+    r0 = w0[1];     // r0 ∈ Z^(|idx_hid|·h + ℓr·d)
+    // u0 = w0[2];  // u0 ∈ {0,1}^t
   
     // 5. (P, s, C, r) ← PreprocessingProve^HISIS_ISIS (P, s, B_goth_s, C, r, B_goth_r)
-    // P ∈ Z^[d × (m+2)·d + d_hat]_(q_hat) 
-    // s ∈ Z^((m+2)·d + d_hat)
+    // P ∈ Z^[d × (m+2)·d + d_hat]_(q_hat)
+    // s ∈ Z^((m+2)·d + d_hat)_(q_hat)
     // C ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat)
-    // r ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)   
+    // r ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
     // Preprocessing_ISIS(P, s1, C, r1, P1, s0, B_goth_s, C1, r0, B_goth_r);
     Preprocessing_ISIS(s0, r0, B_goth_s2, B_goth_r2);
     
@@ -286,7 +286,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     CoeffsInvHat(r, conv<vec_zz_p>(r0), idxhlrddd); // r ∈ R^^((|idx_hid|·h + ℓr·d + d_hat)/d_hat)_(q_hat)
 
     //    u ← Coeffs^−1(u0) 
-    CoeffsInvHat(u, conv<vec_zz_p>(w0[2]), t_d);    // u ∈ R^^(t/d_hat)_(q_hat) 
+    CoeffsInvHat(u, conv<vec_zz_p>(w0[2]), t_d);    // u ∈ R^^(t/d_hat)_(q_hat)
     
        
     // 7. Initialize rst ← 0,   rst ∈ Z, scalar
@@ -295,7 +295,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     // 8. Initialize idx ← 0,   idx ∈ N, scalar
     idx     = 0;
     
-    // 9. s_1 ← (s, r, u),   s_1 ∈ R^^(m1)
+    // 9. s_1 ← (s, r, u),   s_1 ∈ R^^(m1)_(q_hat)
     s_1.SetLength(m1);
     // NOTE: m1 := ((m + 2)·d + d_hat      + (|idx_hid|·h + ℓr·d + d_hat)    + t) / d_hat
     //           = ((m0+2)*d0+d_hat)/d_hat + (idx_hid*h0+lr0*d0+d_hat)/d_hat + t0/d_hat
@@ -320,7 +320,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         k++;      
     }
 
-    // Precompute coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)   
+    // Precompute coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)_(q_hat)
     CoeffsHat(coeffs_s1, s_1, m1);
     // NOTE: coeffs_s1 contains the same coefficients listed in w0
 
@@ -451,7 +451,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         idx = idx + 1;
         // cout << "idx = " << idx << endl;
         
-        // 12. Random generation of s_2 ∈ R^^(m2)
+        // 12. Random generation of s_2 ∈ R^^(m2)_(q_hat)
         s_2.SetLength(m2);
         
         for(i=0; i<m2; i++)
@@ -467,7 +467,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
 
 
-        // 13. t_A = A_1*s_1 + A_2*s_2,  tA ∈ R^^(n)_(q_hat)
+        // 13. t_A = A_1*s_1 + A_2*s_2,  t_A ∈ R^^(n)_(q_hat)
         Pi.t_A.SetLength(n);
         
         for(i=0; i<n; i++)
@@ -476,7 +476,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
 
         
-        // 14. Random generation of the y_1 ∈ R^^m1,  y_2 ∈ R^^m2,  y_3 ∈ R^^(256/d_hat)
+        // 14. Random generation of the y_1 ∈ R^^m1_(q_hat),  y_2 ∈ R^^m2_(q_hat),  y_3 ∈ R^^(256/d_hat)_(q_hat)
         y_1.SetLength(m1);
         y_2.SetLength(m2);
         y_3.SetLength(n256);
@@ -547,17 +547,17 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
         // 21. R_goth = R_goth_0 - R_goth_1
         HISIS1(R_goth, state, "1");
-        // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat,
+        // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
         //       equivalent to (R_goth_0 - R_goth_1) in BLNS
         
-        // 22. coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)   
+        // 22. coeffs_s1 ← Coeffs(s_1),   coeffs_s1 ∈ Z^(m1*d_hat)_(q_hat)
         // CoeffsHat(coeffs_s1, s_1, m1);
         // NOTE: precomputed after row 9
                 
-        // 23. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)   
+        // 23. coeffs_y3 ← Coeffs(y_3),   coeffs_y3 ∈ Z^(256)_(q_hat)
         CoeffsHat(coeffs_y3, y_3, n256);
         
-        // 24.  z_3 = y_3 + R_goth*s_1,   z_3 ∈ Z^(256)   
+        // 24.  z_3 = y_3 + R_goth*s_1,   z_3 ∈ Z^(256)_(q_hat)
         coeffs_R_goth_mult_s1.SetLength(256);
         Pi.z_3.SetLength(256);
         // NOTE: This equation is performed in Z not in polynomials, needing Coeffs() transformation of y_3, R_goth, and s_1
@@ -582,12 +582,12 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         }
 
         
-        // 26. a_2 ← z_3,   a2 ∈ Z^256
+        // 26. a_2 ← z_3,   a2 ∈ Z^256_(q_hat)
         ss.str("");
         ss << Pi.z_3;
         Hash_Update(state, ss.str());
 
-        // 27. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
+        // 27. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_(q_hat)
         HISIS2(gamma, state, "2");
         // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
@@ -960,18 +960,18 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         // 43. Definition of t ∈ R^_(q_hat)
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
-        // 44. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)
+        // 44. a_4 ← (t, f0),   a_4 ∈ R^^2_(q_hat)
         ss.str("");
         ss << Pi.t << Pi.f0;
         Hash_Update(state, ss.str());
 
-        // 45. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^
+        // 45. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
         HISIS4(c, state, "4");
 
         // 46. for i ∈ {1, 2} do
         // NOTE: for simplicity, next operations are duplicated with suffixes _1 and _2
 
-        // 47. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)    
+        // 47. z_i ← y_i + c*s_i,   z_i ∈ R^^(m_i)_(q_hat)
         Pi.z_1.SetLength(m1);
         Pi.z_2.SetLength(m2);
         c_s1.SetLength(m1);
@@ -1154,34 +1154,35 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
     Hash_Update(state, ss.str());
     
-    // 7. a_2 ← z_3,   a2 ∈ Z^256    
+    // 7. a_2 ← z_3,   a2 ∈ Z^256_(q_hat)
     // a_2 << Pi.z_3;
     
     // 8. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)    
     // a_3 << Pi.h;
     
-    // 9. a_4 ← (t, f0),   a_4 ∈ R^_(q_hat) x R^_(q_hat)  
+    // 9. a_4 ← (t, f0),   a_4 ∈ R^^2_(q_hat)
     // a_4 << Pi.t << Pi.f0;
     
     // 10. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
+    // 11. R_goth = R_goth_0 - R_goth_1
     HISIS1(R_goth, state, "1");
-    // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q_hat,
+    // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
-    // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_q_hat
+    // 12. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_(q_hat)
     ss.str("");
     ss << Pi.z_3;
     Hash_Update(state, ss.str());
     HISIS2(gamma, state, "2");   
     // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
-    // 12. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
+    // 13. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
     ss.str("");
     ss << Pi.h;
     Hash_Update(state, ss.str());
     HISIS3(mu, state, "3");
 
-    // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
+    // 14. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
     ss.str("");
     ss << Pi.t << Pi.f0;
     Hash_Update(state, ss.str());
@@ -1189,10 +1190,10 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
 
     delete  state;
 
-    // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
+    // 15. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
     B.SetDims((n256 + tau0), m2);
 
-    // 15. t_B ← [t_y; t_g],   t_B ∈ R^^(256/d_hat + tau)_(q_hat)
+    // 16. t_B ← [t_y; t_g],   t_B ∈ R^^(256/d_hat + tau)_(q_hat)
     t_B.SetLength(n256 + tau0);    
 
     for(i=0; i<n256; i++) 
@@ -1208,7 +1209,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 16. z ← (z_1; σ(z_1); (c*t_B − B*z_2); σ(c*t_B − B*z_2)),     z ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
+    // 17. z ← (z_1; σ(z_1); (c*t_B − B*z_2); σ(c*t_B − B*z_2)),     z ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
     z.SetLength( m1_n256_tau ); 
 
     for(i=0; i<m1; i++) 
@@ -1252,9 +1253,9 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 17. δ_1 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+1) },   δ_1 ∈ R^^_(q_hat)
-    // 18. δ_2 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+2) },   δ_2 ∈ R^^_(q_hat)
-    // 19. δ_3 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+3) },   δ_3 ∈ R^^_(q_hat)
+    // 18. δ_1 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+1) },   δ_1 ∈ R^^_(q_hat)
+    // 19. δ_2 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+2) },   δ_2 ∈ R^^_(q_hat)
+    // 20. δ_3 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+3) },   δ_3 ∈ R^^_(q_hat)
     clear(delta_1);
     clear(delta_2);
     clear(delta_3);
@@ -1266,7 +1267,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
         delta_3 += mu[i]*gamma[i][256+d0+2];
     }
 
-    // 20. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)
+    // 21. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)
     D2_2_1.SetDims(m1, m1);
         
     for(i=0; i<(m2ddd); i++)
@@ -1289,7 +1290,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 21.  (r_s,j , r_r,j , r_u,j ) ← r_j,
+    // 22.  (r_s,j , r_r,j , r_u,j ) ← r_j,
     //       r_s,j ∈ R^^(((m+2)d+d_hat)/d_hat)_(q_hat)
     //       r_r,j ∈ R^^((|idx_hid|·h+ℓr·d+d_hat)/d_hat)_(q_hat)
     //       r_u,j ∈ R^^(t/d_hat)_(q_hat)
@@ -1414,7 +1415,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     sigma_map(sigma_ones , coeffs_ones, d_hat);
 
 
-    // 22. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
+    // 23. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
     d_1.SetLength(m1_n256_tau);
 
     // 1st entry of d_1: ((m+2)d+d_hat)/d_hat polynomials
@@ -1565,7 +1566,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     // NOTE: skip 7th entry of d_1 (tau0 + 256/d_hat zeros)
 
 
-    // 23. Definition of d_0 ∈ R^_(q_hat)    
+    // 24. Definition of d_0 ∈ R^_(q_hat)    
     clear(d_0);
     // NOTE: d_0 (not d0 parameter) 
         
@@ -1589,14 +1590,16 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 24.  if one of the 4 conditions below does not hold, then return 0
+    // 25.  if one of the 4 conditions below does not hold, then return 0
        
     // Compute ||z_i||^2, squared Euclidean norm of each z_i
     norm2_z1 = Norm2Xm(Pi.z_1, d_hat, q2_hat);
     norm2_z2 = Norm2Xm(Pi.z_2, d_hat, q2_hat);
     norm2_z3 = Norm2m( Pi.z_3, q2_hat );
+    // NOTE: norms computed using values in {-(q-1)/2, ..., (q-1)/2}
+
     
-    // 24.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
+    // 25.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
     // NOTE: equations in ZZ, with squared norms and thresholds
     if ( norm2_z1 > B_goth2_1)
     { 
@@ -1617,7 +1620,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 24.2 Second condition: h˜_i == 0 for i ∈ [τ] 
+    // 25.2 Second condition: h˜_i == 0 for i ∈ [τ] 
     // NOTE: equations in R^^_(q_hat)
     for(i=0; i<tau0; i++)
     {
@@ -1629,7 +1632,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 24.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
+    // 25.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
     // NOTE: equations in R^^(n)_(q_hat)    
     tmp_vec.SetLength(n);
     tmp_vec2.SetLength(n);
@@ -1650,7 +1653,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     }
 
 
-    // 24.4 Fourth condition: σ(z_1)^T*D2_2_1*z_1 + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
+    // 25.4 Fourth condition: σ(z_1)^T*D2_2_1*z_1 + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
     // NOTE: equations in R^^_(q_hat)
     
     // 1st addend σ(z_1)^T * (D2_2_1 * z_1)
@@ -1691,6 +1694,6 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     
     // cout << "# Verify_ISIS: OK!" << endl;
 
-    // 25. else, return 1
+    // 26. else, return 1
     return 1;
 }

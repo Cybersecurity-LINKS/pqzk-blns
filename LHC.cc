@@ -24,7 +24,7 @@
 // - index:     i (1 or 2)
 // - A_i, B_i:  uniformly random matrices (i.e., structure crs_LHC) 
 //              A_i, B_i ∈ R_hat^(m_i x n_i)_(q_hat)
-// - s, y:      vectors of polynomials, s, y ∈ R_hat^m_i  
+// - s, y:      vectors of polynomials, s, y ∈ R_hat^m_i_(q_hat)
 //  
 // Outputs:
 // - com:       commitment structure    
@@ -224,7 +224,7 @@ long Rej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s,
 //              It returns as output “reject” (0) or “accept” (1).
 //
 // Inputs:
-// - z, v:  vectors of (m1 or m2) polynomials of length d_hat
+// - z, v:  vectors of m1 (or m2) polynomials of length d_hat
 // - q:     modulo for the coefficients of the polynomials
 // - s:     scalar, it is the standard deviation
 // - M:     scalar, it is a coefficient
