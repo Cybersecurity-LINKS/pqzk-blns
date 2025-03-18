@@ -17,22 +17,22 @@
 
 //==============================================================================
 // Preprocessing_Com -  Preprocessing function (PreprocessingProve^HCom_Com). 
-//                      It takes as input (P, s, B_goth) with B_goth ≥ ||s||. 
-//                      It returns s such that B_goth = ||s|| 
+//                      It takes as input (P0, s0, B_goth) with B_goth ≥ ||s||. 
+//                      It returns s such that B_goth = ||s||
 //                      and P filled with the appropriate number of zeros.
 // 
 // Inputs:
-// - P:             matrix P  ∈ Z^[d x (|idx_hid|·h + ℓr·d)]_(q_hat)
-// - s:             vector s  ∈ Z^(|idx_hid|·h + ℓr·d)_(q_hat)
+// - P0:            matrix P0 ∈ Z^[d x (|idx_hid|·h + ℓr·d)]_(q_hat)
+// - s0:            vector s0 ∈ Z^(|idx_hid|·h + ℓr·d)
 // - B_goth2:       bound  B_goth^2 ∈ Z≥0 (it is a scalar)
 //  
 // Output:
-// - P1:            matrix P1 ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
-// - s0:            vector s0 ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
+// - P:             matrix P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
+// - s:             vector s  ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
 //==============================================================================
 // NOTE: zero padding of P, s already done in H_VerCred1
-void  Preprocessing_Com(vec_ZZ& s0, const ZZ& B_goth2)
-{    
+void  Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2)
+{
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long    i;//j;
     ZZ      diff; //a1, a2, a3, a4;
@@ -54,49 +54,28 @@ void  Preprocessing_Com(vec_ZZ& s0, const ZZ& B_goth2)
     }
 
     // diff = diff % q1_hat;
-    // // NOTE: diff mod q1_hat, to speed up sum_of_four_squares
+    // NOTE: diff mod q1_hat, to speed up sum_of_four_squares
 
 
-    // // 1. (a1, a2, a3, a4) ← SumOfFourSquares(B_goth^2 − ||s||^2),   (a1, a2, a3, a4) ∈ Z^4
+    // 1. (a1, a2, a3, a4) ← SumOfFourSquares(B_goth^2 − ||s||^2),   (a1, a2, a3, a4) ∈ Z^4
     // sum_of_four_squares(a1, a2, a3, a4, diff);
-
-    // // 2. a ← (a1, a2, a3, a4, 0, ... , 0),  a ∈ Z^(d_hat)
-    // // NOTE: add d_hat − 4 zeros
-
-    // 3. s0 ← (s, a),   s0 ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)
-    // s0.SetLength(idxhlrd + d_hat);
-
-    // for(i=0; i<idxhlrd; i++)
-    // {
-    //     s0[i] = s[i];
-    // }
-
-    // s0[idxhlrd]   = a1;
-    // s0[idxhlrd+1] = a2;
-    // s0[idxhlrd+2] = a3;
-    // s0[idxhlrd+3] = a4;
-
     // NOTE: sum_of_four_squares (too slow) replaced with fast_sum_of_squares
     fast_sum_of_squares(a, diff);
+
+    // 2. a ← (a1, a2, a3, a4, 0, ... , 0),  a ∈ Z^(d_hat)
+    // NOTE: add d_hat − 4 zeros
+
+    // 3. s ← (s0, a),   s ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
+    s = conv<vec_zz_p>(s0);
     
     for(i=0; i<a.length(); i++)
     {
-        s0[idxhlrd+i] = a[i];
+        s[idxhlrd+i] = conv<zz_p>(a[i]);
     }
 
-
-    // 4. P1 ← [P,  0_(d × d_hat)],   P1 ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
-    // P1.SetDims(d0, (idxhlrd + d_hat));
-
-    // for(i=0; i<d0; i++)
-    //     {   
-    //     for(j=0; j<idxhlrd; j++)
-    //     {
-    //         P1[i][j] = P[i][j];
-    //     }
-    // }  
-
-    // 5. return (P1, s0)
+    // 4. P ← [P0,  0_(d × d_hat)],   P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
+    
+    // 5. return (P, s)
 }
 
 
@@ -113,7 +92,7 @@ void  Preprocessing_Com(vec_ZZ& s0, const ZZ& B_goth2)
 //                  P ∈ Z^[d x (m1*d_hat)]_(q_hat)
 //                  u ∈ Z^(d)_(q_hat)
 //                  B_goth^2 ∈ Z≥0 (it is a scalar)
-// - w0:            it contains the vector s ∈ Z^(m1*d_hat)
+// - w0:            it contains the vector s0 ∈ Z^(m1*d_hat)
 //                  NOTE: (|idx_hid|*h + l_r*d + d_hat) == (m1 * d_hat)
 //  
 // Output:
@@ -125,7 +104,6 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
     unsigned long       i, j, k, idx;
     long                rst, b1, b2, b3, bbar1, bbar2;
-    vec_ZZ              s0;
     Mat<zz_pX>          B, D2_2_1;
     vec_zz_pX           u, g;
     vec_zz_pX           h_part1, h_part2;
@@ -140,7 +118,7 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     LHC_ST_t            st_1, st_2;
     stringstream        ss;
     mat_zz_p            R_goth, gamma;
-    vec_zz_p            coeffs_s0, e_tmp, coeffs_R_goth_mult_s1, coeffs_y3;
+    vec_zz_p            s, e_tmp, coeffs_R_goth_mult_s1, coeffs_y3;
     HASH_STATE_t       *state0, *state;
 
     // Initialise constants    
@@ -187,24 +165,23 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
     // 2. (P, u, B_goth) ← x
     // NOTE: directly provided as inputs
-    
+
     // 3. s ← w
-    s0 = w0;    
+    // s0 = w0;    
     
     // 4. (P, s) ← PreprocessingProve^HCom_Com (P, s, B_goth)
     // P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
     // s ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
-    Preprocessing_Com(s0, B_goth2);
-    coeffs_s0 = conv<vec_zz_p>(s0);
-    
+    Preprocessing_Com(s, w0, B_goth2);
+
     // 5. Initialize rst ∈ Z, scalar
     rst     = 0;
 
     // 6. Initialize idx ∈ N, scalar
     idx     = 0;
 
-    // 7.1 Convert vector s0 into polynomial vector s_1 ∈ R^^(m1)_(q_hat)
-    CoeffsInvHat(s_1, coeffs_s0, m1);
+    // 7.1 Convert vector s into polynomial vector s_1 ∈ R^^(m1)_(q_hat)
+    CoeffsInvHat(s_1, s, m1);
 
     // 7.2 Convert vector u0 into polynomial vector u ∈ R^^(d/d_hat)_(q_hat)
     CoeffsInvHat(u, u0, d_d_hat);
@@ -403,8 +380,8 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 
         for(i=0; i<256; i++)
         {
-            coeffs_R_goth_mult_s1[i] = R_goth[i] * coeffs_s0;
-            // NOTE: this term corresponds to InnerProduct(result, R_goth[i], coeffs_s0);
+            coeffs_R_goth_mult_s1[i] = R_goth[i] * s;
+            // NOTE: this term corresponds to InnerProduct(result, R_goth[i], s);
 
             Pi.z_3[i] = coeffs_y3[i] + coeffs_R_goth_mult_s1[i];            
         }

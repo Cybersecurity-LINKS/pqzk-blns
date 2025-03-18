@@ -17,28 +17,28 @@
 
 //==============================================================================
 // Preprocessing_ISIS - Preprocessing function (PreprocessingProve^HISIS_ISIS). 
-//      It takes as input (P, s, B_goth_s, C, r, B_goth_r)
+//      It takes as input (P0, s0, B_goth_s, C0, r0, B_goth_r)
 //      with B_goth_s ≥ ||s|| and B_goth_r ≥ ||r||. 
 //      It returns s and r such that B_goth_s = ||s|| and B_goth_r = ||r||, 
 //      together with P and C filled with the appropriate number of zeros.
 // 
 // Inputs:
-// - P:             matrix P  ∈ Z^[d × (m+2)·d]_(q_hat) 
+// - P0:            matrix P0 ∈ Z^[d × (m+2)·d]_(q_hat) 
 // - s0:            vector s0 ∈ Z^((m+2)·d)_(q_hat)
 // - B_goth_s2:     bound  B_goth_s^2 ∈ Z≥0 (it is a scalar)
-// - C:             matrix C  ∈ Z^[d × (ℓm+ℓr)·d]_(q_hat)
+// - C0:            matrix C0 ∈ Z^[d × (ℓm+ℓr)·d]_(q_hat)
 // - r0:            vector r0 ∈ Z^(|idx_hid|·h + ℓr·d)_(q_hat)
 // - B_goth_r2:     bound  B_goth_r^2 ∈ Z≥0 (it is a scalar)
 //  
 // Output:
-// - P1:            matrix P1 ∈ Z^[d × (m+2)·d + d_hat]_(q_hat) 
-// - s1:            vector s1 ∈ Z^((m+2)·d + d_hat)_(q_hat)
-// - C1:            matrix C1 ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat)
-// - r1:            vector r1 ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
+// - P:             matrix P ∈ Z^[d × (m+2)·d + d_hat]_(q_hat) 
+// - s:             vector s ∈ Z^((m+2)·d + d_hat)_(q_hat)
+// - C:             matrix C ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat)
+// - r:             vector r ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
 //==============================================================================
-// NOTE: zero padding of P, s0, C, r0 already done in H_VerPres
-void  Preprocessing_ISIS(vec_ZZ& s0, vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& B_goth_r2)
-{    
+// NOTE: zero padding of P, s, C, r already done in H_VerPres
+void  Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& B_goth_r2)
+{
     // NOTE: assuming that current modulus is q2_hat (not q0)
     long    i;
     ZZ      diff; //a1, a2, a3, a4;
@@ -46,7 +46,6 @@ void  Preprocessing_ISIS(vec_ZZ& s0, vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& 
 
     const long  m2d     = (m0 + 2)*d0;    // (m+2)·d
     const long  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
-
 
     // diff = B_goth_s^2 − ||s||^2
     diff = (B_goth_s2 - Norm2(s0));
@@ -62,49 +61,27 @@ void  Preprocessing_ISIS(vec_ZZ& s0, vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& 
     }
 
     // diff = diff % q2_hat;
-    // // NOTE: diff mod q2_hat, to speed up sum_of_four_squares
+    // NOTE: diff mod q2_hat, to speed up sum_of_four_squares
 
 
-    // // 1. (a1, a2, a3, a4) ← SumOfFourSquares(B_goth_s^2 − ||s||^2),   (a1, a2, a3, a4) ∈ Z^4
+    // 1. (a1, a2, a3, a4) ← SumOfFourSquares(B_goth_s^2 − ||s||^2),   (a1, a2, a3, a4) ∈ Z^4
     // sum_of_four_squares(a1, a2, a3, a4, diff);
-
-
-    // // 2. a ← (a1, a2, a3, a4, 0, ... , 0),  a ∈ Z^(d_hat) 
-    // // NOTE: add d_hat − 4 zeros
-
-    // 3. s1 ← (s, a),   s1 ∈ Z^((m+2)·d + d_hat)
-    // s1.SetLength(m2d + d_hat);
-           
-    // for(i=0; i<m2d; i++)
-    // {
-    //     s1[i] = s0[i];
-    // }    
-
-    // s1[m2d]   = a1;
-    // s1[m2d+1] = a2;
-    // s1[m2d+2] = a3;
-    // s1[m2d+3] = a4;
-
     // NOTE: sum_of_four_squares (too slow) replaced with fast_sum_of_squares
     fast_sum_of_squares(a, diff);
+
+    // 2. a ← (a1, a2, a3, a4, 0, ... , 0),  a ∈ Z^(d_hat) 
+    // NOTE: add d_hat − 4 zeros
+
+    // 3. s ← (s0, a),   s ∈ Z^((m+2)·d + d_hat)_(q_hat)
+    s = conv<vec_zz_p>(s0);
     
     for(i=0; i<a.length(); i++)
     {
-        s0[m2d+i] = a[i];
+        s[m2d+i] = conv<zz_p>(a[i]);
     }
 
-
-    // 4. P1 ← [P,  0_(d × d_hat)],   P1 ∈ Z^[d × (m+2)·d + d_hat]_(q_hat)     
-    // P1.SetDims(d0, (m2d + d_hat));
-
-    // for(i=0; i<d0; i++)
-    //     {   
-    //     for(j=0; j<m2d; j++)
-    //     {
-    //         P1[i][j] = P[i][j];
-    //     }
-    // }
-
+    // 4. P ← [P0,  0_(d × d_hat)],   P ∈ Z^[d × (m+2)·d + d_hat]_(q_hat)     
+    
 
     // diff = B_goth_r^2 − ||r||^2
     diff = (B_goth_r2 - Norm2(r0));
@@ -120,50 +97,28 @@ void  Preprocessing_ISIS(vec_ZZ& s0, vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& 
     }
 
     // diff = diff % q2_hat;
-    // // NOTE: diff mod q2_hat, to speed up sum_of_four_squares
+    // NOTE: diff mod q2_hat, to speed up sum_of_four_squares
 
 
-    // // 5. (b1, b2, b3, b4) ← SumOfFourSquares(B_goth_r^2 − ||r||^2),   (b1, b2, b3, b4) ∈ Z^4
+    // 5. (b1, b2, b3, b4) ← SumOfFourSquares(B_goth_r^2 − ||r||^2),   (b1, b2, b3, b4) ∈ Z^4
     // sum_of_four_squares(a1, a2, a3, a4, diff);
-
-    // // 6. b ← (b1, b2, b3, b4, 0, ... , 0),  b ∈ Z^(d_hat) 
-    // // NOTE: add d_hat − 4 zeros
-
-    // 7. r1 ← (r, b),   r1 ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)
-    // r1.SetLength(idxhlrd + d_hat);
-
-    // for(i=0; i<idxhlrd; i++)
-    // {
-    //     r1[i]     = r0[i];
-    // }
-
-    // r1[idxhlrd]   = a1;
-    // r1[idxhlrd+1] = a2;
-    // r1[idxhlrd+2] = a3;
-    // r1[idxhlrd+3] = a4;
-
     // NOTE: sum_of_four_squares (too slow) replaced with fast_sum_of_squares
     fast_sum_of_squares(a, diff);
 
+    // 6. b ← (b1, b2, b3, b4, 0, ... , 0),  b ∈ Z^(d_hat) 
+    // NOTE: add d_hat − 4 zeros
+
+    // 7. r ← (r0, b),   r ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
+    r = conv<vec_zz_p>(r0);
+
     for(i=0; i<a.length(); i++)
     {
-        r0[idxhlrd+i] = a[i];
+        r[idxhlrd+i] = conv<zz_p>(a[i]);
     }
 
+    // 8. C ← [C0,  0_(d × d_hat)],   C ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat) 
     
-    // 8. C1 ← [C,  0_(d × d_hat)],   C1 ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat) 
-    // const long  lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d  
-    // C1.SetDims(d0, (lmlrd + d_hat));
-
-    // for(i=0; i<d0; i++)
-    //     {   
-    //     for(j=0; j<lmlrd; j++)
-    //     {
-    //         C1[i][j] = C[i][j];
-    //     }
-    // }
-
-    // 9. return (P1, s1, C1, r1)
+    // 9. return (P, s, C, r)
 }
 
 
@@ -189,7 +144,6 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
    
     unsigned long   idx, i, j, k;
     long            rst, b1, b2, b3;
-    vec_ZZ          s0, r0;
     Mat<zz_pX>      B, D2_2_1;
     vec_zz_pX       g;
     vec_zz_pX       h_part1, h_part2;
@@ -203,7 +157,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
     stringstream    ss;    
     mat_zz_p        R_goth, gamma, C_m, C_r;
-    vec_zz_p        ones, coeffs_s1, coeffs_y3, coeffs_R_goth_mult_s1;
+    vec_zz_p        coeffs_s, coeffs_r, ones, coeffs_s1, coeffs_y3, coeffs_R_goth_mult_s1;
     vec_zz_pX       coeffs_ones, u_m_ones, sigma_u_m_ones, sigma_ones;
     vec_zz_pX       sigma_s, sigma_r;
     vec_zz_p        e_tmp, m_C;   
@@ -267,8 +221,8 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
 
     // 4. (s0, r0, u0) ← w0    
-    s0 = w0[0];     // s0 ∈ Z^((m+2)·d)
-    r0 = w0[1];     // r0 ∈ Z^(|idx_hid|·h + ℓr·d)
+    // s0 = w0[0];  // s0 ∈ Z^((m+2)·d)
+    // r0 = w0[1];  // r0 ∈ Z^(|idx_hid|·h + ℓr·d)
     // u0 = w0[2];  // u0 ∈ {0,1}^t
   
     // 5. (P, s, C, r) ← PreprocessingProve^HISIS_ISIS (P, s, B_goth_s, C, r, B_goth_r)
@@ -276,14 +230,13 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     // s ∈ Z^((m+2)·d + d_hat)_(q_hat)
     // C ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat)
     // r ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
-    // Preprocessing_ISIS(P, s1, C, r1, P1, s0, B_goth_s, C1, r0, B_goth_r);
-    Preprocessing_ISIS(s0, r0, B_goth_s2, B_goth_r2);
+    Preprocessing_ISIS(coeffs_s, coeffs_r, w0[0], w0[1], B_goth_s2, B_goth_r2);
     
     // 6. s ← Coeffs^−1(s0)    
-    CoeffsInvHat(s, conv<vec_zz_p>(s0), m2ddd);     // s ∈ R^^(((m+2)·d+d_hat)/d_hat)_(q_hat)
+    CoeffsInvHat(s, coeffs_s, m2ddd);     // s ∈ R^^(((m+2)·d+d_hat)/d_hat)_(q_hat)
 
     //    r ← Coeffs^−1(r0)
-    CoeffsInvHat(r, conv<vec_zz_p>(r0), idxhlrddd); // r ∈ R^^((|idx_hid|·h + ℓr·d + d_hat)/d_hat)_(q_hat)
+    CoeffsInvHat(r, coeffs_r, idxhlrddd); // r ∈ R^^((|idx_hid|·h + ℓr·d + d_hat)/d_hat)_(q_hat)
 
     //    u ← Coeffs^−1(u0) 
     CoeffsInvHat(u, conv<vec_zz_p>(w0[2]), t_d);    // u ∈ R^^(t/d_hat)_(q_hat)
