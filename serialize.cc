@@ -14,28 +14,23 @@
 
 #include "serialize.h"
 
-#include <cmath>
 
-#include <iostream>
-#include <sstream> 
-#include <fstream>
-
-
+// compute size functions (size in bytes of vector v)
 size_t calc_ser_size(const long r, const long c) {
     return ((r*c)*sizeof(long));
 }
 
 size_t calc_ser_size_minbyte(const long r, const long c, int nbits) {
-    int b = static_cast<int>(std::ceil(nbits / 8.0));
+    int b = static_cast<int>(ceil(nbits / 8.0));
     return (r*c*b);
 }
 
 size_t calc_ser_size_minbits(const long r, const long c, int nbits) {
-    return static_cast<int>(std::ceil((r*c*nbits) / 8.0));;
+    return static_cast<int>(ceil((r*c*nbits) / 8.0));;
 }
 
 
-
+// serialize/deserialize functions for mat_zz_p, 64 bits per element (i.e. 1 long int) 
 void serialize_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, const mat_zz_p& m) {
     long i, j;
     
@@ -52,14 +47,15 @@ void deserialize_mat_zz_p(mat_zz_p& m, const long r, const long c, const uint8_t
     long i, j;
     
     const long* data_ptr = reinterpret_cast<const long*>(v);
-    for (long i = 0; i < r; i++) {
-        for (long j = 0; j < c; j++) {
+    for (i = 0; i < r; i++) {
+        for (j = 0; j < c; j++) {
             m[i][j] = conv<zz_p>(data_ptr[i * c + j]);
         }
     }
 }
 
 
+// serialize/deserialize functions for mat_zz_p, minimum number of bytes per element
 void serialize_minbyte_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, const int nbits, const mat_zz_p& m) {
     long i, j, elem;
     int k, blk;
@@ -70,7 +66,7 @@ void serialize_minbyte_mat_zz_p(uint8_t* v, const size_t s, const long r, const 
     for(i = 0; i < r; i++) {
         for(j = 0; j < c; j++) {
 
-            elem = NTL::conv<long>(m[i][j]);
+            elem = conv<long>(m[i][j]);
             for(k=0; k < blk; ++k) {
                 v[n++] = static_cast<uint8_t>((elem >> (8 * k)) & 0xFF);
             }
@@ -102,6 +98,7 @@ void deserialize_minbyte_mat_zz_p(mat_zz_p& m, const long r, const long c, const
 }
 
 
+// serialize/deserialize functions for mat_zz_p, minimum number of bits per element
 void serialize_minbits_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, const int nbits, const mat_zz_p& m) {
     size_t l, b, blk, blk_b;
     size_t cnt = static_cast<size_t>(r) * static_cast<size_t>(c);

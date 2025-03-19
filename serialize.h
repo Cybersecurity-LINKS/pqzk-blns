@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <iostream>
-#include <cstdint>
-
 #include <NTL/mat_lzz_p.h>
-
 
 using namespace std;
 using namespace NTL;
