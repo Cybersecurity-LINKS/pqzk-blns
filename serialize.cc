@@ -29,6 +29,10 @@ size_t calc_ser_size_minbits(const long r, const long c, int nbits) {
     return static_cast<int>(ceil((r*c*nbits) / 8.0));;
 }
 
+size_t calc_ser_size_vec_poly(const long n, const long d) {
+    return (n*d*sizeof(long));
+}
+
 
 // serialize/deserialize functions for mat_zz_p, 64 bits per element (i.e. 1 long int) 
 void serialize_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, const mat_zz_p& m) {
@@ -41,7 +45,6 @@ void serialize_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, 
         }
     }
 }
-
 
 void deserialize_mat_zz_p(mat_zz_p& m, const long r, const long c, const uint8_t* v, const size_t s) {
     long i, j;
@@ -73,7 +76,6 @@ void serialize_minbyte_mat_zz_p(uint8_t* v, const size_t s, const long r, const 
         }
     }
 }
-
 
 void deserialize_minbyte_mat_zz_p(mat_zz_p& m, const long r, const long c, const int nbits, const uint8_t* v, const size_t s) {
     long i, j, elem;
@@ -127,7 +129,6 @@ void serialize_minbits_mat_zz_p(uint8_t* v, const size_t s, const long r, const 
     delete[] vf;
 }
 
-
 void deserialize_minbits_mat_zz_p(mat_zz_p& m, const long r, const long c, const int nbits, const uint8_t* v, const size_t s) {
     size_t l, b, blk, blk_b;
     size_t cnt = static_cast<size_t>(r) * static_cast<size_t>(c);
@@ -155,4 +156,36 @@ void deserialize_minbits_mat_zz_p(mat_zz_p& m, const long r, const long c, const
         }
     }
     delete[] vf;
+}
+
+
+// serialize/deserialize functions for vec_zz_pX, 64 bits per element (i.e. 1 long int) 
+void serialize_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, const long d, const vec_zz_pX& p) {
+    long i, j, k;
+    zz_p x;
+
+    long* data_ptr = reinterpret_cast<long*>(v);
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < d; j++) {
+            x = coeff(p[i], j);
+            k = conv<long>(x);
+            data_ptr[i * d + j] = k;
+        }
+    }
+}
+
+void deserialize_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d, const uint8_t* v, const size_t s) {
+    long i, j;
+    zz_p c;
+
+    const long* data_ptr = reinterpret_cast<const long*>(v);
+    for (i = 0; i < n; i++) {
+        zz_pX poly;
+        poly.SetLength(d);
+        for (j = 0; j < d; j++) {
+            c = conv<zz_p>(data_ptr[i * d + j]);
+            poly[j] = c;
+        }
+        p[i] = poly;
+    }
 }
