@@ -15,6 +15,33 @@
 #include "Utils.h"
 
 
+//===============================================================
+// This converts a std::vector<int8_t> into an ZZX polynomial
+// convert each int8_t value into ZZ and set it as a coefficient.
+//===============================================================
+ZZX int8ArrayToZZX(const vector<int8_t>& vec) {
+    ZZX poly;
+    for (size_t i = 0; i < vec.size(); i++) {
+        SetCoeff(poly, i, ZZ(vec[i]));  // Set coefficient i to vec[i]
+    }
+    return poly;
+}
+
+
+//=================================================================================
+// This converts std::vector<uint16_t> into zz_pX over a finite field modulo prime.
+// Convert uint16_t values into zz_p elements and set them as coefficients.
+//=================================================================================
+zz_pX uint16ArrayToZZ_pX(const vector<uint16_t>& vec, long prime) {
+    zz_p::init(prime);  // Set modulus for finite field
+    zz_pX poly;
+    for (size_t i = 0; i < vec.size(); i++) {
+        SetCoeff(poly, i, zz_p(vec[i]));  // Set coefficient i to vec[i] mod prime
+    }
+    return poly;
+}
+
+
 ZZX Phi()
 {
     ZZX phi;

@@ -2,12 +2,14 @@
 The following dependencies must be installed:
 - [GMP](https://gmplib.org/) 6.3.0
 - [NTL](https://libntl.org/) 11.5.1
+- [Falcon](https://falcon-sign.info/) (Optional)
+- [Clang](https://clang.llvm.org/) (Optional - necessary if Falcon is used)
 
 NOTE: it may work with greater (or lesser) versions.
 
-Tested with Ubuntu 22.04, where both GMP and NTL can be simply installed as:
+Tested with Ubuntu 22.04, where both GMP, NTL and Clang can be simply installed as:
 ```sh
-sudo apt install libgmp10 libgmp-dev libntl44 libntl-dev
+sudo apt install libgmp10 libgmp-dev libntl44 libntl-dev clang
 ```
 To build and install them manually, please follow the instructions below.
 
@@ -38,6 +40,16 @@ sudo make install
 cd ../..
 ```
 
+## Falcon (optional)
+```sh
+wget https://falcon-sign.info/Falcon-impl-20211101.zip
+unzip Falcon-impl-20211101.zip
+cd Falcon-impl-20211101
+make -j$(nproc)
+ar rcs libfalcon.a codec.o common.o falcon.o fft.o fpr.o keygen.o rng.o shake.o sign.o vrfy.o
+cd ..
+```
+
 # Download & Build
 ```sh
 wget https://github.com/Cybersecurity-LINKS/pqzk-blns/archive/refs/heads/main.zip -O ./BLNS.zip
@@ -56,3 +68,8 @@ GMP
 NTL
 - https://libntl.org/doc/tour-unix.html
 - https://libntl.org/doc/tour-modules.html
+
+Falcon
+- https://falcon-sign.info/
+- https://falcon-sign.info/falcon.pdf
+- https://falcon-sign.info/impl/falcon.h.html

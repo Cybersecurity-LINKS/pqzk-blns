@@ -13,7 +13,9 @@
 // limitations under the License.
 
 #include "Issuer.h"
-
+extern "C" {
+    #include "inner.h"
+}
 
 //==============================================================================
 // I_KeyGen - Issuer.KeyGen function. It generates Issuer Public Key and 
@@ -33,8 +35,99 @@ void I_KeyGen(IPK_t& ipk, mat_L& isk)
 {
     unsigned long i;
 
+    
+    /////////////////////////////////////////////////////////////////////////////////
+    ///////////Falcon KeyGen Integration -- Start////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////     
+    
+    unsigned long j;
+    ZZX     ZZX_f, ZZX_g, ZZX_F, ZZX_G;
+    int8_t f[d0], g[d0], F[d0], G[d0];
+    uint16_t h[d0];
+
+    // Structure for a PRNG suitable to Falcon (see inner.h)
+    union {
+        uint8_t b[FALCON_KEYGEN_TEMP_9];
+        uint64_t dummy_u64;
+    } tmp;
+
+    // Initialize an explicit 48-byte seed, using get_seed from Falcon (see inner.h)
+    unsigned char seed[48];
+    Zf(get_seed)(seed,48);
+        
+    // Initialize a SHAKE256 context from Falcon (see inner.h) suitable to the keygen
+    inner_shake256_context sc;
+    inner_shake256_init(&sc);
+    inner_shake256_inject(&sc, seed, 48);
+    inner_shake256_flip(&sc);
+
+    // Use Falcon keygen
+    Zf(keygen)(&sc, f, g, F, G, h, log2(d0), tmp.b);
+
+    // Convert the type of the variables to NTL types
+    ipk.a1 = uint16ArrayToZZ_pX(vector<uint16_t>(h, h + d0), q0);
+    ZZX_f = int8ArrayToZZX(vector<int8_t>(f, f + d0));
+    ZZX_g = int8ArrayToZZX(vector<int8_t>(g, g + d0));
+    ZZX_F = int8ArrayToZZX(vector<int8_t>(F, F + d0));
+    ZZX_G = int8ArrayToZZX(vector<int8_t>(G, G + d0));
+
+    // B ← [rot(g) −rot(f) 
+    //      rot(G) −rot(F)] ∈ Z^(2d×2d)
+    mat_L   A;
+    A.SetDims(d0,d0);
+
+    isk.SetDims(2*d0, 2*d0);
+
+
+    rot(A, ZZX_g); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            isk[i][j] = A[i][j];
+        }
+    }
+    
+    rot(A, -ZZX_f); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            isk[i][j+d0] = A[i][j];
+        }
+    }
+
+    rot(A, ZZX_G); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            isk[i+d0][j] = A[i][j];
+        }
+    }
+
+    rot(A, -ZZX_F); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            isk[i+d0][j+d0] = A[i][j];
+        }
+    }
+
+    A.kill();
+
+    /////////////////////////////////////////////////////////////////////////////////
+    ///////////Falcon KeyGen Integration -- End//////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////
+
+
     // Algorithm NTRU.TrapGen(q, d) in [BLNS23]
-    NTRU_TrapGen(ipk.a1, isk);
+    //NTRU_TrapGen(ipk.a1, isk);
     // NOTE: a1 is a Polynomial with d coefficients modulo q (i.e. h in [DLP14])
                 
     ipk.a2.SetLength(m0);   

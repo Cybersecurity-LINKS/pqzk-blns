@@ -14,24 +14,28 @@
 
 # Set compiler and linker flags
 CC			= g++
+CFLAGS  	= -Wall -pthread -std=gnu++0x -Ofast -Drestrict=__restrict__
+LNFLAGS  	= -lntl -lgmp -lfalcon  # Link Falcon library
 
-# NOTE: If the dependencies are not installed in the default locations, adjust the path.
-CFLAGS  	= -Wall -pthread -std=gnu++0x -Ofast
-LNFLAGS  	= -lntl -lgmp
+# Falcon library location
+FALCON_DIR	= $(HOME)/Falcon-impl-20211101/
+FALCON_LIB  = $(FALCON_DIR)/libfalcon.a
+FALCON_INC  = $(HOME)/Falcon-impl-20211101/  # Adjust if Falcon headers are in a different path
+
 
 SRCS		= $(wildcard *.cc)
 OBJS		= $(SRCS:.cc=.o)
 
-.PHONY: 	all clean
+.PHONY: all clean
 
-all: 		BLNS
+all: BLNS
 
-BLNS:		$(OBJS)
-			$(CC) $(CFLAGS) -o BLNS $(OBJS) $(LNFLAGS)
+BLNS: $(OBJS) $(FALCON_LIB)
+	$(CC) $(CFLAGS) -I$(FALCON_INC) -o BLNS $(OBJS) -L$(FALCON_DIR) $(LNFLAGS)
 
-%.o: 		%.cc params.h
-			$(CC) $(CFLAGS) -c $< 
+%.o: %.cc params.h
+	$(CC) $(CFLAGS) -I$(FALCON_INC) -c $< 
 
 clean:
-			rm -f *.o
-			rm -f BLNS
+	rm -f *.o
+	rm -f BLNS
