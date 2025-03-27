@@ -18,6 +18,9 @@
 #include "params.h"
 #include "Utils.h"
 
+#ifdef ENABLE_FALCON
+void Falcon_keygen(zz_pX& a1, mat_L& B);
+#endif
 
 void NTRU_TrapGen(zz_pX& a1, mat_L& B);
 

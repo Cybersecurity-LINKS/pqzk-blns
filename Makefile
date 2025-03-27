@@ -12,30 +12,58 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Enable or disable Falcon keygen
+USE_FALCON 	= 1
+#USE_FALCON = 0
+
 # Set compiler and linker flags
 CC			= g++
-CFLAGS  	= -Wall -pthread -std=gnu++0x -Ofast -Drestrict=__restrict__
-LNFLAGS  	= -lntl -lgmp -lfalcon  # Link Falcon library
+CFLAGS  	= -Wall -pthread -std=gnu++0x -Ofast
+LNFLAGS  	= -lntl -lgmp 
 
-# Falcon library location
-FALCON_DIR	= $(HOME)/Falcon-impl-20211101/
-FALCON_LIB  = $(FALCON_DIR)/libfalcon.a
-FALCON_INC  = $(HOME)/Falcon-impl-20211101/  # Adjust if Falcon headers are in a different path
+# If necessary, set Falcon library location and flags
+ifeq ($(USE_FALCON),1)
+FALCON_DIR 	= /Falcon-impl-20211101
+FALCON_PATH	= $(CURDIR)$(FALCON_DIR)/
+FALCON_LIB  = $(FALCON_PATH)/libfalcon.a
+FILE_EXISTS = $(or $(and $(wildcard $(FALCON_LIB)),1),0)
 
+CFLAGS  	+= -Drestrict=__restrict__ -DENABLE_FALCON -I$(FALCON_PATH)
+LNFLAGS 	+= -L$(FALCON_PATH) -lfalcon
+endif
 
 SRCS		= $(wildcard *.cc)
 OBJS		= $(SRCS:.cc=.o)
 
-.PHONY: all clean
 
-all: BLNS
+.PHONY: 	all falcon clean cleanall
 
-BLNS: $(OBJS) $(FALCON_LIB)
-	$(CC) $(CFLAGS) -I$(FALCON_INC) -o BLNS $(OBJS) -L$(FALCON_DIR) $(LNFLAGS)
+all: 		falcon BLNS
 
-%.o: %.cc params.h
-	$(CC) $(CFLAGS) -I$(FALCON_INC) -c $< 
+falcon:	
+ifeq ($(USE_FALCON),1)	
+ifeq ($(FILE_EXISTS),0) # Falcon files do not already exists in $(FALCON_PATH)
+	$(info Download and build Falcon...)
+	wget https://falcon-sign.info/Falcon-impl-20211101.zip;\
+	unzip Falcon-impl-20211101.zip;\
+	cd Falcon-impl-20211101;\
+	make -j$(nproc);\
+	ar rcs libfalcon.a codec.o common.o falcon.o fft.o fpr.o keygen.o rng.o shake.o sign.o vrfy.o;\
+	cd ..
+endif
+endif
+
+BLNS:		$(OBJS)
+			$(CC) $(CFLAGS) -o BLNS $(OBJS) $(LNFLAGS)
+
+%.o: 		%.cc params.h
+			$(CC) $(CFLAGS) -c $< 
 
 clean:
-	rm -f *.o
-	rm -f BLNS
+			rm -f *.o
+			rm -f BLNS
+
+cleanall:   clean
+ifeq ($(USE_FALCON),1)	
+			rm -rf $(FALCON_PATH)
+endif

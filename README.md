@@ -8,8 +8,15 @@ This repository contains an implementation of the framework for Post-Quantum (PQ
 
 - [GMP](https://gmplib.org/) 6.3.0
 - [NTL](https://libntl.org/) 11.5.1
+- [Falcon](https://falcon-sign.info/) 2021-11-01 (Optional)
+- [Clang](https://clang.llvm.org/) 14.0.0 (Optional - necessary if Falcon is used)
 
-For installation instructions and additional information, see [./Docs/INSTALL.md](./Docs/INSTALL.md)
+NOTE: it is possible to set ```USE_FALCON = 1``` (default) in the [Makefile](./Makefile), 
+to automatically download and use the ```keygen``` from the [Falcon](https://falcon-sign.info/) reference implementation, for better performance.
+
+Otherwise, with ```USE_FALCON = 0``` only the ```NTRU_TrapGen``` function defined in [Lattice.cc](./Lattice.cc) is used.
+
+For installation instructions and additional information, see [/Docs/INSTALL.md](./Docs/INSTALL.md)
 
 ## Usage
 After cloning this repository, build and run the ```BLNS``` executable as follows:

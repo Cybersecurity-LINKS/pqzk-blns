@@ -16,10 +16,13 @@
 #define BLNS_UTILS_H
 
 #include "params.h"
+
+#ifdef ENABLE_FALCON
 #include <vector>
 
 ZZX         int8ArrayToZZX(const vector<int8_t>& vec);
-zz_pX       uint16ArrayToZZ_pX(const vector<uint16_t>& vec, long prime);
+zz_pX       uint16ArrayToZZ_pX(const vector<uint16_t>& vec);
+#endif
 
 ZZX         Phi();
 

@@ -14,6 +14,116 @@
 
 #include "Lattice.h"
 
+#ifdef ENABLE_FALCON
+extern "C" {
+    #include "inner.h"
+}
+
+//==============================================================================
+// Falcon_keygen - Generates a1 and B from parameters d and q.
+//
+// Inputs:
+// - None
+//
+// Outputs:
+// - a1 : polynomial 
+// - B  : matrix with size (2d * 2d), basis of the 2d-dimensional lattice
+//
+// NOTE: use the keygen from the Falcon reference implementation.  
+//==============================================================================
+void Falcon_keygen(zz_pX& a1, mat_L& B)
+{
+    unsigned long   i, j;
+    int8_t          f8[d0], g8[d0], F8[d0], G8[d0];
+    uint16_t        h[d0];
+    ZZX             f, g, F, G;
+    mat_L           A;
+
+    #if (d0 == 512)
+        const size_t FALCON_BUFF_SIZE = FALCON_KEYGEN_TEMP_9;
+    #elif (d0 == 1024)
+        const size_t FALCON_BUFF_SIZE = FALCON_KEYGEN_TEMP_10;
+    #endif
+    assert((d0 == 512)||(d0 == 1024));
+    // NOTE: this release supports only Falcon512 or Falcon1024 parameters
+
+    // Structure for a PRNG suitable to Falcon (see inner.h)
+    union {
+        uint8_t b[FALCON_BUFF_SIZE];
+        uint64_t dummy_u64;
+    } tmp;
+
+    // Initialize an explicit 48-byte seed, using get_seed from Falcon (see inner.h)
+    unsigned char seed[48];
+    Zf(get_seed)(seed,48);
+        
+    // Initialize a SHAKE256 context from Falcon (see inner.h) suitable to the keygen
+    inner_shake256_context sc;
+    inner_shake256_init(&sc);
+    inner_shake256_inject(&sc, seed, 48);
+    inner_shake256_flip(&sc);
+
+    // Use Falcon keygen
+    Zf(keygen)(&sc, f8, g8, F8, G8, h, log2(d0), tmp.b);
+
+    // Convert the type of the variables to NTL types
+    a1 = uint16ArrayToZZ_pX(vector<uint16_t>(h, h + d0));
+    f = int8ArrayToZZX(vector<int8_t>(f8, f8 + d0));
+    g = int8ArrayToZZX(vector<int8_t>(g8, g8 + d0));
+    F = int8ArrayToZZX(vector<int8_t>(F8, F8 + d0));
+    G = int8ArrayToZZX(vector<int8_t>(G8, G8 + d0));
+
+    // B ← [rot(g) −rot(f) 
+    //      rot(G) −rot(F)] ∈ Z^(2d×2d)
+    B.SetDims(2*d0, 2*d0);
+    A.SetDims(d0, d0);
+
+    rot(A, g); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            B[i][j] = A[i][j];
+        }
+    }
+    
+    rot(A, -f); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            B[i][j+d0] = A[i][j];
+        }
+    }
+
+    rot(A, G); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            B[i+d0][j] = A[i][j];
+        }
+    }
+
+    rot(A, -F); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            B[i+d0][j+d0] = A[i][j];
+        }
+    }
+
+    A.kill();
+
+    // return (a1, B)
+}
+#endif
+
 
 //==============================================================================
 // NTRU_TrapGen - Generates a1 and B from parameters d and q.
