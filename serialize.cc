@@ -33,11 +33,22 @@ size_t calc_ser_size_vec_poly(const long n, const long d) {
     return (n*d*sizeof(long));
 }
 
+size_t calc_ser_size_poly(long d) {
+    return (d*sizeof(long));
+}
+
+size_t calc_ser_size_vec_zz_p(long l) {
+    return (l*sizeof(long));
+}
+
+size_t calc_ser_size_vec_ZZ(long l) {
+    return(l*sizeof(long));
+}
+
 
 // serialize/deserialize functions for mat_zz_p, 64 bits per element (i.e. 1 long int) 
 void serialize_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, const mat_zz_p& m) {
     long i, j;
-    
     long* data_ptr = reinterpret_cast<long*>(v);
     for (i = 0; i < r; i++) {
         for (j = 0; j < c; j++) {
@@ -48,7 +59,6 @@ void serialize_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, 
 
 void deserialize_mat_zz_p(mat_zz_p& m, const long r, const long c, const uint8_t* v, const size_t s) {
     long i, j;
-    
     const long* data_ptr = reinterpret_cast<const long*>(v);
     for (i = 0; i < r; i++) {
         for (j = 0; j < c; j++) {
@@ -63,7 +73,6 @@ void serialize_minbyte_mat_zz_p(uint8_t* v, const size_t s, const long r, const 
     long i, j, elem;
     int k, blk;
     size_t n;
-    
     n = 0;
     blk = (nbits + 7) / 8;
     for(i = 0; i < r; i++) {
@@ -81,7 +90,6 @@ void deserialize_minbyte_mat_zz_p(mat_zz_p& m, const long r, const long c, const
     long i, j, elem;
     int k, blk;
     size_t n;
-
     n = 0;
     blk = (nbits + 7) / 8;
     for(i = 0; i < r; ++i) {
@@ -106,11 +114,8 @@ void serialize_minbits_mat_zz_p(uint8_t* v, const size_t s, const long r, const 
     size_t cnt = static_cast<size_t>(r) * static_cast<size_t>(c);
     long* vf = new long[cnt];
     long i, j, k;
-
     uint64_t n;
     int p;
-
-
     k = 0;
     for (i = 0; i < r; i++) {
         for (j = 0; j < c; j++) {
@@ -134,11 +139,8 @@ void deserialize_minbits_mat_zz_p(mat_zz_p& m, const long r, const long c, const
     size_t cnt = static_cast<size_t>(r) * static_cast<size_t>(c);
     long* vf = new long[cnt];
     long i, j, k;
-    
     uint64_t n;
     int p;
-
-
     for (l = 0; l < cnt; ++l) {
         b = l * nbits; blk = b / 8; blk_b = b % 8;
         n = 0;
@@ -159,10 +161,9 @@ void deserialize_minbits_mat_zz_p(mat_zz_p& m, const long r, const long c, const
 }
 
 
-// serialize/deserialize functions for vec_zz_pX, 64 bits per element (i.e. 1 long int) 
+// serialize/deserialize functions for vec_zz_pX, 64 bits per coefficient (i.e. 1 long int) 
 void serialize_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, const long d, const vec_zz_pX& p) {
     long i, j;
-
     long* data_ptr = reinterpret_cast<long*>(v);
     for (i = 0; i < n; i++) {
         for (j = 0; j < d; j++) {
@@ -174,16 +175,71 @@ void serialize_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, const lo
 
 void deserialize_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d, const uint8_t* v, const size_t s) {
     long i, j;
-
     const long* data_ptr = reinterpret_cast<const long*>(v);
     for (i = 0; i < n; i++) {        
         p[i].SetLength(d);
-        
         for (j = 0; j < d; j++) {
             p[i][j] = data_ptr[i * d + j];
             // SetCoeff(p[i], j, data_ptr[i * d + j]);
         }
-
         p[i].normalize();
+    }
+}
+
+
+// serialize/deserialize functions for zz_pX, 64 bits per coefficient (i.e. 1 long int) 
+void serialize_poly_zz_pX(uint8_t* v, const size_t s, const long d, const zz_pX& p) {
+    long i;
+    long* data_ptr = reinterpret_cast<long*>(v);
+    for (i = 0; i < d; i++) {
+        data_ptr[i] = conv<long>(coeff(p, i));
+    }
+}
+
+void deserialize_poly_zz_pX(zz_pX& p, const long d, const uint8_t* v, const size_t s) {
+    long i;
+    const long* data_ptr = reinterpret_cast<const long*>(v);
+    p.SetLength(d);
+    for (i = 0; i < d; i++) {
+        p[i] = data_ptr[i];
+    }
+    p.normalize();   
+}
+
+
+// serialize/deserialize functions for vec_zz_p, 64 bits per element (i.e. 1 long int) 
+void serialize_vec_zz_p(uint8_t* v, const size_t s, const long d, const vec_zz_p& p) {
+    long i;
+    long* data_ptr = reinterpret_cast<long*>(v);
+    for (i = 0; i < d; i++) {
+        data_ptr[i] = conv<long>(p[i]);
+    }
+}
+
+void deserialize_vec_zz_p(vec_zz_p& p, const long d, const uint8_t* v, const size_t s) {
+    long i;
+    const long* data_ptr = reinterpret_cast<const long*>(v);
+    p.SetLength(d);
+    for (i = 0; i < d; i++) {
+        p[i] = data_ptr[i];
+    }
+}
+
+
+// serialize/deserialize functions for vec_ZZ, 64 bits per element (i.e. 1 long int)
+void serialize_vec_ZZ(uint8_t* v, const size_t s, const long d, const vec_ZZ& p) {
+    long i;
+    long* data_ptr = reinterpret_cast<long*>(v);
+    for (i = 0; i < d; i++) {
+        data_ptr[i] = conv<long>(p[i]);
+    }
+}
+
+void deserialize_vec_ZZ(vec_ZZ& p, const long d, const uint8_t* v, const size_t s) {
+    long i;
+    const long* data_ptr = reinterpret_cast<const long*>(v);
+    p.SetLength(d);
+    for (i = 0; i < d; i++) {
+        p[i] = data_ptr[i];
     }
 }

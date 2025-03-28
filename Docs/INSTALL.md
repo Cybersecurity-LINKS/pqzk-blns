@@ -41,7 +41,7 @@ cd ../..
 ```
 
 ## Falcon (Optional)
-If ```USE_FALCON``` flag is set to ```1``` in the [Makefile](./Makefile) (default), 
+If ```USE_FALCON``` flag is set to ```1``` in the [Makefile](../Makefile) (default), 
 Falcon reference implementation is automatically downloaded and used by ```make```.
 
 Otherwise, it can be manually downloaded and built as a library as follows.
