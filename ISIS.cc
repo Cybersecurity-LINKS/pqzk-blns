@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+
 #include "ISIS.h"
+#include "serialize.h"
 
 
 //==============================================================================
@@ -136,9 +139,9 @@ void  Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_Z
 // -  w0:           it contains the vectors (s0, r0, u0)
 //  
 // Output:
-// -  Pi:           proof (π) structure 
+// -  Pi_ptr:       pointer to proof (π) data 
 //==============================================================================
-void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const ZZ& aux, const Vec<vec_ZZ>& w0)
+void Prove_ISIS(uint8_t** Pi_ptr, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, const Vec<vec_ZZ>& w0)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
    
@@ -154,8 +157,7 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     zz_pX           h_part3, h_part4, h_part5;
     zz_pX           acc, delta_1, delta_2, delta_3, f1;
     Mat<zz_pX>      e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
-    Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;    
-    stringstream    ss;    
+    Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;
     mat_zz_p        R_goth, gamma, C_m, C_r;
     vec_zz_p        coeffs_s, coeffs_r, ones, coeffs_s1, coeffs_y3, coeffs_R_goth_mult_s1;
     vec_zz_pX       coeffs_ones, u_m_ones, sigma_u_m_ones, sigma_ones;
@@ -165,6 +167,12 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     ZZ              B_goth_s2,   B_goth_r2;
     zz_p            B_goth_s2_p, B_goth_r2_p;
     HASH_STATE_t   *state0, *state;
+    size_t          len_inputStr, len_a1, len_a2, len_c0, len_c1, len_idx_hid, len_mex, len_B_f, len_Bounds, len_aux, max_len;
+    size_t          len_t_A, len_t_y, len_t_g, len_w, len_z_3, len_h;
+    size_t          len_t, len_f0, len_z_1, len_z_2, len_valid, len_Pi;
+    uint8_t        *buffer, *Pi_bytes;
+    vector<size_t>  lengths;
+    PROOF_I_t       Pi;
 
     // Initialise constants
     const unsigned long n           = n_ISIS;
@@ -386,15 +394,78 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     h_part3 = poly_mult_hat(sigma_s, s) - B_goth_s2_p;
     h_part4 = poly_mult_hat(sigma_r, r) - B_goth_r2_p;
     h_part5 = poly_mult_hat(sigma_u_m_ones, u);
-    
+
 
     // Initialize the custom Hash function
-    // ss << crs << P << C << mex << B_f << Bounds << aux;
-    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << idx_hid << mex << B_f << Bounds << aux;
-    // NOTE: using inputStr, ipk, idx_hid, instead of crs, P, C to speedup Hash_Init    
-    state0 = Hash_Init(ss.str());
+    // NOTE: using inputStr, ipk.a1, ipk.a2, ipk.c0, ipk.c1, idx_hid, instead of crs, P, C to speedup Hash_Init    
+    len_inputStr = inputStr.length();               // string    - 7 or 8 bytes
+    len_a1       = calc_ser_size_poly(d0);          // zz_pX     - 4096  bytes      
+    len_a2       = calc_ser_size_vec_poly(m0,  d0); // vec_zz_pX - 12288 bytes
+    len_c0       = calc_ser_size_vec_poly(lm0, d0); // vec_zz_pX - 4096  bytes
+    len_c1       = calc_ser_size_vec_poly(lr0, d0); // vec_zz_pX - 8192  bytes
+    len_idx_hid  = 1;                               // uint8     - 1     byte
+    len_mex      = calc_ser_size_vec_zz_p(idx_pub*h0); // vec_zz_p - 2048 bytes
+    len_B_f      = calc_ser_size(d0, t0);           // mat_zz_p - 2097152 bytes
+    len_Bounds   = calc_ser_size_vec_ZZ(2);         // vec_ZZ (2*long) - 16 bytes
+    len_aux      = 1;                               // uint8     - 1 byte   
+    // cout << "  Size Hash_Init: " << (len_inputStr + len_a1 + len_a2 + len_c0 + len_c1 + len_idx_hid + len_mex + len_B_f + len_Bounds + len_aux)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
 
+    lengths = {len_inputStr, len_a1, len_a2, len_c0, len_c1, len_idx_hid, len_mex, len_B_f, len_Bounds, len_aux};
+    max_len = *max_element(begin(lengths), end(lengths)); 
+    buffer = new uint8_t[max_len];
+    
+    state0 = Hash_Initb(reinterpret_cast<const uint8_t*>(&inputStr[0]), len_inputStr);
+        
+    serialize_poly_zz_pX(buffer, len_a1, d0, ipk.a1);
+    Hash_Updateb(state0, buffer, len_a1);
 
+    serialize_vec_poly_zz_pX(buffer, len_a2, m0,  d0, ipk.a2);
+    Hash_Updateb(state0, buffer, len_a2);
+
+    serialize_vec_poly_zz_pX(buffer, len_c0, lm0,  d0, ipk.c0);
+    Hash_Updateb(state0, buffer, len_c0);
+
+    serialize_vec_poly_zz_pX(buffer, len_c1, lr0,  d0, ipk.c1);
+    Hash_Updateb(state0, buffer, len_c1);
+
+    buffer[0] = (uint8_t)(idx_hid);
+    Hash_Updateb(state0, buffer, len_idx_hid);
+
+    serialize_vec_zz_p(buffer, len_mex, idx_pub*h0, mex);
+    Hash_Updateb(state0, buffer, len_mex);
+
+    serialize_mat_zz_p(buffer, len_B_f, d0, t0, B_f);
+    Hash_Updateb(state0, buffer, len_B_f);
+
+    serialize_vec_ZZ(buffer, len_Bounds, 2, Bounds);
+    Hash_Updateb(state0, buffer, len_Bounds);
+
+    buffer[0] = (uint8_t)(aux);
+    Hash_Updateb(state0, buffer, len_aux);
+
+    delete[] buffer;
+    
+       
+    // Compute the number of bytes for each component of the Proof Pi
+    len_t_A = calc_ser_size_vec_poly(n, d_hat);     // vec_zz_pX - 10240 bytes
+    len_t_y = calc_ser_size_vec_poly(n256, d_hat);  // vec_zz_pX - 2048 bytes
+    len_t_g = calc_ser_size_vec_poly(tau0, d_hat);  // vec_zz_pX - 4096 bytes
+    len_w   = calc_ser_size_vec_poly(n, d_hat);     // vec_zz_pX - 10240 bytes
+    len_z_3 = calc_ser_size_vec_zz_p(256);          // vec_zz_p  - 2048 bytes
+    len_h   = calc_ser_size_vec_poly(tau0, d_hat);  // vec_zz_pX - 4096 bytes
+    len_t   = calc_ser_size_poly(d_hat);            // zz_pX     - 512 bytes
+    len_f0  = calc_ser_size_poly(d_hat);            // zz_pX     - 512 bytes
+    len_z_1 = calc_ser_size_vec_poly(m1, d_hat);    // vec_zz_pX - 35840 bytes
+    len_z_2 = calc_ser_size_vec_poly(m2, d_hat);    // vec_zz_pX - 32768 bytes
+    len_valid = 1;                                  // uint8     - 1 byte
+
+    len_Pi = len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2 + len_valid; // 102401 bytes
+    cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+   
+    // Allocate a vector of bytes to store the proof Pi
+    *Pi_ptr = new uint8_t[len_Pi]; 
+
+    
     // 10. while (rst == 0 ∧ idx < N) do
     while((rst == 0) && (idx < N1))
     {
@@ -491,11 +562,31 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
 
         // 19. a_1 ← (t_A, t_y, t_g, w) 
-        ss.str("");
-        ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
+        Pi_bytes = *Pi_ptr;
         // NOTE: copy the initial status structure, already initialized with (crs, x) before row 10        
-        state = Hash_Copy(state0);
-        Hash_Update(state, ss.str());
+        state = Hash_Copy(state0);        
+
+        // Initialize Pi with a flag to identify a valid proof
+        Pi.valid = 0; // invalid
+        Pi_bytes[0] = 0;
+        Pi_bytes += len_valid;
+
+        serialize_vec_poly_zz_pX(Pi_bytes, len_t_A, n, d_hat, Pi.t_A);
+        Hash_Updateb(state, Pi_bytes, len_t_A);
+        Pi_bytes += len_t_A;
+
+        serialize_vec_poly_zz_pX(Pi_bytes, len_t_y, n256, d_hat, Pi.t_y);
+        Hash_Updateb(state, Pi_bytes, len_t_y);
+        Pi_bytes += len_t_y;
+
+        serialize_vec_poly_zz_pX(Pi_bytes, len_t_g, tau0, d_hat, Pi.t_g);
+        Hash_Updateb(state, Pi_bytes, len_t_g);
+        Pi_bytes += len_t_g;
+
+        serialize_vec_poly_zz_pX(Pi_bytes, len_w, n, d_hat, Pi.w);
+        Hash_Updateb(state, Pi_bytes, len_w);
+        Pi_bytes += len_w;
+
         
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
         // 21. R_goth = R_goth_0 - R_goth_1
@@ -536,9 +627,10 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
         
         // 26. a_2 ← z_3,   a2 ∈ Z^256_(q_hat)
-        ss.str("");
-        ss << Pi.z_3;
-        Hash_Update(state, ss.str());
+        serialize_vec_zz_p(Pi_bytes, len_z_3, 256, Pi.z_3);
+        Hash_Updateb(state, Pi_bytes, len_z_3);
+        Pi_bytes += len_z_3;
+
 
         // 27. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_(q_hat)
         HISIS2(gamma, state, "2");
@@ -612,9 +704,10 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 
 
         // 31. a_3 ← h,   a_3 ∈ R^^(τ)_(q_hat)
-        ss.str("");
-        ss << Pi.h;
-        Hash_Update(state, ss.str());
+        serialize_vec_poly_zz_pX(Pi_bytes, len_h, tau0, d_hat, Pi.h);
+        Hash_Updateb(state, Pi_bytes, len_h);
+        Pi_bytes += len_h;
+
 
         // 32. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
         HISIS3(mu, state, "3");
@@ -914,10 +1007,15 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
         // 44. a_4 ← (t, f0),   a_4 ∈ R^^2_(q_hat)
-        ss.str("");
-        ss << Pi.t << Pi.f0;
-        Hash_Update(state, ss.str());
+        serialize_poly_zz_pX(Pi_bytes, len_t, d_hat, Pi.t);
+        Hash_Updateb(state, Pi_bytes, len_t);
+        Pi_bytes += len_t;
 
+        serialize_poly_zz_pX(Pi_bytes, len_f0, d_hat, Pi.f0);
+        Hash_Updateb(state, Pi_bytes, len_f0);
+        Pi_bytes += len_f0;
+        
+        
         // 45. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
         HISIS4(c, state, "4");
 
@@ -985,15 +1083,20 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
     // 51. if rst = 1 then return π
     if (rst == 1)
     {
-        // NOTE: additional flag, to identify a valid proof
+        // Serialize z_1, z_2
+        serialize_vec_poly_zz_pX(Pi_bytes, len_z_1, m1, d_hat, Pi.z_1);
+        Pi_bytes += len_z_1;
+
+        serialize_vec_poly_zz_pX(Pi_bytes, len_z_2, m2, d_hat, Pi.z_2);
+        // Pi_bytes += len_z_2;
+        
+        // NOTE: additional flag, to identify a valid proof in Pi
         Pi.valid = 1;
+        (*Pi_ptr)[0] = 1;
     }
+
     // 52. else return ⊥
-    else // (rst == 0)      
-    {
-        // NOTE: invalid proof, other data fields in PROOF_I_t structure are empty
-        Pi.valid = 0;        
-    }
+    // NOTE: invalid proof, with Pi.valid = 0
     
     // return Pi;
 }
@@ -1010,12 +1113,12 @@ void Prove_ISIS(PROOF_I_t& Pi, const string& inputStr, const CRS_t& crs, const I
 // -  ipk:          Issuer public key
 // - (P, C, mex, B_f, 
 //    Bounds, aux): they correspond to x
-// -  Pi:           proof (π) structure 
+// -  Pi_ptr:       pointer to proof (π) data 
 //  
 // Output:
 // -  0 or 1:       reject or accept 
 //==============================================================================
-long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const ZZ& aux, const PROOF_I_t& Pi)
+long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, uint8_t** Pi_ptr)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0) 
    
@@ -1025,15 +1128,20 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, sigma_z_1;
     zz_pX           acc, delta_1, delta_2, delta_3, c, d_0;
     Mat<zz_pX>      e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
-    Mat<zz_pX>      sigma_r_, sigma_r_s_ , sigma_r_r_, sigma_r_u_;    
-    stringstream    ss;
+    Mat<zz_pX>      sigma_r_, sigma_r_s_ , sigma_r_r_, sigma_r_u_;
     mat_zz_p        R_goth, gamma, C_m, C_r;
     vec_zz_p        ones, e_tmp, m_C;
     ZZ              B_goth_s2, B_goth_r2, B_goth2;
     zz_p            B_goth_s2_p, B_goth_r2_p, sums;
     ZZ              norm2_z1, norm2_z2, norm2_z3;
     HASH_STATE_t*   state;
-
+    size_t          len_inputStr, len_a1, len_a2, len_c0, len_c1, len_idx_hid, len_mex, len_B_f, len_Bounds, len_aux, max_len;
+    size_t          len_t_A, len_t_y, len_t_g, len_w, len_z_3, len_h;
+    size_t          len_t, len_f0, len_z_1, len_z_2, len_valid; //len_Pi;
+    uint8_t        *buffer, *Pi_bytes;
+    vector<size_t>  lengths;
+    PROOF_I_t       Pi;
+    
     // Initialise constants
     const unsigned long n           = n_ISIS;
     const unsigned long m1          = m1_ISIS;
@@ -1087,25 +1195,106 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     // NOTE: zero padding of C already done in V_Verify
 
     // 5. (t_A, t_y, t_g, w, z_3, h, t, f0, z_1, z_2) ← π
+    // NOTE: to save memory, proof values will be directly accessed as Pi.{name}
+
+
+    // Initialize the custom Hash function
+    // NOTE: using inputStr, ipk.a1, ipk.a2, ipk.c0, ipk.c1, idx_hid, instead of crs, P, C to speedup Hash_Init
+    len_inputStr = inputStr.length();               // string    - 7 or 8 bytes
+    len_a1       = calc_ser_size_poly(d0);          // zz_pX     - 4096  bytes      
+    len_a2       = calc_ser_size_vec_poly(m0,  d0); // vec_zz_pX - 12288 bytes
+    len_c0       = calc_ser_size_vec_poly(lm0, d0); // vec_zz_pX - 4096  bytes
+    len_c1       = calc_ser_size_vec_poly(lr0, d0); // vec_zz_pX - 8192  bytes
+    len_idx_hid  = 1;                               // uint8     - 1     byte
+    len_mex      = calc_ser_size_vec_zz_p(idx_pub*h0); // vec_zz_p - 2048 bytes
+    len_B_f      = calc_ser_size(d0, t0);           // mat_zz_p - 2097152 bytes
+    len_Bounds   = calc_ser_size_vec_ZZ(2);         // vec_ZZ (2*long) - 16 bytes
+    len_aux      = 1;                               // uint8     - 1 byte
+
+    lengths = {len_inputStr, len_a1, len_a2, len_c0, len_c1, len_idx_hid, len_mex, len_B_f, len_Bounds, len_aux};
+    max_len = *max_element(begin(lengths), end(lengths)); 
+    buffer = new uint8_t[max_len];
+           
+    state = Hash_Initb(reinterpret_cast<const uint8_t*>(&inputStr[0]), len_inputStr);
+        
+    serialize_poly_zz_pX(buffer, len_a1, d0, ipk.a1);
+    Hash_Updateb(state, buffer, len_a1);
+
+    serialize_vec_poly_zz_pX(buffer, len_a2, m0,  d0, ipk.a2);
+    Hash_Updateb(state, buffer, len_a2);
+
+    serialize_vec_poly_zz_pX(buffer, len_c0, lm0,  d0, ipk.c0);
+    Hash_Updateb(state, buffer, len_c0);
+
+    serialize_vec_poly_zz_pX(buffer, len_c1, lr0,  d0, ipk.c1);
+    Hash_Updateb(state, buffer, len_c1);
+
+    buffer[0] = (uint8_t)(idx_hid);
+    Hash_Updateb(state, buffer, len_idx_hid);
+
+    serialize_vec_zz_p(buffer, len_mex, idx_pub*h0, mex);
+    Hash_Updateb(state, buffer, len_mex);
+
+    serialize_mat_zz_p(buffer, len_B_f, d0, t0, B_f);
+    Hash_Updateb(state, buffer, len_B_f);
+
+    serialize_vec_ZZ(buffer, len_Bounds, 2, Bounds);
+    Hash_Updateb(state, buffer, len_Bounds);
+
+    buffer[0] = (uint8_t)(aux);
+    Hash_Updateb(state, buffer, len_aux);
+          
+    delete[] buffer;
+
+
+    // Compute the number of bytes for each component of the Proof Pi
+    len_t_A = calc_ser_size_vec_poly(n, d_hat);     // vec_zz_pX - 10240 bytes
+    len_t_y = calc_ser_size_vec_poly(n256, d_hat);  // vec_zz_pX - 2048 bytes
+    len_t_g = calc_ser_size_vec_poly(tau0, d_hat);  // vec_zz_pX - 4096 bytes
+    len_w   = calc_ser_size_vec_poly(n, d_hat);     // vec_zz_pX - 10240 bytes
+    len_z_3 = calc_ser_size_vec_zz_p(256);          // vec_zz_p  - 2048 bytes
+    len_h   = calc_ser_size_vec_poly(tau0, d_hat);  // vec_zz_pX - 4096 bytes
+    len_t   = calc_ser_size_poly(d_hat);            // zz_pX     - 512 bytes
+    len_f0  = calc_ser_size_poly(d_hat);            // zz_pX     - 512 bytes
+    len_z_1 = calc_ser_size_vec_poly(m1, d_hat);    // vec_zz_pX - 35840 bytes
+    len_z_2 = calc_ser_size_vec_poly(m2, d_hat);    // vec_zz_pX - 32768 bytes
+    len_valid = 1;                                  // uint8     - 1 byte
+
+    // len_Pi = len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2 + len_valid; // 102401 bytes
+    // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    
+
+    // Deserialize the proof Pi
+    Pi_bytes = *Pi_ptr;
+
+    Pi.valid = (long)(Pi_bytes[0]);
+    Pi_bytes += len_valid;
+
     // Check if Pi contains a valid proof   
     if (Pi.valid != 1)
     {
         cout << "ERROR! Pi does not contain a valid proof" << endl;
         return 0;
     }
-    // NOTE: to save memory, proof values will be directly accessed as Pi.{name}
-    
-    // Initialize the custom Hash function
-    // ss << crs << P << C << mex << B_f << Bounds << aux;
-    ss << inputStr << ipk.a1 << ipk.a2 << ipk.c0 << ipk.c1 << idx_hid << mex << B_f << Bounds << aux;
-    // NOTE: using inputStr, ipk, idx_hid, instead of crs, P, C to speedup Hash_Init    
-    state = Hash_Init(ss.str());
 
-    // 6. a_1 ← (t_A, t_y, t_g, w)     
-    // a_1 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
-    ss.str("");
-    ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w;
-    Hash_Update(state, ss.str());
+    
+    // 6. a_1 ← (t_A, t_y, t_g, w)
+    Hash_Updateb(state, Pi_bytes, len_t_A);
+    deserialize_vec_poly_zz_pX(Pi.t_A, n, d_hat, Pi_bytes, len_t_A);
+    Pi_bytes += len_t_A;
+
+    Hash_Updateb(state, Pi_bytes, len_t_y);
+    deserialize_vec_poly_zz_pX(Pi.t_y, n256, d_hat, Pi_bytes, len_t_y);
+    Pi_bytes += len_t_y;
+
+    Hash_Updateb(state, Pi_bytes, len_t_g);
+    deserialize_vec_poly_zz_pX(Pi.t_g, tau0, d_hat, Pi_bytes, len_t_g);
+    Pi_bytes += len_t_g;
+
+    Hash_Updateb(state, Pi_bytes, len_w);
+    deserialize_vec_poly_zz_pX(Pi.w, n, d_hat, Pi_bytes, len_w);
+    Pi_bytes += len_w;
+
     
     // 7. a_2 ← z_3,   a2 ∈ Z^256_(q_hat)
     // a_2 << Pi.z_3;
@@ -1122,23 +1311,30 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
+
     // 12. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+3)_(q_hat)
-    ss.str("");
-    ss << Pi.z_3;
-    Hash_Update(state, ss.str());
+    Hash_Updateb(state, Pi_bytes, len_z_3);
+    deserialize_vec_zz_p(Pi.z_3, 256, Pi_bytes, len_z_3);
+    Pi_bytes += len_z_3;    
     HISIS2(gamma, state, "2");   
     // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
+
     // 13. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(τ)_(q_hat)
-    ss.str("");
-    ss << Pi.h;
-    Hash_Update(state, ss.str());
+    Hash_Updateb(state, Pi_bytes, len_h);
+    deserialize_vec_poly_zz_pX(Pi.h, tau0, d_hat, Pi_bytes, len_h);
+    Pi_bytes += len_h;
     HISIS3(mu, state, "3");
 
     // 14. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
-    ss.str("");
-    ss << Pi.t << Pi.f0;
-    Hash_Update(state, ss.str());
+    Hash_Updateb(state, Pi_bytes, len_t);
+    deserialize_poly_zz_pX(Pi.t, d_hat, Pi_bytes, len_t);
+    Pi_bytes += len_t;
+    
+    Hash_Updateb(state, Pi_bytes, len_f0);
+    deserialize_poly_zz_pX(Pi.f0, d_hat, Pi_bytes, len_f0);
+    Pi_bytes += len_f0;
+    
     HISIS4(c, state, "4");
 
     delete  state;
@@ -1160,6 +1356,14 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
         B[i]   = crs[3][i-n256];
         t_B[i] = Pi.t_g[i-n256];
     }
+
+
+    // Deserialize z_1, z_2
+    deserialize_vec_poly_zz_pX(Pi.z_1, m1, d_hat, Pi_bytes, len_z_1);
+    Pi_bytes += len_z_1;
+
+    deserialize_vec_poly_zz_pX(Pi.z_2, m2, d_hat, Pi_bytes, len_z_2);
+    // Pi_bytes += len_z_2;
 
 
     // 17. z ← (z_1; σ(z_1); (c*t_B − B*z_2); σ(c*t_B − B*z_2)),     z ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
@@ -1579,7 +1783,8 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     {
         if ( coeff(Pi.h[i], 0) != 0 )
         {
-            cout << "Second condition failed! \n  h = " << Pi.h << endl;
+            cout << "Second condition failed!" << endl; 
+            // cout <<  "h = " << Pi.h << endl;
             return 0;
         }
     }
@@ -1641,7 +1846,7 @@ long Verify_ISIS(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, con
     if (acc != Pi.f0)
     {
         cout << "Fourth condition failed!" << endl; 
-        cout << acc << " != " << Pi.f0 << endl; 
+        // cout << acc << " != " << Pi.f0 << endl; 
         return 0;
     }
     

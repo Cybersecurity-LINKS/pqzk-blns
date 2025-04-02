@@ -36,6 +36,26 @@ HASH_STATE_t* Hash_Init(const string& inputStr)
     return state;
 }
 
+//==============================================================================
+// Hash_Init  - Initialize the Custom Hash function, implemented using SHAKE128
+// 
+// Inputs:
+// - v:         vector of bytes containing the input message (initial seed)
+// - len:       length of v (number of bytes)
+//
+// Output:
+// - state:     status structure
+//==============================================================================
+HASH_STATE_t* Hash_Initb(const uint8_t* v, const size_t len)
+{
+    HASH_STATE_t *state = new HASH_STATE_t();
+
+    _shake128_init(state);
+    _shake128_absorb(state, v, len); 
+
+    return state;
+}
+
 
 //==============================================================================
 // Hash_Update - Update the Custom Hash function with a new input message
@@ -55,6 +75,25 @@ void Hash_Update(HASH_STATE_t *state, const string& inputStr)
 
     // return state;
 }
+
+//==============================================================================
+// Hash_Update - Update the Custom Hash function with a new input message
+// 
+// Inputs:
+// - state:      status structure
+// - v:          vector of bytes containing a new input message
+// - len:        length of v (number of bytes)
+//
+// Output:
+// - state:      updated status structure
+//==============================================================================
+void Hash_Updateb(HASH_STATE_t *state, const uint8_t* v, const size_t len)
+{
+    _shake128_absorb(state, v, len); 
+
+    // return state;
+}
+
 
 
 //==============================================================================

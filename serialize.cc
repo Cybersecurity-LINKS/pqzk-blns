@@ -60,6 +60,7 @@ void serialize_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, 
 void deserialize_mat_zz_p(mat_zz_p& m, const long r, const long c, const uint8_t* v, const size_t s) {
     long i, j;
     const long* data_ptr = reinterpret_cast<const long*>(v);
+    m.SetDims(r, c);
     for (i = 0; i < r; i++) {
         for (j = 0; j < c; j++) {
             m[i][j] = data_ptr[i * c + j];
@@ -92,6 +93,7 @@ void deserialize_minbyte_mat_zz_p(mat_zz_p& m, const long r, const long c, const
     size_t n;
     n = 0;
     blk = (nbits + 7) / 8;
+    m.SetDims(r, c);
     for(i = 0; i < r; ++i) {
         for(j = 0; j < c; ++j) {
 
@@ -152,6 +154,7 @@ void deserialize_minbits_mat_zz_p(mat_zz_p& m, const long r, const long c, const
         vf[l] = static_cast<long>(n);
     }
     k = 0;
+    m.SetDims(r, c);
     for (i = 0; i < r; i++) {
         for (j = 0; j < c; j++) {
             m[i][j] = conv<zz_p>(vf[k++]);
@@ -176,6 +179,7 @@ void serialize_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, const lo
 void deserialize_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d, const uint8_t* v, const size_t s) {
     long i, j;
     const long* data_ptr = reinterpret_cast<const long*>(v);
+    p.SetLength(n);
     for (i = 0; i < n; i++) {        
         p[i].SetLength(d);
         for (j = 0; j < d; j++) {

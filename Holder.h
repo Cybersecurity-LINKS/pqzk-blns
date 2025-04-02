@@ -38,11 +38,11 @@ typedef struct
 
 typedef struct
 {
-    // vec_ZZ      cp;
-    IPK_t  ipk;
+    // vec_ZZ   cp;
+    IPK_t       ipk;
     Vec<string> attrs_prime;
     vec_ZZ      idx;
-    PROOF_I_t   pi;
+    uint8_t*    Pi;
     long        valid = 0;
 } VP_t;
 

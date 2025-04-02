@@ -338,7 +338,7 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
     {
         // 6.    return ⊥
         cout << "First  condition failed - Invalid s norm!" << endl;
-        cout << " norm_s = " << norm_s << " > " << th_s << endl;
+        // cout << " norm_s = " << norm_s << " > " << th_s << endl;
         return;
     }
     
@@ -347,7 +347,7 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
     {
         // 6.    return ⊥
         cout << "Second condition failed - Invalid r norm!" << endl;
-        cout << " norm_r = " << norm_r << " > " << th_r << endl;        
+        // cout << " norm_r = " << norm_r << " > " << th_r << endl;        
         return;               
     }
 
@@ -356,7 +356,7 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
     {
         // 6.    return ⊥
         cout << "Third  condition failed - left != right!" << endl;
-        cout << " " << left << " != " << right << endl;        
+        // cout << " " << left << " != " << right << endl;        
         return; 
     }
     
@@ -403,7 +403,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     mat_zz_p        P, C0, C1, C; 
     vec_ZZ          Bounds;
     Vec<vec_ZZ>     sig;
-    long            mul;
+    long            mul, Pi_valid;
 
     const unsigned long m2d     = (m0 + 2)*d0;    // (m+2)·d
     const unsigned long lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
@@ -576,7 +576,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
     // Bounds[1] = psi0 * sqrt(conv<RR>( idxhlrd ));
     Bounds[0] = sqr( ZZ(sigma0) ) * ZZ( (m0+2)*d0 );
     Bounds[1] = sqr( ZZ(psi0)   ) * ZZ( idxhlrd   );
-    
+
       
     // 12. VP ← emptyVP()
     // NOTE: see VP_t
@@ -619,16 +619,17 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_
         zz_pPush push(q2_hat);
         // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat)) 
     
-        Prove_ISIS(VP.pi, inputStr, crs[0], ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, ZZ(idx_pub), sig );
+        Prove_ISIS(&(VP.Pi), inputStr, crs[0], ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, idx_pub, sig );
         // NOTE: P, C, B_f are converted from modulo q0 to q2_hat
     }
 
     P.kill();
     C.kill();
     
+    Pi_valid = VP.Pi[0];
 
     // 18. return VP  
-    if (VP.pi.valid)
+    if (Pi_valid)
     {
         VP.valid = 1;
     }

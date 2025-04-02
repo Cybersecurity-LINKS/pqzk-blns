@@ -27,7 +27,7 @@
 // Output:
 // -  1 or 0:        accept if π is valid, reject if the proof is invalid
 //==============================================================================
-long V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f)
+long V_Verify(VP_t& VP, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
@@ -172,7 +172,7 @@ long V_Verify(const VP_t& VP, const string& inputStr, const CRS2_t& crs, const m
         zz_pPush push(q2_hat);
         // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat)) 
 
-        out = Verify_ISIS(inputStr, crs[0], VP.ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, ZZ(idx_pub), VP.pi ); 
+        out = Verify_ISIS(inputStr, crs[0], VP.ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, idx_pub, &(VP.Pi)); 
         // NOTE: P, C, B_f are converted from modulo q0 to q2_hat
     }
 
