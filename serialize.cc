@@ -45,6 +45,11 @@ size_t calc_ser_size_vec_ZZ(long l) {
     return(l*sizeof(long));
 }
 
+size_t calc_ser_size_ZZ(void)
+{
+    return(sizeof(long));
+}
+
 
 // serialize/deserialize functions for mat_zz_p, 64 bits per element (i.e. 1 long int) 
 void serialize_mat_zz_p(uint8_t* v, const size_t s, const long r, const long c, const mat_zz_p& m) {
@@ -246,4 +251,16 @@ void deserialize_vec_ZZ(vec_ZZ& p, const long d, const uint8_t* v, const size_t 
     for (i = 0; i < d; i++) {
         p[i] = data_ptr[i];
     }
+}
+
+
+// serialize/deserialize functions for ZZ, max. 64 bits (i.e. 1 long int)
+void serialize_ZZ(uint8_t* v, const size_t s, const ZZ& p) {
+    long* data_ptr = reinterpret_cast<long*>(v);
+    data_ptr[0] = conv<long>(p);
+}
+
+void deserialize_ZZ(ZZ& p, const uint8_t* v, const size_t s) {
+    const long* data_ptr = reinterpret_cast<const long*>(v);
+    p = data_ptr[0];
 }
