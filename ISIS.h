@@ -26,12 +26,12 @@
 
 typedef struct
 {
+    long            valid = 0;
     vec_zz_pX       t_A, t_y, t_g, w;    
     vec_zz_p        z_3;
     vec_zz_pX       h;
     zz_pX           t, f0;
     vec_zz_pX       z_1, z_2;
-    long            valid = 0;
 } PROOF_I_t;
 
 
