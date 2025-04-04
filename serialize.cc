@@ -45,9 +45,28 @@ size_t calc_ser_size_vec_ZZ(long l) {
     return(l*sizeof(long));
 }
 
-size_t calc_ser_size_ZZ(void)
-{
+size_t calc_ser_size_ZZ(void) {
     return(sizeof(long));
+}
+
+size_t calc_ser_size_vec_poly_minbyte(const long n, const long d, const int nbits) {
+    int b = static_cast<int>(ceil(nbits / 8.0));
+    return (n*d*b);
+}
+
+size_t calc_ser_size_poly_minbyte(const long d, const int nbits) {
+    int b = static_cast<int>(ceil(nbits / 8.0));
+    return (b*d);
+}
+
+size_t calc_ser_size_vec_zz_p_minbyte(const long l, const int nbits) {
+    int b = static_cast<int>(ceil(nbits / 8.0));
+    return (b*l);
+}
+
+size_t calc_ser_size_vec_ZZ_minbyte(const long l, const int nbits) {
+    int b = static_cast<int>(ceil(nbits / 8.0));
+    return (b*l);
 }
 
 
@@ -83,7 +102,6 @@ void serialize_minbyte_mat_zz_p(uint8_t* v, const size_t s, const long r, const 
     blk = (nbits + 7) / 8;
     for(i = 0; i < r; i++) {
         for(j = 0; j < c; j++) {
-
             elem = conv<long>(m[i][j]);
             for(k=0; k < blk; ++k) {
                 v[n++] = static_cast<uint8_t>((elem >> (8 * k)) & 0xFF);
@@ -101,7 +119,6 @@ void deserialize_minbyte_mat_zz_p(mat_zz_p& m, const long r, const long c, const
     m.SetDims(r, c);
     for(i = 0; i < r; ++i) {
         for(j = 0; j < c; ++j) {
-
             elem = 0;
             for(k = 0; k < blk; ++k) {
                 if (n < s) {
@@ -263,4 +280,156 @@ void serialize_ZZ(uint8_t* v, const size_t s, const ZZ& p) {
 void deserialize_ZZ(ZZ& p, const uint8_t* v, const size_t s) {
     const long* data_ptr = reinterpret_cast<const long*>(v);
     p = data_ptr[0];
+}
+
+
+void serialize_minbyte_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, const long d, const int nbits, const vec_zz_pX& p) {
+    long i, j, c;
+    int k, blk;
+    size_t o;
+    
+    o = 0;
+    blk = (nbits + 7) / 8;
+    for(i = 0; i < n; i++) {
+        for(j = 0; j < d; j++) {
+            c = conv<long>(coeff(p[i], j));
+            for(k = 0; k < blk; ++k) {
+                v[o++] = static_cast<uint8_t>((c >> (8 * k)) & 0xFF);
+            }
+        }
+    }
+}
+
+void deserialize_minbyte_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d, const int nbits, const uint8_t* v, const size_t s) {
+    long i, j, elem;
+    int k, blk;
+    size_t o;
+    zz_p c;
+
+    o = 0;
+    blk = (nbits + 7) / 8;
+    p.SetLength(n);
+    for(i = 0; i < n; ++i) {
+        zz_pX poly;
+        poly.SetLength(d);
+        for(j = 0; j < d; ++j) {
+            elem = 0;
+            for(k = 0; k < blk; ++k) {
+                if (o < s) {
+                    elem |= (static_cast<long>(v[o++])) << (8 * k);
+                    c = conv<zz_p>(elem);
+                    poly[j] = c;
+                }
+            }
+            p[i] = poly;
+        }
+    }
+}
+
+
+void serialize_minbyte_poly_zz_pX(uint8_t* v, const size_t s, const long d, const int nbits, const zz_pX& p) {
+    long i, c;
+    int k, blk;
+    size_t o;
+    
+    o = 0;
+    blk = (nbits + 7) / 8;
+    for(i = 0; i < d; i++) {
+        c = conv<long>(coeff(p, i));
+        for(k = 0; k < blk; ++k) {
+            v[o++] = static_cast<uint8_t>((c >> (8 * k)) & 0xFF);
+        }
+    }
+}
+
+void deserialize_minbyte_poly_zz_pX(zz_pX& p, const long d, const int nbits, const uint8_t* v, const size_t s) {
+    long i, elem;
+    int k, blk;
+    size_t o;
+    zz_p c;
+
+    o = 0;
+    blk = (nbits + 7) / 8;
+    p.SetLength(d);
+    for(i = 0; i < d; ++i) {
+        elem = 0;
+        for(k = 0; k < blk; ++k) {
+            if (o < s) {
+                elem |= (static_cast<long>(v[o++])) << (8 * k);
+                c = conv<zz_p>(elem);
+                p[i] = c;
+            }
+        }
+    }
+}
+
+
+void serialize_minbyte_vec_zz_p(uint8_t* v, const size_t s, const long l, const int nbits, const vec_zz_p& p) {
+    long i, elem;
+    int k, blk;
+    size_t n;
+    
+    n = 0;
+    blk = (nbits + 7) / 8;
+    for(i = 0; i < l; i++) {
+        elem = conv<long>(p[i]);
+        for(k = 0; k < blk; ++k) {
+            v[n++] = static_cast<uint8_t>((elem >> (8 * k)) & 0xFF);
+        }
+    }
+}
+
+void deserialize_minbyte_vec_zz_p(vec_zz_p& p, const long l, const int nbits, const uint8_t* v, const size_t s) {
+    long i, elem;
+    int k, blk;
+    size_t n;
+
+    n = 0;
+    blk = (nbits + 7) / 8;
+    p.SetLength(l);
+    for(i = 0; i < l; ++i) {
+        elem = 0;
+        for(k = 0; k < blk; ++k) {
+            if (n < s) {
+                elem |= (static_cast<long>(v[n++])) << (8 * k);
+            }
+        }
+        p[i] = conv<zz_p>(elem);
+    }
+}
+
+
+void serialize_minbyte_vec_ZZ(uint8_t* v, const size_t s, const long l, const int nbits, const vec_ZZ& p) {
+    long i, elem;
+    int k, blk;
+    size_t n;
+    
+    n = 0;
+    blk = (nbits + 7) / 8;
+    for(i = 0; i < l; i++) {
+        elem = conv<long>(p[i]);
+        for(k = 0; k < blk; ++k) {
+            v[n++] = static_cast<uint8_t>((elem >> (8 * k)) & 0xFF);
+        }
+    }
+}
+
+
+void deserialize_minbyte_vec_ZZ(vec_ZZ& p, const long l, const int nbits, const uint8_t* v, const size_t s) {
+    long i, elem;
+    int k, blk;
+    size_t n;
+
+    n = 0;
+    blk = (nbits + 7) / 8;
+    p.SetLength(l);
+    for(i = 0; i < l; ++i) {
+        elem = 0;
+        for(k = 0; k < blk; ++k) {
+            if (n < s) {
+                elem |= (static_cast<long>(v[n++])) << (8 * k);
+            }
+        }
+        p[i] = elem;
+    }
 }
