@@ -18,9 +18,11 @@
 #include "Verifier.h"
 
 
-//=====================================================================
-// Main - Proof-of-Concept of BLNS Framework for Anonymous Credentials
-//=====================================================================
+//=========================================================================================
+// Main - Implementation of the framework for Post-Quantum Anonymous Verifiable Credentials 
+//        defined by Bootle, Lyubashevsky, Nguyen, and Sorniotti (BLNS) in:
+//        https://eprint.iacr.org/2023/560.pdf
+//=========================================================================================
 int main()
 {
     zz_p::init(q0); // Initialize modulus q
@@ -35,13 +37,12 @@ int main()
     vec_ZZX         w;
     ZZ              x;
     CRS2_t          crs;
-    PROOF_C_t       Pi;
+    uint8_t*        Pi; 
     STATE_t         state;
     CRED_t          cred;
     VP_t            VP;
     long            iter, N, i, valid;
-    double          t1, t2, t3;  
-        
+    double          t1, t2, t3, ta, tb;  
 
     N = 10;  // Number of iterations, for demonstration purposes
     
@@ -58,7 +59,7 @@ int main()
         cout << "  CPU time: " << (t2 - t1) << " s" << endl;
         
         cout << "\n- Holder.Init      (initialize common random string and matrices)" << endl;
-        
+        ta = GetWallTime();        
         randomSeed = to_string( RandomBnd(12345678) ); 
         cout << "  seed = " << randomSeed << endl; 
 
@@ -66,14 +67,18 @@ int main()
 
         // Initialize a random matrix B_f ∈ Z^(d×t)_q
         B_f = random_mat_zz_p(d0, t0);
+        tb = GetWallTime();        
+        cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         
         cout << "\n=====================================================================" << endl;
         cout << "  ISSUING PROTOCOL" << endl;
         cout << "=====================================================================" << endl;
-     
+        ta = GetWallTime();     
         cout << "\n- Holder.VerCred1  (prove knowledge of undisclosed attributes)" << endl;
-        H_VerCred1(u, Pi, state, randomSeed, crs, ipk, attrs);
+        H_VerCred1(u, &Pi, state, randomSeed, crs, ipk, attrs);
+        tb = GetWallTime();        
+        cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         // Select disclosed attributes, fill with zeros hidden attributes 
         attrs_prime = attrs;
@@ -85,27 +90,34 @@ int main()
         // cout << "  attrs  = " << attrs << endl;
         // cout << "  attrs' = " << attrs_prime << endl;
    
-
+        ta = GetWallTime();
         cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
-        I_VerCred(s, w, x, randomSeed, crs, B_f, ipk, isk, attrs_prime, u, Pi);
- 
+        I_VerCred(s, w, x, randomSeed, crs, B_f, ipk, isk, attrs_prime, u, &Pi);
+        tb = GetWallTime();        
+        cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         cout << "\n- Holder.VerCred2  (unblind signature and store credential)" << endl;
+        ta = GetWallTime();        
         H_VerCred2(cred, ipk, B_f, s, w, x, state);
-
+        tb = GetWallTime();        
+        cout << "  CPU time: " << (tb - ta) << " s" << endl;
         assert(cred.valid);
         
         
         cout << "\n=====================================================================" << endl;
         cout << "  PRESENTATION PROTOCOL" << endl;
         cout << "=====================================================================" << endl;
-
+        ta = GetWallTime();
         cout << "\n- Holder.VerPres   (prove knowledge of signature and attributes)" << endl;
         H_VerPres(VP, cred, randomSeed, crs, ipk, B_f, attrs);
+        tb = GetWallTime();        
+        cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
-
+        ta = GetWallTime();  
         cout << "\n- Verifier.Verify  (verify proof and authorize)" << endl;
         valid = V_Verify(VP, randomSeed, crs, B_f);
+        tb = GetWallTime();        
+        cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         if (valid)
         {

@@ -83,7 +83,7 @@ void I_KeyGen(IPK_t& ipk, mat_L& isk)
 // - isk:           Issuer Secret Key, i.e. matrix of integers B (size 2d * 2d)
 // - attrs_prime:   disclosed attributes (attrs′)
 // - idx_pub:       |idx|, number of disclosed attributes
-// - u, Pi:         commitment u and proof π, corresponding to the structure ρ_1 
+// - u, Pi_ptr:     commitment u and proof π, corresponding to the structure ρ_1 
 // 
 // Outputs:
 // - s_0:           short vector (output of GSampler),       s_0 ∈ Z^(2d)
@@ -91,7 +91,7 @@ void I_KeyGen(IPK_t& ipk, mat_L& isk)
 // - x:             random integer, uniformly sampled from the set [N]
 //                  NOTE: (s_0, w, x) correspond to the structure ρ_2
 //==============================================================================
-void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, const PROOF_C_t& Pi)
+void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k, result;
@@ -216,7 +216,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
 
-        result = Verify_Com(inputStr, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, Pi);
+        result = Verify_Com(inputStr, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, Pi_ptr);
         // NOTE: P, u are converted from modulo q0 to q1_hat
     }
 
@@ -225,7 +225,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const string& inputStr, const CRS
     if (result == 0)
     {
         // 9. return ⊥       
-        cout << "\n Invalid Proof! (return ⊥ )" << endl;
+        cout << "\n Invalid proof Pi! (return ⊥ )" << endl;
         s_0.SetLength(0);
         x = -1;
         return;

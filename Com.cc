@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+
 #include "Com.h"
+#include "serialize.h"
 
 
 //==============================================================================
@@ -96,9 +99,9 @@ void  Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2)
 //                  NOTE: (|idx_hid|*h + l_r*d + d_hat) == (m1 * d_hat)
 //  
 // Output:
-// - Pi:            proof (π) structure 
+// - Pi_ptr:        pointer to proof (π) data
 //==============================================================================
-void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0)
+void Prove_Com(uint8_t** Pi_ptr, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
 
@@ -116,10 +119,20 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     Mat<zz_pX>          e_, e_prime;
     Mat<zz_pX>          sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_;
     LHC_ST_t            st_1, st_2;
-    stringstream        ss;
     mat_zz_p            R_goth, gamma;
     vec_zz_p            s, e_tmp, coeffs_R_goth_mult_s1, coeffs_y3;
     HASH_STATE_t       *state0, *state;
+    size_t              len_inputStr, len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2, max_len;
+    size_t              len_t_A, len_t_y, len_t_g, len_w, len_z_3, len_h;
+    size_t              len_com1_t1, len_com1_t2, len_com1_w1, len_com1_w2;
+    size_t              len_com2_t1, len_com2_t2, len_com2_w1, len_com2_w2;
+    size_t              len_op1_z1, len_op1_z2, len_op1_z3, len_op1_valid;
+    size_t              len_op2_z1, len_op2_z2, len_op2_z3, len_op2_valid;
+    size_t              len_t, len_f0, len_z_1, len_z_2, len_valid, len_Pi;
+    uint8_t            *buffer, *Pi_bytes;
+    vector<size_t>      lengths;
+    PROOF_C_t           Pi;
+
 
     // Initialise constants    
     const unsigned long n           = n_Com;
@@ -255,11 +268,73 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     h_part3   = poly_mult_hat(sigma_s_1, s_1) + conv<zz_p>(-B_goth2);
 
     // Initialize the custom Hash function
-    // ss << crs << P << u0 << B_goth2;
-    ss << inputStr << ipk.c0 << ipk.c1 << idx_hid << u0 << B_goth2;
-    // NOTE: using inputStr, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init
-    state0 = Hash_Init(ss.str());
+    // NOTE: using inputStr, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init        
+    len_inputStr = inputStr.length();               // string    - 7 or 8 bytes
+    len_c0       = calc_ser_size_vec_poly(lm0, d0); // vec_zz_pX - 4096  bytes
+    len_c1       = calc_ser_size_vec_poly(lr0, d0); // vec_zz_pX - 8192  bytes
+    len_idx_hid  = 1;                               // uint8     - 1     byte
+    len_u0       = calc_ser_size_vec_zz_p(d0);      // vec_zz_p  - 4096 bytes
+    len_B_goth2  = calc_ser_size_ZZ();              // ZZ (long) - 8 bytes
+    // cout << "  Size Hash_Init: " << (len_inputStr + len_c0 + len_c1 + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
 
+    lengths = {len_inputStr, len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2};
+    max_len = *max_element(begin(lengths), end(lengths)); 
+    buffer = new uint8_t[max_len]; 
+
+    state0 = Hash_Initb(reinterpret_cast<const uint8_t*>(&inputStr[0]), len_inputStr);
+    serialize_vec_poly_zz_pX(buffer, len_c0, lm0,  d0, ipk.c0);
+    Hash_Updateb(state0, buffer, len_c0);
+    serialize_vec_poly_zz_pX(buffer, len_c1, lr0,  d0, ipk.c1);
+    Hash_Updateb(state0, buffer, len_c1);
+    buffer[0] = (uint8_t)(idx_hid);
+    Hash_Updateb(state0, buffer, len_idx_hid);
+    serialize_vec_zz_p(buffer, len_u0, d0, u0);
+    Hash_Updateb(state0, buffer, len_u0);
+    serialize_ZZ(buffer, len_B_goth2, B_goth2);
+    Hash_Updateb(state0, buffer, len_B_goth2);
+         
+    delete[] buffer;
+
+    // Compute the number of bytes for each component of the proof Pi
+    len_valid = 1;                                      // uint8     - 1 byte
+    len_t_A = calc_ser_size_vec_poly(n, d_hat);         // vec_zz_pX - 8704 bytes
+    len_t_y = calc_ser_size_vec_poly(n256, d_hat);      // vec_zz_pX - 2048 bytes
+    len_t_g = calc_ser_size_vec_poly(tau0, d_hat);      // vec_zz_pX - 4096 bytes
+    len_w   = calc_ser_size_vec_poly(n, d_hat);         // vec_zz_pX - 8704 bytes
+    len_com1_t1 = calc_ser_size_vec_poly(m1, d_hat);    // vec_zz_pX - 10752 bytes
+    len_com1_t2 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
+    len_com1_w1 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
+    len_com1_w2 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
+    len_com2_t1 = calc_ser_size_vec_poly(m2, d_hat);    // vec_zz_pX - 28160 bytes
+    len_com2_t2 = len_com2_t1;                          // vec_zz_pX - 28160 bytes
+    len_com2_w1 = len_com2_t1;                          // vec_zz_pX - 28160 bytes
+    len_com2_w2 = len_com2_t1;                          // vec_zz_pX - 28160 bytes   
+    len_z_3 = calc_ser_size_vec_zz_p(256);              // vec_zz_p  - 2048 bytes    
+    len_h   = calc_ser_size_vec_poly(tau0, d_hat);      // vec_zz_pX - 4096 bytes
+    len_t   = calc_ser_size_poly(d_hat);                // zz_pX     - 512 bytes
+    len_f0  = calc_ser_size_poly(d_hat);                // zz_pX     - 512 bytes    
+    len_z_1 = calc_ser_size_vec_poly(m1, d_hat);        // vec_zz_pX - 10752 bytes
+    len_z_2 = calc_ser_size_vec_poly(m2, d_hat);        // vec_zz_pX - 28160 bytes
+    len_op1_z1 = calc_ser_size_vec_poly(n_i, d_hat);    // vec_zz_pX - 14336 bytes
+    len_op1_z2 = calc_ser_size_vec_poly(m1, d_hat);     // vec_zz_pX - 10752 bytes
+    len_op1_z3 = calc_ser_size_vec_poly(m1, d_hat);     // vec_zz_pX - 10752 bytes
+    len_op1_valid = 1;                                  // uint8     - 1 byte
+    len_op2_z1 = calc_ser_size_vec_poly(n_i, d_hat);    // vec_zz_pX - 14336 bytes
+    len_op2_z2 = calc_ser_size_vec_poly(m2, d_hat);     // vec_zz_pX - 28160 bytes
+    len_op2_z3 = calc_ser_size_vec_poly(m2, d_hat);     // vec_zz_pX - 28160 bytes
+    len_op2_valid = 1;                                  // uint8     - 1 byte
+
+    len_Pi =    len_valid + len_t_A + len_t_y + len_t_g + len_w +         
+                len_com1_t1 + len_com1_t2 + len_com1_w1 + len_com1_w2 + 
+                len_com2_t1 + len_com2_t2 + len_com2_w1 + len_com2_w2 +                     
+                len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2 + 
+                len_op1_z1 + len_op1_z2 + len_op1_z3 + len_op1_valid + 
+                len_op2_z1 + len_op2_z2 + len_op2_z3 + len_op2_valid; // 331779 bytes
+    cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+        
+    // Allocate a vector of bytes to store the proof Pi
+    *Pi_ptr = new uint8_t[len_Pi]; 
+    
     
     // 8. while (rst == 0 ∧ idx < N) do
     while((rst == 0) && (idx < N1))
@@ -357,12 +432,54 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         // 18. (com_2, st_2) = LHC_Com(2, crs_LHC2, s_2, y_2)
         LHC_Com(Pi.com_2, st_2, 2, crs[6], crs[8], s_2, y_2);
 
-        // 19. a1 ← (t_A, t_y, t_g, w, com_1, com_2) 
-        ss.str("");
-        ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
+        // 19. a1 ← (t_A, t_y, t_g, w, com_1, com_2)
+        Pi_bytes = *Pi_ptr;
         // NOTE: copy the initial status structure, already initialized with (crs, x) before row 8        
-        state = Hash_Copy(state0);
-        Hash_Update(state, ss.str());
+        state = Hash_Copy(state0);        
+
+        // Initialize Pi with a flag to identify an invalid proof
+        Pi.valid = 0;
+        Pi_bytes[0] = 0;
+        Pi_bytes += len_valid;
+
+        // Serialize and Hash (t_A, t_y, t_g, w, com_1, com_2) in the proof Pi
+        serialize_vec_poly_zz_pX(Pi_bytes, len_t_A, n, d_hat, Pi.t_A);
+        Hash_Updateb(state, Pi_bytes, len_t_A);
+        Pi_bytes += len_t_A;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_t_y, n256, d_hat, Pi.t_y);
+        Hash_Updateb(state, Pi_bytes, len_t_y);
+        Pi_bytes += len_t_y;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_t_g, tau0, d_hat, Pi.t_g);
+        Hash_Updateb(state, Pi_bytes, len_t_g);
+        Pi_bytes += len_t_g;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_w, n, d_hat, Pi.w);
+        Hash_Updateb(state, Pi_bytes, len_w);
+        Pi_bytes += len_w;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_com1_t1, m1, d_hat, Pi.com_1.t_1);
+        Hash_Updateb(state, Pi_bytes, len_com1_t1);
+        Pi_bytes += len_com1_t1;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_com1_t2, m1, d_hat, Pi.com_1.t_2);
+        Hash_Updateb(state, Pi_bytes, len_com1_t2);
+        Pi_bytes += len_com1_t2;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_com1_w1, m1, d_hat, Pi.com_1.w_1);
+        Hash_Updateb(state, Pi_bytes, len_com1_w1);
+        Pi_bytes += len_com1_w1;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_com1_w2, m1, d_hat, Pi.com_1.w_2);
+        Hash_Updateb(state, Pi_bytes, len_com1_w2);
+        Pi_bytes += len_com1_w2;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_com2_t1, m2, d_hat, Pi.com_2.t_1);
+        Hash_Updateb(state, Pi_bytes, len_com2_t1);
+        Pi_bytes += len_com2_t1;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_com2_t2, m2, d_hat, Pi.com_2.t_2);
+        Hash_Updateb(state, Pi_bytes, len_com2_t2);
+        Pi_bytes += len_com2_t2;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_com2_w1, m2, d_hat, Pi.com_2.w_1);
+        Hash_Updateb(state, Pi_bytes, len_com2_w1);
+        Pi_bytes += len_com2_w1;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_com2_w2, m2, d_hat, Pi.com_2.w_2);
+        Hash_Updateb(state, Pi_bytes, len_com2_w2);
+        Pi_bytes += len_com2_w2;
+        
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
         // 21. R_goth = R_goth_0 - R_goth_1
@@ -397,10 +514,10 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
         
         // 25. a2 ← z_3,   a2 ∈ Z^256_(q_hat)
-        ss.str("");
-        ss << Pi.z_3;
-        Hash_Update(state, ss.str());
-        
+        serialize_vec_zz_p(Pi_bytes, len_z_3, 256, Pi.z_3);
+        Hash_Updateb(state, Pi_bytes, len_z_3);
+        Pi_bytes += len_z_3;
+
         // 26. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_(q_hat)
         HCom2(gamma, state, "2");
 
@@ -443,9 +560,10 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         }
 
         // 30. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)
-        ss.str("");
-        ss << Pi.h;
-        Hash_Update(state, ss.str());
+        serialize_vec_poly_zz_pX(Pi_bytes, len_h, tau0, d_hat, Pi.h);
+        Hash_Updateb(state, Pi_bytes, len_h);
+        Pi_bytes += len_h;
+
 
         // 31. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(tau)_(q_hat)        
         HCom3(mu, state, "3");
@@ -645,9 +763,12 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
         // 39. a_4 ← (t, f0),   a_4 ∈ R^^2_(q_hat)
-        ss.str("");
-        ss << Pi.t << Pi.f0;
-        Hash_Update(state, ss.str());
+        serialize_poly_zz_pX(Pi_bytes, len_t, d_hat, Pi.t);
+        Hash_Updateb(state, Pi_bytes, len_t);
+        Pi_bytes += len_t;
+        serialize_poly_zz_pX(Pi_bytes, len_f0, d_hat, Pi.f0);
+        Hash_Updateb(state, Pi_bytes, len_f0);
+        Pi_bytes += len_f0;
 
         // 40. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
         HCom4(c, state, "4");
@@ -724,21 +845,8 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
             bbar2 = 1;
         }
 
-        // 47. π ← (t_A, t_y, t_g, w, com_1, com_2, z_3, h, t, f0, z_1, z_2, op_1, op_2)    
-        // Pi.t_A   = t_A;
-        // Pi.t_y   = t_y;
-        // Pi.t_g   = t_g;
-        // Pi.w     = w;
-        // Pi.com_1 = com_1;
-        // Pi.com_2 = com_2;
-        // Pi.z_3   = z_3;
-        // Pi.h     = h;
-        // Pi.t     = t;
-        // Pi.f0    = f0;
-        // Pi.z_1   = z_1;
-        // Pi.z_2   = z_2;
-        // Pi.op_1  = op_1;
-        // Pi.op_2  = op_2;        
+        // 47. π ← (t_A, t_y, t_g, w, com_1, com_2, z_3, h, t, f0, z_1, z_2, op_1, op_2)
+        // NOTE:   (t_A, t_y, t_g, w, com_1, com_2, z_3, h, t, f0) already serialized in Pi_bytes
 
         // 48. rst ← b1*b2*b3*b_bar_1*b_bar_2
         rst = b1*b2*b3*bbar1*bbar2;        
@@ -751,15 +859,34 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
     // 49. if rst = 1 then return π
     if (rst == 1)
     {
-        // NOTE: additional flag, to identify a valid proof
+        // Serialize (z_1, z_2, op_1, op_2) in bytes at the end of the proof Pi
+        serialize_vec_poly_zz_pX(Pi_bytes, len_z_1, m1, d_hat, Pi.z_1);
+        Pi_bytes += len_z_1;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_z_2, m2, d_hat, Pi.z_2);
+        Pi_bytes += len_z_2;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_op1_z1, n_i, d_hat, Pi.op_1.z_1);
+        Pi_bytes += len_op1_z1;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_op1_z2, m1, d_hat, Pi.op_1.z_2);
+        Pi_bytes += len_op1_z2;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_op1_z3, m1, d_hat, Pi.op_1.z_3);
+        Pi_bytes += len_op1_z3;
+        Pi_bytes[0] = Pi.op_1.valid;
+        Pi_bytes += len_op1_valid;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_op2_z1, n_i, d_hat, Pi.op_2.z_1);
+        Pi_bytes += len_op2_z1;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_op2_z2, m2, d_hat, Pi.op_2.z_2);
+        Pi_bytes += len_op2_z2;
+        serialize_vec_poly_zz_pX(Pi_bytes, len_op2_z3, m2, d_hat, Pi.op_2.z_3);
+        Pi_bytes += len_op2_z3;
+        Pi_bytes[0] = Pi.op_2.valid;
+        // Pi_bytes += len_op2_valid;
+        
+        // NOTE: additional flag, to identify a valid proof Pi
         Pi.valid = 1;
+        (*Pi_ptr)[0] = 1;
     }
-    // 50. else return ⊥
-    else // (rst == 0)      
-    {
-        // NOTE: invalid proof
-        Pi.valid = 0;        
-    }
+    // 50. else return ⊥    
+    // NOTE: invalid proof, with Pi.valid = 0
     
     // return Pi;
 }
@@ -778,12 +905,12 @@ void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IP
 //                  P ∈ Z^[d x (m1*d_hat)]_(q_hat)
 //                  u ∈ Z^(d)_(q_hat)
 //                  B_goth^2 ∈ Z≥0 (it is a scalar)
-// - Pi:            proof (π) structure 
+// - Pi_ptr:        pointer to proof (π) data
 //  
 // Output:
 // - 0 or 1:        reject or accept 
 //==============================================================================
-long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const PROOF_C_t& Pi)
+long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, uint8_t** Pi_ptr)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
 
@@ -795,12 +922,21 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     zz_pX               c, acc, sum, d_0, sum_sigma_e_u;
     Mat<zz_pX>          e_, e_prime;
     Mat<zz_pX>          sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_;
-    stringstream        ss;
     mat_zz_p            R_goth, gamma;
     vec_zz_p            e_tmp;
     zz_p                sum_z3, B_goth_p;
     ZZ                  norm2_z1, norm2_z2, norm2_z3;
     HASH_STATE_t*       state;
+    size_t              len_inputStr, len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2, max_len;
+    size_t              len_t_A, len_t_y, len_t_g, len_w, len_z_3, len_h;
+    size_t              len_com1_t1, len_com1_t2, len_com1_w1, len_com1_w2;
+    size_t              len_com2_t1, len_com2_t2, len_com2_w1, len_com2_w2;
+    size_t              len_op1_z1, len_op1_z2, len_op1_z3, len_op1_valid;
+    size_t              len_op2_z1, len_op2_z2, len_op2_z3, len_op2_valid;
+    size_t              len_t, len_f0, len_z_1, len_z_2, len_valid, len_in; //len_Pi;
+    uint8_t            *buffer, *Pi_bytes;
+    vector<size_t>      lengths;
+    PROOF_C_t           Pi;
 
     // Initialise constants and variables
     const unsigned long n           = n_Com;
@@ -833,33 +969,156 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     // Bbar_2  = crs[8];    // ∈ (R^_q^)^(m2 x n2)
 
     // 2. Retrieve (P, u, B_goth) ← x
-    // NOTE: (P, u0, B_goth) already provided as inputs, so we just need to 
-    //       convert u0 ∈ Z^(d)_(q_hat)  to  u ∈ R^^(d/d_hat)_(q_hat), needed at row 19
+    // NOTE: (P, u0, B_goth) already provided as inputs
+
+    // Convert u0 ∈ Z^(d)_(q_hat) to u ∈ R^^(d/d_hat)_(q_hat), needed at row 19
     CoeffsInvHat(u, u0, d_d_hat);
+    
+    // Initialize the custom Hash function with (crs, x)
+    // NOTE: using inputStr, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init        
+    len_inputStr = inputStr.length();               // string    - 7 or 8 bytes
+    len_c0       = calc_ser_size_vec_poly(lm0, d0); // vec_zz_pX - 4096  bytes
+    len_c1       = calc_ser_size_vec_poly(lr0, d0); // vec_zz_pX - 8192  bytes
+    len_idx_hid  = 1;                               // uint8     - 1     byte
+    len_u0       = calc_ser_size_vec_zz_p(d0);      // vec_zz_p  - 4096 bytes
+    len_B_goth2  = calc_ser_size_ZZ();              // ZZ (long) - 8 bytes
+    // cout << "  Size Hash_Init: " << (len_inputStr + len_c0 + len_c1 + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+
+    lengths = {len_inputStr, len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2};
+    max_len = *max_element(begin(lengths), end(lengths)); 
+    buffer = new uint8_t[max_len]; 
+
+    state = Hash_Initb(reinterpret_cast<const uint8_t*>(&inputStr[0]), len_inputStr);
+    serialize_vec_poly_zz_pX(buffer, len_c0, lm0,  d0, ipk.c0);
+    Hash_Updateb(state, buffer, len_c0);
+    serialize_vec_poly_zz_pX(buffer, len_c1, lr0,  d0, ipk.c1);
+    Hash_Updateb(state, buffer, len_c1);
+    buffer[0] = (uint8_t)(idx_hid);
+    Hash_Updateb(state, buffer, len_idx_hid);
+    serialize_vec_zz_p(buffer, len_u0, d0, u0);
+    Hash_Updateb(state, buffer, len_u0);
+    serialize_ZZ(buffer, len_B_goth2, B_goth2);
+    Hash_Updateb(state, buffer, len_B_goth2);
+         
+    delete[] buffer;
+
 
     // 3. P ← [P1,  0_(d × d_hat)],   P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)    
     // NOTE: zero padding of P already done in I_VerCred
 
-    // 4. (t_A, t_y, t_g, w, com1, com2, z_3, h, t, f0, z_1, z_2, op1, op2) ← π       
+    // 4. (t_A, t_y, t_g, w, com1, com2, z_3, h, t, f0, z_1, z_2, op1, op2) ← π   
+        
+    // Compute the number of bytes for each component of the proof Pi
+    len_valid = 1;                                      // uint8     - 1 byte
+    len_t_A = calc_ser_size_vec_poly(n, d_hat);         // vec_zz_pX - 8704 bytes
+    len_t_y = calc_ser_size_vec_poly(n256, d_hat);      // vec_zz_pX - 2048 bytes
+    len_t_g = calc_ser_size_vec_poly(tau0, d_hat);      // vec_zz_pX - 4096 bytes
+    len_w   = calc_ser_size_vec_poly(n, d_hat);         // vec_zz_pX - 8704 bytes
+    len_com1_t1 = calc_ser_size_vec_poly(m1, d_hat);    // vec_zz_pX - 10752 bytes
+    len_com1_t2 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
+    len_com1_w1 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
+    len_com1_w2 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
+    len_com2_t1 = calc_ser_size_vec_poly(m2, d_hat);    // vec_zz_pX - 28160 bytes
+    len_com2_t2 = len_com2_t1;                          // vec_zz_pX - 28160 bytes
+    len_com2_w1 = len_com2_t1;                          // vec_zz_pX - 28160 bytes
+    len_com2_w2 = len_com2_t1;                          // vec_zz_pX - 28160 bytes   
+    len_z_3 = calc_ser_size_vec_zz_p(256);              // vec_zz_p  - 2048 bytes    
+    len_h   = calc_ser_size_vec_poly(tau0, d_hat);      // vec_zz_pX - 4096 bytes
+    len_t   = calc_ser_size_poly(d_hat);                // zz_pX     - 512 bytes
+    len_f0  = calc_ser_size_poly(d_hat);                // zz_pX     - 512 bytes    
+    len_z_1 = calc_ser_size_vec_poly(m1, d_hat);        // vec_zz_pX - 10752 bytes
+    len_z_2 = calc_ser_size_vec_poly(m2, d_hat);        // vec_zz_pX - 28160 bytes
+    len_op1_z1 = calc_ser_size_vec_poly(n_i, d_hat);    // vec_zz_pX - 14336 bytes
+    len_op1_z2 = calc_ser_size_vec_poly(m1, d_hat);     // vec_zz_pX - 10752 bytes
+    len_op1_z3 = calc_ser_size_vec_poly(m1, d_hat);     // vec_zz_pX - 10752 bytes
+    len_op1_valid = 1;                                  // uint8     - 1 byte
+    len_op2_z1 = calc_ser_size_vec_poly(n_i, d_hat);    // vec_zz_pX - 14336 bytes
+    len_op2_z2 = calc_ser_size_vec_poly(m2, d_hat);     // vec_zz_pX - 28160 bytes
+    len_op2_z3 = calc_ser_size_vec_poly(m2, d_hat);     // vec_zz_pX - 28160 bytes
+    len_op2_valid = 1;                                  // uint8     - 1 byte
+
+    // len_Pi =    len_valid + len_t_A + len_t_y + len_t_g + len_w +         
+    //             len_com1_t1 + len_com1_t2 + len_com1_w1 + len_com1_w2 + 
+    //             len_com2_t1 + len_com2_t2 + len_com2_w1 + len_com2_w2 +                     
+    //             len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2 + 
+    //             len_op1_z1 + len_op1_z2 + len_op1_z3 + len_op1_valid + 
+    //             len_op2_z1 + len_op2_z2 + len_op2_z3 + len_op2_valid; // 331779 bytes
+    // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+
+    // Deserialize the proof Pi
+    Pi_bytes = *Pi_ptr;
+    Pi.valid = (long)(Pi_bytes[0]);
+    Pi_bytes += len_valid;
+
     // Check if Pi contains a valid proof   
     if (Pi.valid != 1)
     {
         cout << "ERROR! Pi does not contain a valid proof" << endl;
         return 0;
     }
-    // NOTE: to save memory, proof values will be directly accessed as Pi.{name}
+    
+    deserialize_vec_poly_zz_pX(Pi.t_A, n, d_hat, Pi_bytes, len_t_A);
+    Pi_bytes += len_t_A;
+    deserialize_vec_poly_zz_pX(Pi.t_y, n256, d_hat, Pi_bytes, len_t_y);
+    Pi_bytes += len_t_y;
+    deserialize_vec_poly_zz_pX(Pi.t_g, tau0, d_hat, Pi_bytes, len_t_g);
+    Pi_bytes += len_t_g;
+    deserialize_vec_poly_zz_pX(Pi.w, n, d_hat, Pi_bytes, len_w);
+    Pi_bytes += len_w;
+    deserialize_vec_poly_zz_pX(Pi.com_1.t_1, m1, d_hat, Pi_bytes, len_com1_t1);
+    Pi_bytes += len_com1_t1;
+    deserialize_vec_poly_zz_pX(Pi.com_1.t_2, m1, d_hat, Pi_bytes, len_com1_t2);
+    Pi_bytes += len_com1_t2;
+    deserialize_vec_poly_zz_pX(Pi.com_1.w_1, m1, d_hat, Pi_bytes, len_com1_w1);
+    Pi_bytes += len_com1_w1;
+    deserialize_vec_poly_zz_pX(Pi.com_1.w_2, m1, d_hat, Pi_bytes, len_com1_w2);
+    Pi_bytes += len_com1_w2;
+    deserialize_vec_poly_zz_pX(Pi.com_2.t_1, m2, d_hat, Pi_bytes, len_com2_t1);
+    Pi_bytes += len_com2_t1;
+    deserialize_vec_poly_zz_pX(Pi.com_2.t_2, m2, d_hat, Pi_bytes, len_com2_t2);
+    Pi_bytes += len_com2_t2;
+    deserialize_vec_poly_zz_pX(Pi.com_2.w_1, m2, d_hat, Pi_bytes, len_com2_w1);
+    Pi_bytes += len_com2_w1;
+    deserialize_vec_poly_zz_pX(Pi.com_2.w_2, m2, d_hat, Pi_bytes, len_com2_w2);
+    Pi_bytes += len_com2_w2;
+    deserialize_vec_zz_p(Pi.z_3, 256, Pi_bytes, len_z_3);
+    Pi_bytes += len_z_3;    
+    deserialize_vec_poly_zz_pX(Pi.h, tau0, d_hat, Pi_bytes, len_h);
+    Pi_bytes += len_h;
+    deserialize_poly_zz_pX(Pi.t, d_hat, Pi_bytes, len_t);
+    Pi_bytes += len_t;    
+    deserialize_poly_zz_pX(Pi.f0, d_hat, Pi_bytes, len_f0);
+    Pi_bytes += len_f0;    
+    deserialize_vec_poly_zz_pX(Pi.z_1, m1, d_hat, Pi_bytes, len_z_1);
+    Pi_bytes += len_z_1;
+    deserialize_vec_poly_zz_pX(Pi.z_2, m2, d_hat, Pi_bytes, len_z_2);
+    Pi_bytes += len_z_2;
+    deserialize_vec_poly_zz_pX(Pi.op_1.z_1, n_i, d_hat, Pi_bytes, len_op1_z1);
+    Pi_bytes += len_op1_z1;
+    deserialize_vec_poly_zz_pX(Pi.op_1.z_2, m1, d_hat, Pi_bytes, len_op1_z2);
+    Pi_bytes += len_op1_z2;
+    deserialize_vec_poly_zz_pX(Pi.op_1.z_3, m1, d_hat, Pi_bytes, len_op1_z3);
+    Pi_bytes += len_op1_z3;
+    Pi.op_1.valid = Pi_bytes[0];
+    Pi_bytes += len_op1_valid;
+    deserialize_vec_poly_zz_pX(Pi.op_2.z_1, n_i, d_hat, Pi_bytes, len_op2_z1);
+    Pi_bytes += len_op2_z1;
+    deserialize_vec_poly_zz_pX(Pi.op_2.z_2, m2, d_hat, Pi_bytes, len_op2_z2);
+    Pi_bytes += len_op2_z2;
+    deserialize_vec_poly_zz_pX(Pi.op_2.z_3, m2, d_hat, Pi_bytes, len_op2_z3);
+    Pi_bytes += len_op2_z3;
+    Pi.op_2.valid = Pi_bytes[0];
+    Pi_bytes += len_op2_valid;
 
-    // Initialize the custom Hash function
-    // ss << crs << P << u0 << B_goth2;
-    ss << inputStr << ipk.c0 << ipk.c1 << idx_hid << u0 << B_goth2;
-    // NOTE: using inputStr, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init
-    state = Hash_Init(ss.str());
-
+    
     // 5. a1 ← (t_A, t_y, t_g, w, com_1, com_2) 
-    // a_1 << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1 << Pi.com_2;
-    ss.str("");
-    ss << Pi.t_A << Pi.t_y << Pi.t_g << Pi.w << Pi.com_1.t_1 << Pi.com_1.t_2 << Pi.com_1.w_1 << Pi.com_1.w_2 << Pi.com_2.t_1 << Pi.com_2.t_2 << Pi.com_2.w_1 << Pi.com_2.w_2;
-    Hash_Update(state, ss.str());
+    Pi_bytes = *Pi_ptr + len_valid;
+    len_in =    len_t_A + len_t_y + len_t_g + len_w +
+                len_com1_t1 + len_com1_t2 + len_com1_w1 + len_com1_w2 + 
+                len_com2_t1 + len_com2_t2 + len_com2_w1 + len_com2_w2;
+    Hash_Updateb(state, Pi_bytes, len_in);
+    Pi_bytes += len_in;
+
 
     // 6. a2 ← z_3,   a2 ∈ Z^256_(q_hat)
     // a_2 << Pi.z_3;
@@ -877,22 +1136,25 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
     // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_(q_hat)     
-    ss.str("");
-    ss << Pi.z_3;
-    Hash_Update(state, ss.str());
+    Hash_Updateb(state, Pi_bytes, len_z_3);
+    Pi_bytes += len_z_3;
     HCom2(gamma, state, "2");
 
     // 12. μ ← H(3, crs, x, a1, a2, a3),   μ ∈ R^^(tau)_(q_hat)        
-    ss.str("");
-    ss << Pi.h;
-    Hash_Update(state, ss.str());
+    Hash_Updateb(state, Pi_bytes, len_h);
+    Pi_bytes += len_h;
     HCom3(mu, state, "3");
 
     // 13. c ← H(4, crs, x, a1, a2, a3, a4),   c ∈ C ⊂ R^_(q_hat)
-    ss.str("");
-    ss << Pi.t << Pi.f0;
-    Hash_Update(state, ss.str());
+    len_in = len_t + len_f0;
+    Hash_Updateb(state, Pi_bytes, len_in);
+    // Pi_bytes += len_in;
     HCom4(c, state, "4");
+
+    // Free the Hash state and the vector with serialized proof Pi
+    delete  state;
+    delete[] (*Pi_ptr);
+
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
     B.SetDims((n256 + tau0), m2);
@@ -1184,7 +1446,8 @@ long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, cons
     {
         if ( coeff(Pi.h[i], 0) != 0 )
         {
-            cout << "Second condition failed! \n  h = " << Pi.h << endl;
+            cout << "Second condition failed!" << endl; 
+            // cout <<  "h = " << Pi.h << endl;
             return 0;
         }
     }

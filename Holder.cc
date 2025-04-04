@@ -61,10 +61,10 @@ void H_Init(CRS2_t& crs, Vec<string>& attrs, const string& inputStr)
 // - idx_pub:       | idx |, number of disclosed attributes 
 // 
 // Outputs:
-// - u, Pi:         commitment u and proof π, corresponding to the structure ρ_1 
+// - u, Pi_ptr:     commitment u and proof π, corresponding to the structure ρ_1 
 // - state:         structure that contains the polynomial vectors m and r
 //==============================================================================
-void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs)
+void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
@@ -226,7 +226,7 @@ void H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr,
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
    
-        Prove_Com(Pi, inputStr, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, s);
+        Prove_Com(Pi_ptr, inputStr, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, s);
         // NOTE: P, u are converted from modulo q0 to q1_hat
     }
 

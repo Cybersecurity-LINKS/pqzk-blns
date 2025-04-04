@@ -1049,7 +1049,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const string& inputStr, const CRS_t& crs, cons
         }
 
         // 49. π ← (t_A, t_y, t_g, w, z_3, h, t, f0, z_1, z_2)
-        // NOTE: (t_A, t_y, t_g, w, z_3, h, t, f0) already serialized in Pi_bytes
+        // NOTE:   (t_A, t_y, t_g, w, z_3, h, t, f0) already serialized in Pi_bytes
         
         // 50. rst ← b1*b2*b3
         rst = b1*b2*b3;        

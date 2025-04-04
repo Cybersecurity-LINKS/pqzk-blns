@@ -49,7 +49,7 @@ typedef struct
 
 void    H_Init(CRS2_t& crs, Vec<string>& attrs, const string& inputStr);
 
-void    H_VerCred1(zz_pX& u, PROOF_C_t& Pi, STATE_t& state, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs);
+void    H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs);
 void    H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_t& state);
 void    H_VerPres(VP_t& VP, const CRED_t& cred, const string& inputStr, const CRS2_t& crs, const IPK_t& ipk, const mat_zz_p& B_f, const Vec<string>& attrs);
 

@@ -15,8 +15,6 @@
 #ifndef BLNS_ISIS_H
 #define BLNS_ISIS_H
 
-#include <sstream>
-
 #include "params.h"
 #include "LHC.h"
 #include "Hash.h"

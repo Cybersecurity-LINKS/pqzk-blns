@@ -15,8 +15,6 @@
 #ifndef BLNS_COM_H
 #define BLNS_COM_H
 
-#include <sstream>
-
 #include "params.h"
 #include "LHC.h"
 #include "Hash.h"
@@ -24,6 +22,7 @@
 
 typedef struct
 {
+    long            valid = 0;
     vec_zz_pX       t_A, t_y, t_g, w;
     LHC_COM_t       com_1, com_2;
     vec_zz_p        z_3;
@@ -31,14 +30,13 @@ typedef struct
     zz_pX           t, f0;
     vec_zz_pX       z_1,  z_2;
     LHC_OP_t        op_1, op_2;
-    long            valid = 0;
 } PROOF_C_t;
 
 #include "Issuer.h"
 
 
 void Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2);
-void Prove_Com(PROOF_C_t& Pi, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0);
-long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const PROOF_C_t& Pi);
+void Prove_Com(uint8_t** Pi_ptr, const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0);
+long Verify_Com(const string& inputStr, const CRS_t& crs, const IPK_t& ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, uint8_t** Pi_ptr);
 
 #endif
