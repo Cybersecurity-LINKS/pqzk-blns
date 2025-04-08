@@ -83,7 +83,9 @@ typedef Mat<long>   mat_L;
 // NOTE: idx_pub + idx_hid = l0 = ℓ, number of attributes (d must divide ℓh)
 
 #define k0          32          // k, parameter related to c ∈ C (see BLNS Fig. 8, pag. 26)
-//======================================================================================
+
+#define SEED_LEN    32          // length of each random seed (for crs, isk, ipk) - 32 byte, i.e. 256 bit
+//=======================================================================================================
 
 
 const RR log2e_Const = (log(exp(RR(1))) / log(RR(2))); //log2(e) with e = EulerConstant

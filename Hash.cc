@@ -20,33 +20,13 @@
 // Hash_Init  - Initialize the Custom Hash function, implemented using SHAKE128
 // 
 // Inputs:
-// - inputStr:  string containing the input message (initial seed)
-//
-// Output:
-// - state:     status structure
-//==============================================================================
-HASH_STATE_t* Hash_Init(const string& inputStr)
-{
-    const size_t in_len = inputStr.length();
-    HASH_STATE_t *state = new HASH_STATE_t();
-
-    _shake128_init(state);
-    _shake128_absorb(state, reinterpret_cast<const uint8_t*>(&inputStr[0]), in_len); 
-
-    return state;
-}
-
-//==============================================================================
-// Hash_Init  - Initialize the Custom Hash function, implemented using SHAKE128
-// 
-// Inputs:
 // - v:         vector of bytes containing the input message (initial seed)
 // - len:       length of v (number of bytes)
 //
 // Output:
 // - state:     status structure
 //==============================================================================
-HASH_STATE_t* Hash_Initb(const uint8_t* v, const size_t len)
+HASH_STATE_t* Hash_Init(const uint8_t* v, const size_t len)
 {
     HASH_STATE_t *state = new HASH_STATE_t();
 
@@ -56,25 +36,6 @@ HASH_STATE_t* Hash_Initb(const uint8_t* v, const size_t len)
     return state;
 }
 
-
-//==============================================================================
-// Hash_Update - Update the Custom Hash function with a new input message
-// 
-// Inputs:
-// - state:      status structure
-// - inputStr:   string containing a new input message
-//
-// Output:
-// - state:      updated status structure
-//==============================================================================
-void Hash_Update(HASH_STATE_t *state, const string& inputStr)
-{
-    const size_t in_len = inputStr.length();
-    
-    _shake128_absorb(state, reinterpret_cast<const uint8_t*>(&inputStr[0]), in_len); 
-
-    // return state;
-}
 
 //==============================================================================
 // Hash_Update - Update the Custom Hash function with a new input message
@@ -87,9 +48,9 @@ void Hash_Update(HASH_STATE_t *state, const string& inputStr)
 // Output:
 // - state:      updated status structure
 //==============================================================================
-void Hash_Updateb(HASH_STATE_t *state, const uint8_t* v, const size_t len)
+void Hash_Update(HASH_STATE_t *state, const uint8_t* v, const size_t len)
 {
-    _shake128_absorb(state, v, len); 
+    _shake128_absorb(state, v, len);
 
     // return state;
 }
@@ -271,18 +232,18 @@ void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num)
 //              It generates the pair of common random string (crs_ISIS, crs_Com).
 // 
 // Input:
-// - inputStr:  string containing the input message (initial seed)
+// - crs_seed:  initial public seed for crs structure
 //
 // Output:
 // - crs:       structure with the pair (crs_ISIS, crs_Com)
 //==============================================================================
-void Hcrs(CRS2_t& crs, const string& inputStr)
+void Hcrs(CRS2_t& crs, const unsigned char* crs_seed)
 {
     long            i, j, n, m1, m2, n256;
     HASH_STATE_t    *state;
     size_t          b_coeffs;
        
-    state = Hash_Init(inputStr);
+    state = Hash_Init(reinterpret_cast<const uint8_t*>(&crs_seed[0]), SEED_LEN);
 
     // Create the crs structure  
     crs.SetLength(2); 
@@ -481,13 +442,12 @@ void Hcrs(CRS2_t& crs, const string& inputStr)
 // 
 // Input:
 // - state0:    initial status structure
-// - inputStr:  string containing the input messages
 //
 // Output:
 // - R_goth:    matrix of {-1, 0, 1} mod q1_hat values values,
 //              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
-void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr)
+void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0)
 {
     long         i;
     HASH_STATE_t *state;
@@ -495,7 +455,9 @@ void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr)
     const long   m1 = m1_Com;
 
     state = Hash_Copy(state0);
-    Hash_Update(state, inputStr);
+
+    const uint8_t v[1] = {1};
+    Hash_Update(state, v, 1);
     
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
@@ -518,19 +480,20 @@ void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr)
 // 
 // Input:
 // - state0:    initial status structure
-// - inputStr:  string containing the input messages
 //
 // Output:
 // - gamma:     matrix of integers modulo q1_hat
 //==============================================================================
-void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
+void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long         i, n257;
     HASH_STATE_t *state; 
     
     state = Hash_Copy(state0);
-    Hash_Update(state, inputStr);
+
+    const uint8_t v[1] = {2};
+    Hash_Update(state, v, 1);
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);    
@@ -558,12 +521,11 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
 // 
 // Input:
 // - state0:    initial status structure
-// - inputStr:  string containing the input messages
 //
 // Output:
 // - mu:        vector with tau0 polynomials with d_hat coefficients modulo q1_hat
 //==============================================================================
-void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
+void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long         i;
@@ -573,7 +535,9 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);   
 
     state = Hash_Copy(state0);
-    Hash_Update(state, inputStr);
+
+    const uint8_t v[1] = {3};
+    Hash_Update(state, v, 1);
 
     // Random generation of mu ∈ R^(tau0)_q1_hat
     mu.SetLength(tau0);
@@ -595,12 +559,11 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
 // 
 // Input:
 // - state0:    initial status structure
-// - inputStr:  string containing the input messages
 //
 // Output:
 // - c:         polynomial with d_hat coefficients, c ∈ C ⊂ R^_(q1_hat)
 //==============================================================================
-void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
+void HCom4(zz_pX& c, const HASH_STATE_t *state0)
 {
     long         i;
     HASH_STATE_t *state;    
@@ -617,7 +580,9 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
     norm1_c = 2*nu0_2k;
     
     state = Hash_Copy(state0);
-    Hash_Update(state, inputStr);
+
+    const uint8_t v[1] = {4};
+    Hash_Update(state, v, 1);
 
     c0.SetLength(d_hat);
 
@@ -685,14 +650,13 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
 // 
 // Input:
 // - state0:    initial status structure
-// - inputStr:  string containing the input messages
 //
 // Output:
 // - R_goth:    matrix of {-1, 0, 1} mod q2_hat values, 
 //              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
 // NOTE: HISIS1 is identical to HCom1, apart m1
-void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr)
+void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0)
 {
     long         i;
     HASH_STATE_t *state;
@@ -700,7 +664,9 @@ void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr
     const long  m1 = m1_ISIS;
 
     state = Hash_Copy(state0);
-    Hash_Update(state, inputStr);
+
+    const uint8_t v[1] = {1};
+    Hash_Update(state, v, 1);
     
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
@@ -723,19 +689,20 @@ void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr
 // 
 // Input:
 // - state0:    initial status structure
-// - inputStr:  string containing the input messages
 //
 // Output:
 // - gamma:     matrix of integers modulo q2_hat
 //==============================================================================
-void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
+void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
     long         i, n259;       
     HASH_STATE_t *state; 
     
     state = Hash_Copy(state0);
-    Hash_Update(state, inputStr); 
+
+    const uint8_t v[1] = {2};
+    Hash_Update(state, v, 1);
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);    
@@ -763,12 +730,11 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr)
 // 
 // Input:
 // - state0:    initial status structure
-// - inputStr:  string containing the input messages
 //
 // Output:
 // - mu:        vector with tau0 polynomials with d_hat coefficients modulo q2_hat
 //==============================================================================
-void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
+void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0)
 // NOTE: HISIS3 is identical to HCom3, apart the modulo  
 {     
     // NOTE: assuming that current modulus is q2_hat (not q0)
@@ -779,7 +745,9 @@ void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);   
 
     state = Hash_Copy(state0);
-    Hash_Update(state, inputStr); 
+
+    const uint8_t v[1] = {3};
+    Hash_Update(state, v, 1);
 
     // Random generation of mu ∈ R^(tau0)_q2_hat
     mu.SetLength(tau0);
@@ -801,12 +769,11 @@ void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr)
 // 
 // Input:
 // - state0:    initial status structure
-// - inputStr:  string containing the input messages
 //
 // Output:
 // - c:         polynomial with d_hat coefficients, c ∈ C ⊂ R^_(q2_hat)
 //==============================================================================
-void HISIS4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
+void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
 // NOTE: HISIS4 is identical to HCom4, apart the modulo
 {
     long         i;
@@ -824,7 +791,9 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr)
     norm1_c = 2*nu0_2k;
     
     state = Hash_Copy(state0);
-    Hash_Update(state, inputStr);
+
+    const uint8_t v[1] = {4};
+    Hash_Update(state, v, 1);
 
     c0.SetLength(d_hat);
 
@@ -912,7 +881,7 @@ void HM(vec_ZZ& m_i, const string& a_i)
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(range-1) / 8.0);
 
-    state = Hash_Init(a_i);
+    state = Hash_Init(reinterpret_cast<const uint8_t*>(&a_i[0]), a_i.length());
 
     // Random generation of m_i (modulo range)
     Hash_v_zz_p(tmp, state, h0, b_coeffs);

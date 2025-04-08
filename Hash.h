@@ -26,12 +26,8 @@ typedef  Vec<Vec<Mat<zz_pX>>>  CRS2_t;
 typedef  shake128_state_t      HASH_STATE_t; 
 
 
-HASH_STATE_t* Hash_Init(const string& inputStr);
-HASH_STATE_t* Hash_Initb(const uint8_t* v, const size_t len);
-
-void Hash_Update(HASH_STATE_t *state, const string& inputStr);
-void Hash_Updateb(HASH_STATE_t *state, const uint8_t* v, const size_t len);
-
+HASH_STATE_t* Hash_Init(const uint8_t* v, const size_t len);
+void Hash_Update(HASH_STATE_t *state, const uint8_t* v, const size_t len);
 HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state0);
 
 void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, const size_t& b_coeffs);
@@ -39,17 +35,17 @@ void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, co
 void Hash_R_goth(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems);
 void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num);
 
-void Hcrs(CRS2_t& crs, const string& inputStr);
+void Hcrs(CRS2_t& crs, const unsigned char* crs_seed);
 
-void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr);
-void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr);
-void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr);
-void HCom4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr);
+void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0);
+void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0);
+void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0);
+void HCom4(zz_pX& c, const HASH_STATE_t *state0);
 
-void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const string& inputStr);
-void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0, const string& inputStr);
-void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0, const string& inputStr);
-void HISIS4(zz_pX& c, const HASH_STATE_t *state0, const string& inputStr);
+void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0);
+void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0);
+void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0);
+void HISIS4(zz_pX& c, const HASH_STATE_t *state0);
 
 void HM(vec_ZZ& m_i, const string& a_i);
 
