@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
+#include <vector>
 #include <NTL/ZZX.h>
 #include <NTL/lzz_pX.h>
 #include <NTL/RR.h>
