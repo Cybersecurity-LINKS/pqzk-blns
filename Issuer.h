@@ -29,7 +29,7 @@ typedef struct
 #include "Com.h"
 
  
-void    I_KeyGen(IPK_t& ipk, mat_L& isk);
-void    I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* crs_seed, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr);
+void    I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
+void    I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* crs_seed, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr);
 
 #endif

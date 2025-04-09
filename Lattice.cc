@@ -31,14 +31,11 @@ extern "C" {
 //
 // NOTE: use the keygen from the Falcon reference implementation.  
 //==============================================================================
-void Falcon_keygen(zz_pX& a1, mat_L& B)
+void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 {
-    unsigned long   i, j;
     int8_t          f8[d0], g8[d0], F8[d0], G8[d0];
     uint16_t        h[d0];
-    ZZX             f, g, F, G;
-    mat_L           A;
-
+    
     #if (d0 == 512)
         const size_t FALCON_BUFF_SIZE = FALCON_KEYGEN_TEMP_9;
     #elif (d0 == 1024)
@@ -73,54 +70,8 @@ void Falcon_keygen(zz_pX& a1, mat_L& B)
     F = int8ArrayToZZX(vector<int8_t>(F8, F8 + d0));
     G = int8ArrayToZZX(vector<int8_t>(G8, G8 + d0));
 
-    // B ← [rot(g) −rot(f) 
-    //      rot(G) −rot(F)] ∈ Z^(2d×2d)
-    B.SetDims(2*d0, 2*d0);
-    A.SetDims(d0, d0);
 
-    rot(A, g); 
-
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            B[i][j] = A[i][j];
-        }
-    }
-    
-    rot(A, -f); 
-
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            B[i][j+d0] = A[i][j];
-        }
-    }
-
-    rot(A, G); 
-
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            B[i+d0][j] = A[i][j];
-        }
-    }
-
-    rot(A, -F); 
-
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            B[i+d0][j+d0] = A[i][j];
-        }
-    }
-
-    A.kill();
-
-    // return (a1, B)
+    // 23. return (a1, f, g, F, G)
 }
 #endif
 
@@ -138,14 +89,13 @@ void Falcon_keygen(zz_pX& a1, mat_L& B)
 // NOTE: Algorithm 2 Master Keygen(N, q) at pag. 15 in [DLP14]
 //       equivalent to algorithm NTRU.TrapGen(q, d) in [BLNS23]  
 //==============================================================================
-void NTRU_TrapGen(zz_pX& a1, mat_L& B)
+void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 {
-    long    i, j, valid;
-    ZZX     f, g, F, G, fr, gr, num, den, inv_den, iphi, a, b, rho_f, rho_g, k;
+    long    i, valid;
+    ZZX     fr, gr, num, den, inv_den, iphi, a, b, rho_f, rho_g, k;
     zz_pX   inv_f;
     ZZ      acc, res, out, R_f, R_g, u, v;
     RR      gamma, gamma2;
-    mat_L   A;
 
     const ZZ    q          = conv<ZZ>(q0);
     const ZZX   phi         = Phi();
@@ -314,56 +264,7 @@ void NTRU_TrapGen(zz_pX& a1, mat_L& B)
     inv_f = InvMod( conv<zz_pX>(f), conv<zz_pX>(phi) );
     a1    = ModPhi_q( conv<zz_pX>(g) * inv_f );
 
-    
-    // 22. B ← [rot(g) −rot(f); 
-    //          rot(G) −rot(F)] ∈ Z^(2d×2d)
-    B.SetDims(2*d0, 2*d0);
-    A.SetDims(d0, d0);
-
-    rot(A, g); 
-
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            B[i][j] = A[i][j];
-        }
-    }
-      
-    rot(A, -f); 
-
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            B[i][j+d0] = A[i][j];
-        }
-    }
-    
-    rot(A, G); 
-    
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            B[i+d0][j] = A[i][j];
-        }
-    }
-
-    rot(A, -F); 
-    
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            B[i+d0][j+d0] = A[i][j];
-        }
-    }
-    
-    A.kill();
-     
-
-    // 23. return (a1, B)
+    // 23. return (a1, f, g, F, G)
 }
 
 

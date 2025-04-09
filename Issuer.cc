@@ -29,16 +29,16 @@
 // NOTE: Issuer.KeyGen in BLNS pseudocode, corresponding to
 //       Fig. 18: AnonCreds.Init, pag. 52 in [BLNS23]
 //==============================================================================
-void I_KeyGen(IPK_t& ipk, mat_L& isk)
+void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 {
     unsigned long i;
 
 #ifdef ENABLE_FALCON
     // Keygen algorithm from the Falcon reference implementation 
-    Falcon_keygen(ipk.a1, isk);
+    Falcon_keygen(ipk.a1, f, g, F, G);
 #else
     // NTRU.TrapGen(q, d) algorithm in [BLNS23]
-    NTRU_TrapGen(ipk.a1, isk);    
+    NTRU_TrapGen(ipk.a1, f, g, F, G);    
 #endif
     // NOTE: a1 is a Polynomial with d coefficients modulo q (i.e. h in [DLP14])
     
@@ -91,7 +91,7 @@ void I_KeyGen(IPK_t& ipk, mat_L& isk)
 // - x:             random integer, uniformly sampled from the set [N]
 //                  NOTE: (s_0, w, x) correspond to the structure ρ_2
 //==============================================================================
-void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* crs_seed, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const mat_L& isk, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr)
+void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* crs_seed, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k, result;
@@ -102,6 +102,8 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* crs_seed, co
     vec_zz_p        u_vect, prod;   
     ZZ              B_goth2;
     long            mul;
+    mat_L           A, B;
+
     
     const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
@@ -241,9 +243,58 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* crs_seed, co
 
     // Compute  f(x) + u
     fx_u = Compute_f(B_f, x) + u;
-              
+    
+    
+
+        // B ← [rot(g) −rot(f) 
+    //      rot(G) −rot(F)] ∈ Z^(2d×2d)
+    B.SetDims(2*d0, 2*d0);
+    A.SetDims(d0, d0);
+
+    rot(A, g); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            B[i][j] = A[i][j];
+        }
+    }
+    
+    rot(A, -f); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            B[i][j+d0] = A[i][j];
+        }
+    }
+
+    rot(A, G); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            B[i+d0][j] = A[i][j];
+        }
+    }
+
+    rot(A, -F); 
+
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<d0; j++)
+        {
+            B[i+d0][j+d0] = A[i][j];
+        }
+    }
+
+    A.kill();
+
     // Gaussian sampling  
-    GSampler(s_0, w, ipk.a1, ipk.a2, isk, sigma0, fx_u);
+    GSampler(s_0, w, ipk.a1, ipk.a2, B, sigma0, fx_u);
         
 
     // 12. ρ_2 ← (s_0, w, x),   ρ_2 ∈ Z^(2d) × R^m × N

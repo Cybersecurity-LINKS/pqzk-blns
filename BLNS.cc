@@ -27,7 +27,7 @@ int main()
 {
     zz_p::init(q0); // Initialize modulus q
     
-    mat_L           isk;
+    ZZX     f, g, F, G;
     IPK_t           ipk;
     unsigned char   crs_seed[SEED_LEN];
     Vec<string>     attrs, attrs_prime;
@@ -54,7 +54,7 @@ int main()
         
         cout << "\n- Issuer.KeyGen    (key generation)" << endl;
         t1 = GetWallTime();
-        I_KeyGen(ipk, isk);
+        I_KeyGen(ipk, f, g, F, G);
         t2 = GetWallTime();
         cout << "  CPU time: " << (t2 - t1) << " s" << endl;
         
@@ -100,7 +100,7 @@ int main()
    
         ta = GetWallTime();
         cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
-        I_VerCred(s, w, x, crs_seed, crs, B_f, ipk, isk, attrs_prime, u, &Pi);
+        I_VerCred(s, w, x, crs_seed, crs, B_f, ipk, f, g, F, G, attrs_prime, u, &Pi);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
