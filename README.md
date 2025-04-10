@@ -12,9 +12,9 @@ This repository contains an implementation of the framework for Post-Quantum (PQ
 - [Clang](https://clang.llvm.org/) 14.0.0 (Optional - necessary if Falcon is used)
 
 NOTE: it is possible to set ```USE_FALCON = 1``` (default) in the [Makefile](./Makefile), 
-to automatically download and use the ```keygen``` from the [Falcon](https://falcon-sign.info/) reference implementation, for better performance.
+to automatically download and use the ```Falcon_keygen``` and ```Falcon_GSampler``` from the [Falcon](https://falcon-sign.info/) reference implementation, for better performance.
 
-Otherwise, with ```USE_FALCON = 0``` only the ```NTRU_TrapGen``` function defined in [Lattice.cc](./Lattice.cc) is used.
+Otherwise, with ```USE_FALCON = 0``` the ```NTRU_TrapGen``` and ```GSampler``` function defined in [Lattice.cc](./Lattice.cc) are used.
 
 For installation instructions and additional information, see [/Docs/INSTALL.md](./Docs/INSTALL.md)
 

@@ -20,6 +20,7 @@
 
 #ifdef ENABLE_FALCON
 void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
+void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const double& sigma, const zz_pX& d);
 #endif
 
 void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G);

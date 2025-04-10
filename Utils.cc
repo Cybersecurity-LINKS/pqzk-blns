@@ -28,7 +28,6 @@ ZZX int8ArrayToZZX(const vector<int8_t>& vec)
     {
         SetCoeff(poly, i, ZZ(vec[i]));  // Set coefficient i to vec[i]
     }
-
     return poly;
 }
 
@@ -48,6 +47,56 @@ zz_pX uint16ArrayToZZ_pX(const vector<uint16_t>& vec)
 
     return poly;
 }
+
+//Function: Convert vec_ZZ to std::vector<uint16_t>
+vector<uint16_t> vecZZtoUint16(const vec_ZZ& input) {
+    vector<uint16_t> output;
+    output.reserve(input.length());  // Reserve space for efficiency
+
+    for (long i = 0; i < input.length(); i++) {
+        unsigned int val = conv<unsigned int>(input[i]);  // Convert ZZ to long first
+        //if (val < 0 || val > 65535) {  // Ensure it's within uint16_t range
+        //    throw runtime_error("Value out of range for uint16_t.");
+        //}
+
+        // Extract lower 16 bits only, it doesn't use the 16 higher (2^17>>12289)
+        output.push_back(static_cast<uint16_t>(val & 0xFFFF));
+
+    }
+    return output;
+}
+
+
+
+//Function: Convert zz_X to std::vector<uint8_t>
+vector<uint8_t> convertToUint8(const ZZX& poly) {
+    std::vector<uint8_t> poly_uint8;
+    poly_uint8.resize(d0 + 1);
+    
+    for (long i = 0; i <= d0; i++) {
+        unsigned long coefficient = conv<long>(coeff(poly,i));  // Convert coefficient to long
+        poly_uint8[i] = static_cast<uint8_t>(static_cast<uint8_t>(coefficient + 256) & 0xFF); // Ensure it's uint8_t
+    }
+
+    return poly_uint8;
+}
+
+
+
+// Function to convert an int16_t array to a vec_ZZ
+vec_ZZ int16ToVecZZ(const int16_t* arr, size_t len) {
+    vec_ZZ result;  // Create an empty vec_ZZ
+    result.SetLength(len);  // Set the length to match the input array
+
+    // Convert each element from int16_t to ZZ and store in vec_ZZ
+    for (size_t i = 0; i < len; i++) {
+        result[i] = conv<ZZ>(arr[i]);  // Convert int16_t to ZZ and store in the vec_ZZ
+    }
+
+    return result;
+}
+
+
 #endif
 
 
