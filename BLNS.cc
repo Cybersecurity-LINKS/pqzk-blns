@@ -27,9 +27,9 @@ int main()
 {
     zz_p::init(q0); // Initialize modulus q
     
-    ZZX     f, g, F, G;
+    ZZX             f, g, F, G;
     IPK_t           ipk;
-    unsigned char   crs_seed[SEED_LEN];
+    unsigned char   seed_crs[SEED_LEN];
     Vec<string>     attrs, attrs_prime;
     mat_zz_p        B_f;
     zz_pX           u;
@@ -60,22 +60,8 @@ int main()
         
         cout << "\n- Holder.Init      (initialize common random string and matrices)" << endl;
         ta = GetWallTime();
-
-        // Initialize a 32 byte (256 bit) public seed for common random string (crs) structure,
-        // using the cryptographically strong pseudo-random number generator from NTL
-        RandomStream& RS = GetCurrentRandomStream();
-        RS.get(crs_seed, SEED_LEN);
-        // for(i=0; i<SEED_LEN; i++)
-        // {
-        //     printf("%0x", crs_seed[i]);
-        // }
-        // printf("\n");
-
-        H_Init(crs, attrs, crs_seed);
-
-        // Initialize a random matrix B_f ∈ Z^(d×t)_q
-        B_f = random_mat_zz_p(d0, t0);
-        tb = GetWallTime();        
+        H_Init(crs, B_f, seed_crs, attrs);
+        tb = GetWallTime();
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         
@@ -84,7 +70,7 @@ int main()
         cout << "=====================================================================" << endl;
         ta = GetWallTime();     
         cout << "\n- Holder.VerCred1  (prove knowledge of undisclosed attributes)" << endl;
-        H_VerCred1(u, &Pi, state, crs_seed, crs, ipk, attrs);
+        H_VerCred1(u, &Pi, state, seed_crs, crs, ipk, attrs);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
@@ -100,7 +86,7 @@ int main()
    
         ta = GetWallTime();
         cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
-        I_VerCred(s, w, x, crs_seed, crs, B_f, ipk, f, g, F, G, attrs_prime, u, &Pi);
+        I_VerCred(s, w, x, seed_crs, crs, B_f, ipk, f, g, F, G, attrs_prime, u, &Pi);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
@@ -117,13 +103,13 @@ int main()
         cout << "=====================================================================" << endl;
         ta = GetWallTime();
         cout << "\n- Holder.VerPres   (prove knowledge of signature and attributes)" << endl;
-        H_VerPres(VP, cred, crs_seed, crs, ipk, B_f, attrs);
+        H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         ta = GetWallTime();  
         cout << "\n- Verifier.Verify  (verify proof and authorize)" << endl;
-        valid = V_Verify(VP, crs_seed, crs, B_f);
+        valid = V_Verify(VP, seed_crs, crs, B_f);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 

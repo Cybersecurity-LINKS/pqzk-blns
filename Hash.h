@@ -35,7 +35,7 @@ void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, co
 void Hash_R_goth(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems);
 void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num);
 
-void Hcrs(CRS2_t& crs, const unsigned char* crs_seed);
+void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const unsigned char* seed_crs);
 
 void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0);
 void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0);

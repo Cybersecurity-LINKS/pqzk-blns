@@ -229,21 +229,23 @@ void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num)
 
 //==============================================================================
 // Hcrs    -    H_crs, custom Hash function needed in BLNS for crs. 
-//              It generates the pair of common random string (crs_ISIS, crs_Com).
+//              It generates the pair of common random string (crs_ISIS, crs_Com)
+//              and the random matrix B_f, from the seed seed_crs.
 // 
 // Input:
-// - crs_seed:  initial public seed for crs structure
+// - seed_crs:  initial public seed for crs structure
 //
 // Output:
 // - crs:       structure with the pair (crs_ISIS, crs_Com)
+// - B_f:       random matrix B_f ∈ Z^(d×t)_q
 //==============================================================================
-void Hcrs(CRS2_t& crs, const unsigned char* crs_seed)
+void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const unsigned char* seed_crs)
 {
     long            i, j, n, m1, m2, n256;
     HASH_STATE_t    *state;
     size_t          b_coeffs;
        
-    state = Hash_Init(reinterpret_cast<const uint8_t*>(&crs_seed[0]), SEED_LEN);
+    state = Hash_Init(reinterpret_cast<const uint8_t*>(&seed_crs[0]), SEED_LEN);
 
     // Create the crs structure  
     crs.SetLength(2); 
@@ -430,9 +432,24 @@ void Hcrs(CRS2_t& crs, const unsigned char* crs_seed)
         }
     }
 
+
+    // ###########################  B_f  ######################################### 
+    // NOTE: assuming that current modulus is q0 (not q1/q2_hat)
+
+    // Compute the minimum number of bytes to represent each coefficient
+    b_coeffs = ceil(log2( conv<double>(q0-1) ) / 8.0);
+
+    // Initialize a random matrix B_f ∈ Z^(d×t)_q
+    B_f.SetDims(d0, t0);
+
+    for(i=0; i<d0; i++)
+    {
+        Hash_v_zz_p(B_f[i], state, t0, b_coeffs);
+    }
+
     delete state;
     
-    // return crs;    
+    // return crs, B_f;    
 }
 
 

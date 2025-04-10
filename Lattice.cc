@@ -20,16 +20,16 @@ extern "C" {
 }
 
 //==============================================================================
-// Falcon_keygen - Using Falcon functions, generates a1 and f, g, F, G from parameters d and q
+// Falcon_keygen - Generates a1, f, g, F, G (i.e. B) from parameters d and q.
 //
 // Inputs:
 // - None
 //
 // Outputs:
-// - a1 : polynomial 
-// - f, g, F, G:    Base polynomials used to build Issuer Secret Key, i.e. matrix of integers B (size 2d * 2d)
+// - a1:         polynomial 
+// - f, g, F, G: Base polynomials used to build Issuer Secret Key (i.e. matrix B)
 //
-// NOTE: use the keygen from the Falcon reference implementation.  
+// NOTE: use the keygen function from the Falcon reference implementation.  
 //==============================================================================
 void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 {
@@ -70,22 +70,21 @@ void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
     F = int8ArrayToZZX(vector<int8_t>(F8, F8 + d0));
     G = int8ArrayToZZX(vector<int8_t>(G8, G8 + d0));
 
-
-    // 23. return (a1, f, g, F, G)
+    // return (a1, f, g, F, G)
 }
 
 //==============================================================================
 // Falcon_GSampler - Computes the Gaussian sampling from Falcon implementation
 // Inputs:
-// - h:     part of public key, i.e. polynomial        a_1 ∈ R_q
-// - a:     part of public key, i.e. polynomial vector a_2 ∈ R_q^m
-// - f, g, F, G:    Base polynomials used to build Issuer Secret Key, i.e. matrix of integers B (size 2d * 2d)
-// - sigma: standard deviation  sigma > 0
-// - d:     center (= f(x)+u ), i.e. polynomial  d ∈ R_q
+// - h:          part of public key, i.e. polynomial        a_1 ∈ R_q
+// - a:          part of public key, i.e. polynomial vector a_2 ∈ R_q^m
+// - f, g, F, G: Base polynomials used to build Issuer Secret Key (i.e. matrix B)
+// - sigma:      standard deviation  sigma > 0
+// - d:          center (= f(x)+u ), i.e. polynomial  d ∈ R_q
 //
 // Outputs:  
-// - s:     short vector,       s ∈ Z^(2d)
-// - w:     polynomial vector,  w ∈ R^m
+// - s:          short vector,       s ∈ Z^(2d)
+// - w:          polynomial vector,  w ∈ R^m
 //==============================================================================
 void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const double& sigma, const zz_pX& d)
 {
@@ -209,14 +208,14 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
 
 
 //==============================================================================
-// NTRU_TrapGen - Generates a1 and B from parameters d and q.
+// NTRU_TrapGen - Generates a1, f, g, F, G (i.e. B) from parameters d and q.
 //
 // Inputs:
 // - None
 //
 // Outputs:
-// - a1 : polynomial 
-// - f, g, F, G:    Base polynomials used to build Issuer Secret Key, i.e. matrix of integers B (size 2d * 2d)
+// - a1:         polynomial
+// - f, g, F, G: Base polynomials used to build Issuer Secret Key (i.e. matrix B)
 //
 // NOTE: Algorithm 2 Master Keygen(N, q) at pag. 15 in [DLP14]
 //       equivalent to algorithm NTRU.TrapGen(q, d) in [BLNS23]  
@@ -395,6 +394,10 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
     a1.SetLength(d0);
     inv_f = InvMod( conv<zz_pX>(f), conv<zz_pX>(phi) );
     a1    = ModPhi_q( conv<zz_pX>(g) * inv_f );
+
+    // 22. B ← [rot(g) −rot(f); 
+    //          rot(G) −rot(F)] ∈ Z^(2d×2d)
+    // NOTE: creation of B moved to I_VerCred
 
     // 23. return (a1, f, g, F, G)
 }
