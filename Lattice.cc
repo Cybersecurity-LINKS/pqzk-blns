@@ -75,6 +75,7 @@ void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 
 //==============================================================================
 // Falcon_GSampler - Computes the Gaussian sampling from Falcon implementation
+// 
 // Inputs:
 // - h:          part of public key, i.e. polynomial        a_1 ∈ R_q
 // - a:          part of public key, i.e. polynomial vector a_2 ∈ R_q^m
@@ -92,14 +93,13 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
     ZZX     u;         
     vec_ZZ  c, d_u, v;
     mat_L   R;
-    int16_t s2[d0];
-    int16_t s1[d0];
+    int16_t s1[d0], s2[d0], s_int16[2*d0];
     inner_shake256_context rng;
     uint8_t tmp[78*d0+7];
     uint16_t hm[2*d0];
-    vector <uint16_t> convert_tmp_hm;
+    vector<uint16_t> conv_hm;
     int8_t f8[d0], g8[d0], F8[d0], G8[d0];
-    vector <uint8_t> convert_tmp_f, convert_tmp_g, convert_tmp_F, convert_tmp_G;
+    vector<uint8_t> conv_f, conv_g, conv_F, conv_G;
 
     const ZZ thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
  
@@ -132,6 +132,10 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
         }        
     }
 
+    // 7. A ← [  I_d   ]
+    //        [ rot(h) ] ∈ Z^(2d×d)
+    // NOTE: next steps do not use matrix A
+
     
     // 8. c ← LinearSolve(c*A = d − Coeffs(u)),   c ∈ Z^(2d)
     c.SetLength(2*d0);
@@ -153,16 +157,19 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
     }
 
 
-    // Convert to uint8_t format
-    convert_tmp_f = convertToUint8(f);
-    convert_tmp_g = convertToUint8(g);
-    convert_tmp_F = convertToUint8(F);
-    convert_tmp_G = convertToUint8(G);
-    memcpy(f8, convert_tmp_f.data(), std::min<size_t>(convert_tmp_f.size(), d0));
-    memcpy(g8, convert_tmp_g.data(), std::min<size_t>(convert_tmp_g.size(), d0));
-    memcpy(F8, convert_tmp_F.data(), std::min<size_t>(convert_tmp_F.size(), d0));
-    memcpy(G8, convert_tmp_G.data(), std::min<size_t>(convert_tmp_G.size(), d0));
+    // 9. v ← preGSampler(B, σ, c),   v ∈ Z^(2d)
+    // 10. s ← c − v,   s ∈ Z^(2d)
+    // NOTE: computed using Falcon implementation
 
+    // Convert to uint8_t format
+    conv_f = convertToUint8(f);
+    conv_g = convertToUint8(g);
+    conv_F = convertToUint8(F);
+    conv_G = convertToUint8(G);
+    memcpy(f8, conv_f.data(), min<size_t>(conv_f.size(), d0));
+    memcpy(g8, conv_g.data(), min<size_t>(conv_g.size(), d0));
+    memcpy(F8, conv_F.data(), min<size_t>(conv_F.size(), d0));
+    memcpy(G8, conv_G.data(), min<size_t>(conv_G.size(), d0));
 
     unsigned char seed[20];
     Zf(get_seed)(seed,20);
@@ -171,37 +178,36 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
     inner_shake256_inject(&rng, seed, 20);
     inner_shake256_flip(&rng);
 
-    // hm is an unsigned, in Falcon a polynomial hm mod q0 is passed, but in BLNS c is not mod q0
+    // hm is unsigned, in Falcon a polynomial hm mod q0 is passed, but in BLNS c is not mod q0
     for (long i = 0; i < c.length(); i++) {
         c[i] = c[i] % q0;  // Apply modulus q0 to each element
     }
 
-    convert_tmp_hm = vecZZtoUint16(c); // hm is the c in BLNS
-    memcpy(hm, convert_tmp_hm.data(), std::min<size_t>(convert_tmp_hm.size(), 2*d0) * sizeof(uint16_t));
+    conv_hm = vecZZtoUint16(c); // hm is the c in BLNS
+    memcpy(hm, conv_hm.data(), min<size_t>(conv_hm.size(), 2*d0) * sizeof(uint16_t));
 
-    // The treshold present inside sign_dyn of Falcon is different from the one in BLNS, so it is necessary the while cycle
+    // The treshold present inside sign_dyn of Falcon is different from the one in BLNS, so it is necessary a while cycle
     const ZZ thres_s = (sqr(ZZ(sigma0)))* ZZ(2*d0);
-    valid=0;
+
+    valid = 0;
+
     while(valid == 0) 
     {
         // Check the sigma value of the sampling, in Falcon (the sigma is computed from the secret key) it is different from BLNS (passed from above)
         Zf(sign_dyn)(s2, &rng, f8, g8, F8, G8, hm, log2(d0), tmp);
 
-        memcpy(s1, tmp, d0 * sizeof(int16_t)); // retrieve s1 from the first part of tmp
-        int16_t s_int16_format[2*d0];
-        memcpy(s_int16_format, s1, d0 * sizeof(int16_t));  // Copy the contents of s1 into s
-        memcpy(s_int16_format + d0, s2, d0 * sizeof(int16_t));  // Copy the contents of s2 into the second part of s
-        s = int16ToVecZZ(s_int16_format, 2*d0); // Convert into ZZ type
+        memcpy(s1, tmp, d0 * sizeof(int16_t)); // retrieve s1 from the first part of tmp        
+        memcpy(s_int16, s1, d0 * sizeof(int16_t));  // Copy the contents of s1 into s
+        memcpy(s_int16 + d0, s2, d0 * sizeof(int16_t));  // Copy the contents of s2 into the second part of s
+        s = int16ToVecZZ(s_int16, 2*d0); // Convert into ZZ type
 
         if ( Norm2(s) <=  thres_s ) // BLNS threshold
-            {   
-                valid = 1;
-            }
+        {   
+            valid = 1;
+        }
     }
 
-
     // return (s, w)
-
 }
 
 #endif
@@ -498,8 +504,6 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
     long    i, valid;  
     ZZX     u;         
     vec_ZZ  c, d_u, v;
-    // mat_ZZ  A, Id;
-    // mat_L   R;
 
     const ZZ thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
  
@@ -531,42 +535,10 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
             valid = 1;
         }        
     }
-
     
     // 7. A ← [  I_d   ]
     //        [ rot(h) ] ∈ Z^(2d×d)
-    /*
-    A.SetDims(2*d0, d0);
-    R.SetDims(d0, d0);
-
-    Id.SetDims(d0, d0);    
-    Id = ident_mat_ZZ(d0);
- 
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            A[i][j] = Id[i][j];
-        }
-    }
-
-    Id.kill();
-    
-    // R = rot(h) 
-    rot(R, conv<ZZX>(h)); 
-
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<d0; j++)
-        {
-            A[i+d0][j] = conv<ZZ>( R[i][j] );
-        }
-    }
-
-    R.kill();
-    */
     // NOTE: next steps do not use matrix A
-    
     
     // 8. c ← LinearSolve(c*A = d − Coeffs(u)),   c ∈ Z^(2d)
     c.SetLength(2*d0);
@@ -588,10 +560,10 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
     }
               
            
-    // 9. v ← preGSampler(B, σ, c),   v ∈ Z^(2d)    
+    // 9. v ← preGSampler(B, σ, c),   v ∈ Z^(2d)
     preGSampler(v, B, sigma, c); 
 
-    // 10. s ← c − v,   s ∈ Z^(2d)    
+    // 10. s ← c − v,   s ∈ Z^(2d)
     s.SetLength(2*d0);    
     s = c - v;    
 

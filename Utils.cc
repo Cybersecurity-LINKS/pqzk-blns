@@ -17,10 +17,10 @@
 
 #ifdef ENABLE_FALCON
 //===============================================================
-// This converts a std::vector<int8_t> into an ZZX polynomial.
+// Function to convert a vector<int8_t> into an ZZX polynomial.
 // Convert each int8_t value into ZZ and set it as a coefficient.
 //===============================================================
-ZZX int8ArrayToZZX(const vector<int8_t>& vec) 
+ZZX int8ArrayToZZX(const vector<int8_t>& vec)
 {
     ZZX poly;
 
@@ -32,10 +32,10 @@ ZZX int8ArrayToZZX(const vector<int8_t>& vec)
 }
 
 //=================================================================================
-// This converts std::vector<uint16_t> into zz_pX over a finite field modulo q0.
+// Function to convert vector<uint16_t> into zz_pX over a finite field modulo q0.
 // Convert uint16_t values into zz_p elements and set them as coefficients.
 //=================================================================================
-zz_pX uint16ArrayToZZ_pX(const vector<uint16_t>& vec) 
+zz_pX uint16ArrayToZZ_pX(const vector<uint16_t>& vec)
 {
     // NOTE: assuming that current modulus is q0
     zz_pX poly;
@@ -48,13 +48,18 @@ zz_pX uint16ArrayToZZ_pX(const vector<uint16_t>& vec)
     return poly;
 }
 
-//Function: Convert vec_ZZ to std::vector<uint16_t>
-vector<uint16_t> vecZZtoUint16(const vec_ZZ& input) {
-    vector<uint16_t> output;
+//=================================================================================
+// Function to convert vec_ZZ to vector<uint16_t>.
+//=================================================================================
+vector<uint16_t> vecZZtoUint16(const vec_ZZ& input)
+{
+    unsigned int        val;
+    vector<uint16_t>    output;    
     output.reserve(input.length());  // Reserve space for efficiency
 
-    for (long i = 0; i < input.length(); i++) {
-        unsigned int val = conv<unsigned int>(input[i]);  // Convert ZZ to long first
+    for (long i = 0; i < input.length(); i++)
+    {
+        val = conv<unsigned int>(input[i]);  // Convert ZZ to uint first
         //if (val < 0 || val > 65535) {  // Ensure it's within uint16_t range
         //    throw runtime_error("Value out of range for uint16_t.");
         //}
@@ -66,40 +71,47 @@ vector<uint16_t> vecZZtoUint16(const vec_ZZ& input) {
     return output;
 }
 
-
-
-//Function: Convert zz_X to std::vector<uint8_t>
-vector<uint8_t> convertToUint8(const ZZX& poly) {
-    std::vector<uint8_t> poly_uint8;
+//=================================================================================
+// Function to convert ZZX to vector<uint8_t>.
+//=================================================================================
+vector<uint8_t> convertToUint8(const ZZX& poly)
+{
+    unsigned long   coefficient;
+    vector<uint8_t> poly_uint8;
     poly_uint8.resize(d0 + 1);
     
-    for (long i = 0; i <= d0; i++) {
-        unsigned long coefficient = conv<long>(coeff(poly,i));  // Convert coefficient to long
+    for (long i = 0; i <= d0; i++)
+    {
+        coefficient = conv<long>(coeff(poly,i));  // Convert coefficient to long
         poly_uint8[i] = static_cast<uint8_t>(static_cast<uint8_t>(coefficient + 256) & 0xFF); // Ensure it's uint8_t
     }
 
     return poly_uint8;
 }
 
-
-
-// Function to convert an int16_t array to a vec_ZZ
-vec_ZZ int16ToVecZZ(const int16_t* arr, size_t len) {
+//=================================================================================
+// Function to convert an int16_t array to a vec_ZZ.
+//=================================================================================
+vec_ZZ int16ToVecZZ(const int16_t* arr, size_t len)
+{
     vec_ZZ result;  // Create an empty vec_ZZ
     result.SetLength(len);  // Set the length to match the input array
 
     // Convert each element from int16_t to ZZ and store in vec_ZZ
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++)
+    {
         result[i] = conv<ZZ>(arr[i]);  // Convert int16_t to ZZ and store in the vec_ZZ
     }
 
     return result;
 }
 
-
 #endif
 
 
+//==============================================================================
+// Phi - Function to define phi = X^d0 + 1
+//==============================================================================
 ZZX Phi()
 {
     ZZX phi;
@@ -446,7 +458,7 @@ void CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const unsigned long& l)
 
 //==============================================================================
 // CoeffsHat(x) - For an input polynomial vector x ∈ R_hat^l_(q_hat), 
-//                  it returns the coefficient vector of x, Coeffs(x) ∈ Z^(l*d_hat)_(q_hat)
+//                it returns the coefficient vector of x, Coeffs(x) ∈ Z^(l*d_hat)_(q_hat)
 //==============================================================================
 void CoeffsHat(vec_zz_p& coeffs_x, const vec_zz_pX& x, const unsigned long& l)
 {
@@ -612,7 +624,7 @@ zz_pX   Compute_f(const mat_zz_p& B_f, const ZZ& x)
 
 
 //==============================================================================
-// Computes the squared norm of a vector v of integers, without modulo.
+// Norm2 - Compute the squared norm of a vector v of integers, without modulo.
 //==============================================================================
 ZZ  Norm2(const vec_ZZ& v)
 {
@@ -632,7 +644,7 @@ ZZ  Norm2(const vec_ZZ& v)
 
 
 //==============================================================================
-// Computes the squared norm of a vector v of integers with modulo q.
+// Norm2m - Compute the squared norm of a vector v of integers with modulo q.
 //==============================================================================
 ZZ  Norm2m(const vec_zz_p& v, const long& q)
 {
@@ -662,7 +674,7 @@ ZZ  Norm2m(const vec_zz_p& v, const long& q)
 
 
 //==============================================================================
-// Computes the squared norm of a vector v of polynomials with d coefficients.
+// Norm2X - Compute the squared norm of a vector v of polynomials with d coefficients.
 //==============================================================================
 ZZ  Norm2X(const vec_ZZX& v, const long& d)
 {
@@ -685,8 +697,8 @@ ZZ  Norm2X(const vec_ZZX& v, const long& d)
 
 
 //==============================================================================
-// Computes the squared norm of a vector v of polynomials 
-// with d coefficients with modulo q.
+// Norm2Xm - Compute the squared norm of a vector v of polynomials 
+//           with d coefficients with modulo q.
 //==============================================================================
 ZZ  Norm2Xm(const vec_zz_pX& v, const long& d, const long& q)
 {
@@ -719,7 +731,7 @@ ZZ  Norm2Xm(const vec_zz_pX& v, const long& d, const long& q)
 
 
 //=================================================================================
-// Computes the squared norm of a vector v of doubles.
+// Norm2D - Compute the squared norm of a vector v of doubles.
 //=================================================================================
 double  Norm2D(const vec_D& v)
 {
@@ -738,7 +750,7 @@ double  Norm2D(const vec_D& v)
 
 
 //=================================================================================
-// Computes the inner product of two vectors a & b of doubles.
+// InnerProdD - Compute the inner product of two vectors a & b of doubles.
 //=================================================================================
 double  InnerProdD(const vec_D& a, const vec_D& b)
 {
