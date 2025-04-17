@@ -154,10 +154,9 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
 
     // 7. Bounds ← ( sigma0·√((m + 2)d), ψ·√(h·|idx| + ℓr·d) ),    Bounds ∈ Z^2
     Bounds.SetLength(2);
-    // Bounds[0] = conv<RR>(sigma0) * sqrt(conv<RR>( (m0+2)*d0) );
-    // Bounds[1] = psi0 * sqrt(conv<RR>( idxhlrd ));
-    Bounds[0] = sqr( ZZ(sigma0) ) * ZZ( (m0+2)*d0 );
-    Bounds[1] = sqr( ZZ(psi0)   ) * ZZ( idxhlrd   );
+    Bounds[0] = ZZ(sigma2) * ZZ((m0+2)*d0);
+    Bounds[1] = sqr(ZZ(psi0)) * ZZ(idxhlrd);
+    // NOTE: squared Bounds, values in ZZ
 
 
     // 8. return  Verify^HISIS_ISIS( crs_ISIS, (ˆq2/q·P, ˆq2/q·C, m′, ˆq2/q·Bf, Bounds, idx), VP.pi )

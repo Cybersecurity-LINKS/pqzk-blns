@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Enable or disable Falcon keygen
+# Enable or disable Falcon keygen and GSampler
 USE_FALCON 	= 1
 #USE_FALCON = 0
 

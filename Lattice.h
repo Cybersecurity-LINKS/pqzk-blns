@@ -20,13 +20,13 @@
 
 #ifdef ENABLE_FALCON
 void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
-void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const double& sigma, const zz_pX& d);
+void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const zz_pX& d);
 #endif
 
 void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
 
-void preGSampler(vec_ZZ& v, const mat_L& B, const double& sigma, const vec_ZZ& c);
-void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const mat_L& B, const double& sigma, const zz_pX& d);
+void preGSampler(vec_ZZ& v, const mat_L& B, const vec_ZZ& c);
+void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const mat_L& B, const zz_pX& d);
 
 void ZSampler(ZZ& x, const double& sigma, const double& c);
 void polySampler(ZZX& s, const double& sigma);

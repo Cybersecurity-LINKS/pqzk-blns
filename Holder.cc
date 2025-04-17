@@ -233,7 +233,7 @@ void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char*
     mul = long(q1_hat) / long(q0);
 
     // B_goth = psi0 * sqrt(conv<RR>( idxhlrd ));
-    B_goth2 = sqr( ZZ(psi0)) * ZZ( idxhlrd );
+    B_goth2 = sqr(ZZ(psi0)) * ZZ(idxhlrd); // B_goth^2
 
     {
         zz_pPush push(q1_hat); 
@@ -280,7 +280,7 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
     vec_zz_pX       a2, c0, c1, a;
     vec_ZZX         m, r, s;
     ZZ              acc;
-    RR              norm_s, norm_r, th_s, th_r;
+    ZZ              norm_s, norm_r, th_s, th_r;
 
     // 1. (m, r) ← state,   state ∈ R^(ℓm) × R^(ℓr)
     m = state.m;
@@ -317,11 +317,12 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
   
    
     // 5. if {∥s∥ > sigma0·√((m + 2)d))} ∨ {∥r∥ > ψ·√(ℓr·d)} ∨ {[1|a1|a2^T]*s != f(x) + c0^T*m + c1^T*r}
-    norm_s = sqrt( conv<RR>( Norm2X(s, d0) ) );
-    th_s   = conv<RR>(sigma0) * sqrt(conv<RR>( (m0+2)*d0) );
+    // NOTE: equations in ZZ, with squared norms and thresholds
+    norm_s = Norm2X(s, d0);
+    th_s   = ZZ(sigma2) * ZZ( (m0+2)*d0 );
 
-    norm_r = sqrt( conv<RR>( Norm2X(r, d0) ) );
-    th_r   = conv<RR>(psi0) * sqrt(conv<RR>( lr0*d0 ) );
+    norm_r = Norm2X(r, d0);
+    th_r   = sqr(ZZ(psi0)) * ZZ( lr0*d0 );
 
     // a ← [1|a1|a2^T]
     a.SetLength(m0+2);
@@ -585,10 +586,9 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
 
     // 11. Bounds ← ( sigma0·√((m + 2)d), ψ·√(h·|idx| + ℓr·d) ),    Bounds ∈ Z^2
     Bounds.SetLength(2);
-    // Bounds[0] = conv<RR>(sigma0) * sqrt(conv<RR>( (m0+2)*d0) );
-    // Bounds[1] = psi0 * sqrt(conv<RR>( idxhlrd ));
-    Bounds[0] = sqr( ZZ(sigma0) ) * ZZ( (m0+2)*d0 );
-    Bounds[1] = sqr( ZZ(psi0)   ) * ZZ( idxhlrd   );
+    Bounds[0] = ZZ(sigma2) * ZZ((m0+2)*d0);
+    Bounds[1] = sqr(ZZ(psi0)) * ZZ(idxhlrd);
+    // NOTE: squared Bounds, values in ZZ
 
       
     // 12. VP ← emptyVP()

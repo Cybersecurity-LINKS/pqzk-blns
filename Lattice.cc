@@ -80,14 +80,13 @@ void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 // - h:          part of public key, i.e. polynomial        a_1 ∈ R_q
 // - a:          part of public key, i.e. polynomial vector a_2 ∈ R_q^m
 // - f, g, F, G: Base polynomials used to build Issuer Secret Key (i.e. matrix B)
-// - sigma:      standard deviation  sigma > 0
 // - d:          center (= f(x)+u ), i.e. polynomial  d ∈ R_q
 //
 // Outputs:  
 // - s:          short vector,       s ∈ Z^(2d)
 // - w:          polynomial vector,  w ∈ R^m
 //==============================================================================
-void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const double& sigma, const zz_pX& d)
+void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const zz_pX& d)
 {
     long    i, valid;  
     ZZX     u;         
@@ -101,7 +100,7 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
     int8_t f8[d0], g8[d0], F8[d0], G8[d0];
     vector<uint8_t> conv_f, conv_g, conv_F, conv_G;
 
-    const ZZ thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
+    const ZZ thres_w = ZZ(sigma2) * ZZ(d0*m0);
  
     // NOTE: loop to find a valid w (i.e. small norm, see Holder.VerCred2, row 5)
     valid = 0;
@@ -119,7 +118,7 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
         for(i=0; i<m0; i++)
         {
             // 4. w_i ← polySampler(σ, 0),  w_i ∈ R     
-            polySampler(w[i], sigma);
+            polySampler(w[i], sqrt(sigma2));
 
             // 5. u ← u + w_i * a_i,   u ∈ R            
             u += ModPhi( w[i] * conv<ZZX>( a[i]) );
@@ -187,7 +186,7 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
     memcpy(hm, conv_hm.data(), min<size_t>(conv_hm.size(), 2*d0) * sizeof(uint16_t));
 
     // The treshold present inside sign_dyn of Falcon is different from the one in BLNS, so it is necessary a while cycle
-    const ZZ thres_s = (sqr(ZZ(sigma0)))* ZZ(2*d0);
+    const ZZ thres_s = ZZ(sigma2) * ZZ(2*d0);
 
     valid = 0;
 
@@ -414,7 +413,6 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 //
 // Inputs:
 // - B:     matrix B ∈ Z^(2d×2d)
-// - sigma: standard deviation sigma > 0
 // - c:     center, vector of integers c ∈ Z^(2d)
 //
 // Output:
@@ -425,7 +423,7 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 //       Dimension n in [DLP14] corresponds to 2*d0 in [BLNS23]
 // NOTE: Optimized version, with OGS_Ortho & all double instead of RR.
 //==============================================================================
-void preGSampler(vec_ZZ& v, const mat_L& B, const double& sigma, const vec_ZZ& c)
+void preGSampler(vec_ZZ& v, const mat_L& B, const vec_ZZ& c)
 {
     long    i, valid;
     mat_D   Bt;
@@ -434,7 +432,8 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const double& sigma, const vec_ZZ& c
     double  cpi, spi;
     ZZ      zi;
 
-    const ZZ thres_s = sqr( ZZ(sigma0) ) * ZZ(2*d0);
+    const double sigma = sqrt(sigma2);
+    const ZZ     thres_s = ZZ(sigma2) * ZZ(2*d0);
 
     zibi.SetLength(2*d0);
 
@@ -489,23 +488,22 @@ void preGSampler(vec_ZZ& v, const mat_L& B, const double& sigma, const vec_ZZ& c
 //==============================================================================
 // GSampler - Computes the Gaussian sampling 
 // Inputs:
-// - h:     part of public key, i.e. polynomial        a_1 ∈ R_q
-// - a:     part of public key, i.e. polynomial vector a_2 ∈ R_q^m
-// - B:     secret key,         i.e. matrix            B   ∈ Z^(2d×2d)
-// - sigma: standard deviation  sigma > 0
-// - d:     center (= f(x)+u ), i.e. polynomial  d ∈ R_q
+// - h:      part of public key, i.e. polynomial        a_1 ∈ R_q
+// - a:      part of public key, i.e. polynomial vector a_2 ∈ R_q^m
+// - B:      secret key,         i.e. matrix            B   ∈ Z^(2d×2d)
+// - d:      center (= f(x)+u ), i.e. polynomial  d ∈ R_q
 //
 // Outputs:  
-// - s:     short vector,       s ∈ Z^(2d)
-// - w:     polynomial vector,  w ∈ R^m
+// - s:      short vector,       s ∈ Z^(2d)
+// - w:      polynomial vector,  w ∈ R^m
 //==============================================================================
-void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const mat_L& B, const double& sigma, const zz_pX& d)
+void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const mat_L& B, const zz_pX& d)
 {
     long    i, valid;  
     ZZX     u;         
     vec_ZZ  c, d_u, v;
 
-    const ZZ thres_w = sqr( ZZ(sigma0) ) * ZZ(d0*m0);             
+    const ZZ thres_w = ZZ(sigma2) * ZZ(d0*m0);
  
     // NOTE: loop to find a valid w (i.e. small norm, see Holder.VerCred2, row 5)
     valid = 0;
@@ -523,7 +521,7 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
         for(i=0; i<m0; i++)
         {
             // 4. w_i ← polySampler(σ, 0),  w_i ∈ R     
-            polySampler(w[i], sigma);
+            polySampler(w[i], sqrt(sigma2));
 
             // 5. u ← u + w_i * a_i,   u ∈ R            
             u += ModPhi( w[i] * conv<ZZX>( a[i]) );
@@ -561,7 +559,7 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
               
            
     // 9. v ← preGSampler(B, σ, c),   v ∈ Z^(2d)
-    preGSampler(v, B, sigma, c); 
+    preGSampler(v, B, c);
 
     // 10. s ← c − v,   s ∈ Z^(2d)
     s.SetLength(2*d0);    

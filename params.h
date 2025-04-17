@@ -40,7 +40,8 @@ typedef Mat<long>   mat_L;
 #define lambda0 128             // λ, security level 
 #define q0      12289           // q, modulus (positive integer)
 #define d0      512             // d, degree of the cyclotomic ring R
-#define sigma0  165.736617183   // \mathfrak{s}, preimages are sampled from D_(s)^{(m+2)d}
+//#define sigma0 165.736617183  // \mathfrak{s}, standard deviation  NOTE: preimages are sampled from D_(s)^{(m+2)d}
+#define sigma2  27468           // sigma2 = floor((sigma0)^2), truncated squared standard deviation (i.e. variance)
 #define N0      (ZZ(1)<<t0)     // N,   domain size of the function f
 #define h0      64              // h,   length of the string output by H_M
 #define psi0    3               // ψ,   infinity norm of r and the output of H_M

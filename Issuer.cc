@@ -210,7 +210,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     mul = long(q1_hat) / long(q0);
     
     // B_goth = psi0 * sqrt(conv<RR>( idxhlrd ));    
-    B_goth2 = sqr( ZZ(psi0)) * ZZ( idxhlrd );
+    B_goth2 = sqr(ZZ(psi0)) * ZZ(idxhlrd); // B_goth^2
     
     {
         zz_pPush push(q1_hat); 
@@ -245,7 +245,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     
     #ifdef ENABLE_FALCON
 
-        Falcon_GSampler(s_0, w, ipk.a1, ipk.a2, f, g, F, G, sigma0, fx_u);
+        Falcon_GSampler(s_0, w, ipk.a1, ipk.a2, f, g, F, G, fx_u);
 
     #else
 
@@ -299,7 +299,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
         A.kill();
 
         // Gaussian sampling  
-        GSampler(s_0, w, ipk.a1, ipk.a2, B, sigma0, fx_u);
+        GSampler(s_0, w, ipk.a1, ipk.a2, B, fx_u);
 
         B.kill();
             
