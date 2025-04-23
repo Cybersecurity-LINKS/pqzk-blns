@@ -125,7 +125,7 @@ void deserialize_minbyte_mat_zz_p(mat_zz_p& m, const long r, const long c, const
                     elem |= (static_cast<long>(v[n++])) << (8 * k);
                 }
             }
-            m[i][j] = conv<zz_p>(elem);
+            m[i][j] = elem;
         }
     }
 
@@ -179,7 +179,7 @@ void deserialize_minbits_mat_zz_p(mat_zz_p& m, const long r, const long c, const
     m.SetDims(r, c);
     for (i = 0; i < r; i++) {
         for (j = 0; j < c; j++) {
-            m[i][j] = conv<zz_p>(vf[k++]);
+            m[i][j] = vf[k++];
         }
     }
     delete[] vf;
@@ -304,25 +304,22 @@ void deserialize_minbyte_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d
     long i, j, elem;
     int k, blk;
     size_t o;
-    zz_p c;
 
     o = 0;
     blk = (nbits + 7) / 8;
     p.SetLength(n);
-    for(i = 0; i < n; ++i) {
-        zz_pX poly;
-        poly.SetLength(d);
+    for(i = 0; i < n; ++i) { 
+        p[i].SetLength(d);       
         for(j = 0; j < d; ++j) {
             elem = 0;
             for(k = 0; k < blk; ++k) {
                 if (o < s) {
                     elem |= (static_cast<long>(v[o++])) << (8 * k);
-                    c = conv<zz_p>(elem);
-                    poly[j] = c;
                 }
             }
-            p[i] = poly;
+            p[i][j] = elem;
         }
+        p[i].normalize();
     }
 }
 
@@ -346,7 +343,6 @@ void deserialize_minbyte_poly_zz_pX(zz_pX& p, const long d, const int nbits, con
     long i, elem;
     int k, blk;
     size_t o;
-    zz_p c;
 
     o = 0;
     blk = (nbits + 7) / 8;
@@ -356,11 +352,11 @@ void deserialize_minbyte_poly_zz_pX(zz_pX& p, const long d, const int nbits, con
         for(k = 0; k < blk; ++k) {
             if (o < s) {
                 elem |= (static_cast<long>(v[o++])) << (8 * k);
-                c = conv<zz_p>(elem);
-                p[i] = c;
             }
         }
+        p[i] = elem;
     }
+    p.normalize();
 }
 
 
@@ -394,7 +390,7 @@ void deserialize_minbyte_vec_zz_p(vec_zz_p& p, const long l, const int nbits, co
                 elem |= (static_cast<long>(v[n++])) << (8 * k);
             }
         }
-        p[i] = conv<zz_p>(elem);
+        p[i] = elem;
     }
 }
 
