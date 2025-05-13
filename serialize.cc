@@ -283,6 +283,7 @@ void deserialize_ZZ(ZZ& p, const uint8_t* v, const size_t s) {
 }
 
 
+// serialize/deserialize functions for vec_zz_pX, minimum number of bytes per element
 void serialize_minbyte_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, const long d, const int nbits, const vec_zz_pX& p) {
     long i, j, c;
     int k, blk;
@@ -324,6 +325,7 @@ void deserialize_minbyte_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d
 }
 
 
+// serialize/deserialize functions for zz_pX, minimum number of bytes per element
 void serialize_minbyte_poly_zz_pX(uint8_t* v, const size_t s, const long d, const int nbits, const zz_pX& p) {
     long i, c;
     int k, blk;
@@ -360,6 +362,7 @@ void deserialize_minbyte_poly_zz_pX(zz_pX& p, const long d, const int nbits, con
 }
 
 
+// serialize/deserialize functions for vec_zz_p, minimum number of bytes per element
 void serialize_minbyte_vec_zz_p(uint8_t* v, const size_t s, const long l, const int nbits, const vec_zz_p& p) {
     long i, elem;
     int k, blk;
@@ -395,6 +398,7 @@ void deserialize_minbyte_vec_zz_p(vec_zz_p& p, const long l, const int nbits, co
 }
 
 
+// serialize/deserialize functions for vec_ZZ, minimum number of bytes per element
 void serialize_minbyte_vec_ZZ(uint8_t* v, const size_t s, const long l, const int nbits, const vec_ZZ& p) {
     long i, elem;
     int k, blk;

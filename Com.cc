@@ -141,6 +141,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     const unsigned long d_d_hat     = (d0/d_hat);
     const unsigned long n256        = (256/d_hat);
     const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau0);
+    const int           nbits       = ceil(log2(conv<double>(q1_hat-1)));
 
     // Initialise the "goth" constants
     const RR  B_goth = sqrt(conv<RR>(B_goth2));
@@ -269,12 +270,12 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
 
     // Initialize the custom Hash function
     // NOTE: using seed_crs, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init        
-    // len_seed  = SEED_LEN;                        // uchar*    - 32 bytes
-    len_c0       = calc_ser_size_vec_poly(lm0, d0); // vec_zz_pX - 4096  bytes
-    len_c1       = calc_ser_size_vec_poly(lr0, d0); // vec_zz_pX - 8192  bytes
-    len_idx_hid  = 1;                               // uint8     - 1     byte
-    len_u0       = calc_ser_size_vec_zz_p(d0);      // vec_zz_p  - 4096 bytes
-    len_B_goth2  = calc_ser_size_ZZ();              // ZZ (long) - 8 bytes
+    // len_seed  = SEED_LEN;                                        // uchar*    - 32 bytes
+    len_c0       = calc_ser_size_vec_poly_minbyte(lm0, d0, nbits);  // vec_zz_pX
+    len_c1       = calc_ser_size_vec_poly_minbyte(lr0, d0, nbits);  // vec_zz_pX
+    len_idx_hid  = 1;                                               // uint8     - 1 byte
+    len_u0       = calc_ser_size_vec_zz_p_minbyte(d0, nbits);       // vec_zz_p
+    len_B_goth2  = calc_ser_size_ZZ();                              // ZZ (long) - 8 bytes
     // cout << "  Size Hash_Init: " << (SEED_LEN + len_c0 + len_c1 + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
 
     lengths = {SEED_LEN, len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2};
@@ -282,13 +283,13 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     buffer = new uint8_t[max_len]; 
 
     state0 = Hash_Init(reinterpret_cast<const uint8_t*>(&seed_crs[0]), SEED_LEN);
-    serialize_vec_poly_zz_pX(buffer, len_c0, lm0,  d0, ipk.c0);
+    serialize_minbyte_vec_poly_zz_pX(buffer, len_c0, lm0, d0, nbits, ipk.c0);
     Hash_Update(state0, buffer, len_c0);
-    serialize_vec_poly_zz_pX(buffer, len_c1, lr0,  d0, ipk.c1);
+    serialize_minbyte_vec_poly_zz_pX(buffer, len_c1, lr0, d0, nbits, ipk.c1);
     Hash_Update(state0, buffer, len_c1);
     buffer[0] = (uint8_t)(idx_hid);
     Hash_Update(state0, buffer, len_idx_hid);
-    serialize_vec_zz_p(buffer, len_u0, d0, u0);
+    serialize_minbyte_vec_zz_p(buffer, len_u0, d0, nbits, u0);
     Hash_Update(state0, buffer, len_u0);
     serialize_ZZ(buffer, len_B_goth2, B_goth2);
     Hash_Update(state0, buffer, len_B_goth2);
@@ -296,33 +297,33 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     delete[] buffer;
 
     // Compute the number of bytes for each component of the proof Pi
-    len_valid = 1;                                      // uint8     - 1 byte
-    len_t_A = calc_ser_size_vec_poly(n, d_hat);         // vec_zz_pX - 8704 bytes
-    len_t_y = calc_ser_size_vec_poly(n256, d_hat);      // vec_zz_pX - 2048 bytes
-    len_t_g = calc_ser_size_vec_poly(tau0, d_hat);      // vec_zz_pX - 4096 bytes
-    len_w   = calc_ser_size_vec_poly(n, d_hat);         // vec_zz_pX - 8704 bytes
-    len_com1_t1 = calc_ser_size_vec_poly(m1, d_hat);    // vec_zz_pX - 10752 bytes
-    len_com1_t2 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
-    len_com1_w1 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
-    len_com1_w2 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
-    len_com2_t1 = calc_ser_size_vec_poly(m2, d_hat);    // vec_zz_pX - 28160 bytes
-    len_com2_t2 = len_com2_t1;                          // vec_zz_pX - 28160 bytes
-    len_com2_w1 = len_com2_t1;                          // vec_zz_pX - 28160 bytes
-    len_com2_w2 = len_com2_t1;                          // vec_zz_pX - 28160 bytes   
-    len_z_3 = calc_ser_size_vec_zz_p(256);              // vec_zz_p  - 2048 bytes    
-    len_h   = calc_ser_size_vec_poly(tau0, d_hat);      // vec_zz_pX - 4096 bytes
-    len_t   = calc_ser_size_poly(d_hat);                // zz_pX     - 512 bytes
-    len_f0  = calc_ser_size_poly(d_hat);                // zz_pX     - 512 bytes    
-    len_z_1 = calc_ser_size_vec_poly(m1, d_hat);        // vec_zz_pX - 10752 bytes
-    len_z_2 = calc_ser_size_vec_poly(m2, d_hat);        // vec_zz_pX - 28160 bytes
-    len_op1_z1 = calc_ser_size_vec_poly(n_i, d_hat);    // vec_zz_pX - 14336 bytes
-    len_op1_z2 = calc_ser_size_vec_poly(m1, d_hat);     // vec_zz_pX - 10752 bytes
-    len_op1_z3 = calc_ser_size_vec_poly(m1, d_hat);     // vec_zz_pX - 10752 bytes
-    len_op1_valid = 1;                                  // uint8     - 1 byte
-    len_op2_z1 = calc_ser_size_vec_poly(n_i, d_hat);    // vec_zz_pX - 14336 bytes
-    len_op2_z2 = calc_ser_size_vec_poly(m2, d_hat);     // vec_zz_pX - 28160 bytes
-    len_op2_z3 = calc_ser_size_vec_poly(m2, d_hat);     // vec_zz_pX - 28160 bytes
-    len_op2_valid = 1;                                  // uint8     - 1 byte
+    len_valid = 1;                                                  // uint8     - 1 byte
+    len_t_A = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);      // vec_zz_pX
+    len_t_y = calc_ser_size_vec_poly_minbyte(n256, d_hat, nbits);   // vec_zz_pX 
+    len_t_g = calc_ser_size_vec_poly_minbyte(tau0, d_hat, nbits);   // vec_zz_pX
+    len_w   = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);      // vec_zz_pX
+    len_com1_t1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits); // vec_zz_pX
+    len_com1_t2 = len_com1_t1;                                      // vec_zz_pX
+    len_com1_w1 = len_com1_t1;                                      // vec_zz_pX
+    len_com1_w2 = len_com1_t1;                                      // vec_zz_pX
+    len_com2_t1 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits); // vec_zz_pX
+    len_com2_t2 = len_com2_t1;                                      // vec_zz_pX
+    len_com2_w1 = len_com2_t1;                                      // vec_zz_pX
+    len_com2_w2 = len_com2_t1;                                      // vec_zz_pX   
+    len_z_3 = calc_ser_size_vec_zz_p_minbyte(256, nbits);           // vec_zz_p     
+    len_h   = calc_ser_size_vec_poly_minbyte(tau0, d_hat, nbits);   // vec_zz_pX
+    len_t   = calc_ser_size_poly_minbyte(d_hat, nbits);             // zz_pX    
+    len_f0  = calc_ser_size_poly_minbyte(d_hat, nbits);             // zz_pX        
+    len_z_1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);     // vec_zz_pX
+    len_z_2 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);     // vec_zz_pX
+    len_op1_z1 = calc_ser_size_vec_poly_minbyte(n_i, d_hat, nbits); // vec_zz_pX
+    len_op1_z2 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);  // vec_zz_pX
+    len_op1_z3 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);  // vec_zz_pX
+    len_op1_valid = 1;                                              // uint8     - 1 byte
+    len_op2_z1 = calc_ser_size_vec_poly_minbyte(n_i, d_hat, nbits); // vec_zz_pX
+    len_op2_z2 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);  // vec_zz_pX
+    len_op2_z3 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);  // vec_zz_pX
+    len_op2_valid = 1;                                              // uint8     - 1 byte
 
     len_Pi =    len_valid + len_t_A + len_t_y + len_t_g + len_w +         
                 len_com1_t1 + len_com1_t2 + len_com1_w1 + len_com1_w2 + 
@@ -443,40 +444,40 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         Pi_bytes += len_valid;
 
         // Serialize and Hash (t_A, t_y, t_g, w, com_1, com_2) in the proof Pi
-        serialize_vec_poly_zz_pX(Pi_bytes, len_t_A, n, d_hat, Pi.t_A);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_A, n, d_hat, nbits, Pi.t_A);
         Hash_Update(state, Pi_bytes, len_t_A);
         Pi_bytes += len_t_A;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_t_y, n256, d_hat, Pi.t_y);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_y, n256, d_hat, nbits, Pi.t_y);
         Hash_Update(state, Pi_bytes, len_t_y);
         Pi_bytes += len_t_y;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_t_g, tau0, d_hat, Pi.t_g);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_g, tau0, d_hat, nbits, Pi.t_g);
         Hash_Update(state, Pi_bytes, len_t_g);
         Pi_bytes += len_t_g;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_w, n, d_hat, Pi.w);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_w, n, d_hat, nbits, Pi.w);
         Hash_Update(state, Pi_bytes, len_w);
         Pi_bytes += len_w;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_com1_t1, m1, d_hat, Pi.com_1.t_1);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_com1_t1, m1, d_hat, nbits, Pi.com_1.t_1);
         Hash_Update(state, Pi_bytes, len_com1_t1);
         Pi_bytes += len_com1_t1;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_com1_t2, m1, d_hat, Pi.com_1.t_2);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_com1_t2, m1, d_hat, nbits, Pi.com_1.t_2);
         Hash_Update(state, Pi_bytes, len_com1_t2);
         Pi_bytes += len_com1_t2;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_com1_w1, m1, d_hat, Pi.com_1.w_1);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_com1_w1, m1, d_hat, nbits, Pi.com_1.w_1);
         Hash_Update(state, Pi_bytes, len_com1_w1);
         Pi_bytes += len_com1_w1;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_com1_w2, m1, d_hat, Pi.com_1.w_2);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_com1_w2, m1, d_hat, nbits, Pi.com_1.w_2);
         Hash_Update(state, Pi_bytes, len_com1_w2);
         Pi_bytes += len_com1_w2;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_com2_t1, m2, d_hat, Pi.com_2.t_1);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_com2_t1, m2, d_hat, nbits, Pi.com_2.t_1);
         Hash_Update(state, Pi_bytes, len_com2_t1);
         Pi_bytes += len_com2_t1;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_com2_t2, m2, d_hat, Pi.com_2.t_2);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_com2_t2, m2, d_hat, nbits, Pi.com_2.t_2);
         Hash_Update(state, Pi_bytes, len_com2_t2);
         Pi_bytes += len_com2_t2;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_com2_w1, m2, d_hat, Pi.com_2.w_1);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_com2_w1, m2, d_hat, nbits, Pi.com_2.w_1);
         Hash_Update(state, Pi_bytes, len_com2_w1);
         Pi_bytes += len_com2_w1;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_com2_w2, m2, d_hat, Pi.com_2.w_2);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_com2_w2, m2, d_hat, nbits, Pi.com_2.w_2);
         Hash_Update(state, Pi_bytes, len_com2_w2);
         Pi_bytes += len_com2_w2;
         
@@ -514,7 +515,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         }
         
         // 25. a2 ← z_3,   a2 ∈ Z^256_(q_hat)
-        serialize_vec_zz_p(Pi_bytes, len_z_3, 256, Pi.z_3);
+        serialize_minbyte_vec_zz_p(Pi_bytes, len_z_3, 256, nbits, Pi.z_3);
         Hash_Update(state, Pi_bytes, len_z_3);
         Pi_bytes += len_z_3;
 
@@ -560,7 +561,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         }
 
         // 30. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)
-        serialize_vec_poly_zz_pX(Pi_bytes, len_h, tau0, d_hat, Pi.h);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_h, tau0, d_hat, nbits, Pi.h);
         Hash_Update(state, Pi_bytes, len_h);
         Pi_bytes += len_h;
 
@@ -763,10 +764,10 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
 
         // 39. a_4 ← (t, f0),   a_4 ∈ R^^2_(q_hat)
-        serialize_poly_zz_pX(Pi_bytes, len_t, d_hat, Pi.t);
+        serialize_minbyte_poly_zz_pX(Pi_bytes, len_t, d_hat, nbits, Pi.t);
         Hash_Update(state, Pi_bytes, len_t);
         Pi_bytes += len_t;
-        serialize_poly_zz_pX(Pi_bytes, len_f0, d_hat, Pi.f0);
+        serialize_minbyte_poly_zz_pX(Pi_bytes, len_f0, d_hat, nbits, Pi.f0);
         Hash_Update(state, Pi_bytes, len_f0);
         Pi_bytes += len_f0;
 
@@ -860,23 +861,23 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     if (rst == 1)
     {
         // Serialize (z_1, z_2, op_1, op_2) in bytes at the end of the proof Pi
-        serialize_vec_poly_zz_pX(Pi_bytes, len_z_1, m1, d_hat, Pi.z_1);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_z_1, m1, d_hat, nbits, Pi.z_1);
         Pi_bytes += len_z_1;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_z_2, m2, d_hat, Pi.z_2);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_z_2, m2, d_hat, nbits, Pi.z_2);
         Pi_bytes += len_z_2;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_op1_z1, n_i, d_hat, Pi.op_1.z_1);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_op1_z1, n_i, d_hat, nbits, Pi.op_1.z_1);
         Pi_bytes += len_op1_z1;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_op1_z2, m1, d_hat, Pi.op_1.z_2);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_op1_z2, m1, d_hat, nbits, Pi.op_1.z_2);
         Pi_bytes += len_op1_z2;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_op1_z3, m1, d_hat, Pi.op_1.z_3);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_op1_z3, m1, d_hat, nbits, Pi.op_1.z_3);
         Pi_bytes += len_op1_z3;
         Pi_bytes[0] = Pi.op_1.valid;
         Pi_bytes += len_op1_valid;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_op2_z1, n_i, d_hat, Pi.op_2.z_1);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_op2_z1, n_i, d_hat, nbits, Pi.op_2.z_1);
         Pi_bytes += len_op2_z1;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_op2_z2, m2, d_hat, Pi.op_2.z_2);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_op2_z2, m2, d_hat, nbits, Pi.op_2.z_2);
         Pi_bytes += len_op2_z2;
-        serialize_vec_poly_zz_pX(Pi_bytes, len_op2_z3, m2, d_hat, Pi.op_2.z_3);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_op2_z3, m2, d_hat, nbits, Pi.op_2.z_3);
         Pi_bytes += len_op2_z3;
         Pi_bytes[0] = Pi.op_2.valid;
         // Pi_bytes += len_op2_valid;
@@ -945,6 +946,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     const unsigned long d_d_hat     = (d0/d_hat);
     const unsigned long n256        = (256/d_hat);
     const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau0);
+    const int           nbits       = ceil(log2(conv<double>(q1_hat-1)));
 
     // Initialise the "goth" constants
     // NOTE: all values are squared, to avoid sqrt and floating points
@@ -976,12 +978,12 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     
     // Initialize the custom Hash function with (crs, x)
     // NOTE: using seed_crs, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init        
-    // len_seed  = SEED_LEN;                        // uchar*    - 32 bytes
-    len_c0       = calc_ser_size_vec_poly(lm0, d0); // vec_zz_pX - 4096  bytes
-    len_c1       = calc_ser_size_vec_poly(lr0, d0); // vec_zz_pX - 8192  bytes
-    len_idx_hid  = 1;                               // uint8     - 1     byte
-    len_u0       = calc_ser_size_vec_zz_p(d0);      // vec_zz_p  - 4096 bytes
-    len_B_goth2  = calc_ser_size_ZZ();              // ZZ (long) - 8 bytes
+    // len_seed  = SEED_LEN;                                        // uchar*    - 32 bytes
+    len_c0       = calc_ser_size_vec_poly_minbyte(lm0, d0, nbits);  // vec_zz_pX
+    len_c1       = calc_ser_size_vec_poly_minbyte(lr0, d0, nbits);  // vec_zz_pX
+    len_idx_hid  = 1;                                               // uint8     - 1 byte
+    len_u0       = calc_ser_size_vec_zz_p_minbyte(d0, nbits);       // vec_zz_p
+    len_B_goth2  = calc_ser_size_ZZ();                              // ZZ (long) - 8 bytes
     // cout << "  Size Hash_Init: " << (SEED_LEN + len_c0 + len_c1 + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
 
     lengths = {SEED_LEN, len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2};
@@ -989,13 +991,13 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     buffer = new uint8_t[max_len]; 
 
     state = Hash_Init(reinterpret_cast<const uint8_t*>(&seed_crs[0]), SEED_LEN);
-    serialize_vec_poly_zz_pX(buffer, len_c0, lm0,  d0, ipk.c0);
+    serialize_minbyte_vec_poly_zz_pX(buffer, len_c0, lm0, d0, nbits, ipk.c0);
     Hash_Update(state, buffer, len_c0);
-    serialize_vec_poly_zz_pX(buffer, len_c1, lr0,  d0, ipk.c1);
+    serialize_minbyte_vec_poly_zz_pX(buffer, len_c1, lr0, d0, nbits, ipk.c1);
     Hash_Update(state, buffer, len_c1);
     buffer[0] = (uint8_t)(idx_hid);
     Hash_Update(state, buffer, len_idx_hid);
-    serialize_vec_zz_p(buffer, len_u0, d0, u0);
+    serialize_minbyte_vec_zz_p(buffer, len_u0, d0, nbits, u0);
     Hash_Update(state, buffer, len_u0);
     serialize_ZZ(buffer, len_B_goth2, B_goth2);
     Hash_Update(state, buffer, len_B_goth2);
@@ -1006,36 +1008,36 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     // 3. P ← [P1,  0_(d × d_hat)],   P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)    
     // NOTE: zero padding of P already done in I_VerCred
 
-    // 4. (t_A, t_y, t_g, w, com1, com2, z_3, h, t, f0, z_1, z_2, op1, op2) ← π   
-        
+    // 4. (t_A, t_y, t_g, w, com1, com2, z_3, h, t, f0, z_1, z_2, op1, op2) ← π
+
     // Compute the number of bytes for each component of the proof Pi
-    len_valid = 1;                                      // uint8     - 1 byte
-    len_t_A = calc_ser_size_vec_poly(n, d_hat);         // vec_zz_pX - 8704 bytes
-    len_t_y = calc_ser_size_vec_poly(n256, d_hat);      // vec_zz_pX - 2048 bytes
-    len_t_g = calc_ser_size_vec_poly(tau0, d_hat);      // vec_zz_pX - 4096 bytes
-    len_w   = calc_ser_size_vec_poly(n, d_hat);         // vec_zz_pX - 8704 bytes
-    len_com1_t1 = calc_ser_size_vec_poly(m1, d_hat);    // vec_zz_pX - 10752 bytes
-    len_com1_t2 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
-    len_com1_w1 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
-    len_com1_w2 = len_com1_t1;                          // vec_zz_pX - 10752 bytes
-    len_com2_t1 = calc_ser_size_vec_poly(m2, d_hat);    // vec_zz_pX - 28160 bytes
-    len_com2_t2 = len_com2_t1;                          // vec_zz_pX - 28160 bytes
-    len_com2_w1 = len_com2_t1;                          // vec_zz_pX - 28160 bytes
-    len_com2_w2 = len_com2_t1;                          // vec_zz_pX - 28160 bytes   
-    len_z_3 = calc_ser_size_vec_zz_p(256);              // vec_zz_p  - 2048 bytes    
-    len_h   = calc_ser_size_vec_poly(tau0, d_hat);      // vec_zz_pX - 4096 bytes
-    len_t   = calc_ser_size_poly(d_hat);                // zz_pX     - 512 bytes
-    len_f0  = calc_ser_size_poly(d_hat);                // zz_pX     - 512 bytes    
-    len_z_1 = calc_ser_size_vec_poly(m1, d_hat);        // vec_zz_pX - 10752 bytes
-    len_z_2 = calc_ser_size_vec_poly(m2, d_hat);        // vec_zz_pX - 28160 bytes
-    len_op1_z1 = calc_ser_size_vec_poly(n_i, d_hat);    // vec_zz_pX - 14336 bytes
-    len_op1_z2 = calc_ser_size_vec_poly(m1, d_hat);     // vec_zz_pX - 10752 bytes
-    len_op1_z3 = calc_ser_size_vec_poly(m1, d_hat);     // vec_zz_pX - 10752 bytes
-    len_op1_valid = 1;                                  // uint8     - 1 byte
-    len_op2_z1 = calc_ser_size_vec_poly(n_i, d_hat);    // vec_zz_pX - 14336 bytes
-    len_op2_z2 = calc_ser_size_vec_poly(m2, d_hat);     // vec_zz_pX - 28160 bytes
-    len_op2_z3 = calc_ser_size_vec_poly(m2, d_hat);     // vec_zz_pX - 28160 bytes
-    len_op2_valid = 1;                                  // uint8     - 1 byte
+    len_valid = 1;                                                  // uint8     - 1 byte
+    len_t_A = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);      // vec_zz_pX
+    len_t_y = calc_ser_size_vec_poly_minbyte(n256, d_hat, nbits);   // vec_zz_pX 
+    len_t_g = calc_ser_size_vec_poly_minbyte(tau0, d_hat, nbits);   // vec_zz_pX
+    len_w   = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);      // vec_zz_pX
+    len_com1_t1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits); // vec_zz_pX
+    len_com1_t2 = len_com1_t1;                                      // vec_zz_pX
+    len_com1_w1 = len_com1_t1;                                      // vec_zz_pX
+    len_com1_w2 = len_com1_t1;                                      // vec_zz_pX
+    len_com2_t1 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits); // vec_zz_pX
+    len_com2_t2 = len_com2_t1;                                      // vec_zz_pX
+    len_com2_w1 = len_com2_t1;                                      // vec_zz_pX
+    len_com2_w2 = len_com2_t1;                                      // vec_zz_pX   
+    len_z_3 = calc_ser_size_vec_zz_p_minbyte(256, nbits);           // vec_zz_p     
+    len_h   = calc_ser_size_vec_poly_minbyte(tau0, d_hat, nbits);   // vec_zz_pX
+    len_t   = calc_ser_size_poly_minbyte(d_hat, nbits);             // zz_pX    
+    len_f0  = calc_ser_size_poly_minbyte(d_hat, nbits);             // zz_pX        
+    len_z_1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);     // vec_zz_pX
+    len_z_2 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);     // vec_zz_pX
+    len_op1_z1 = calc_ser_size_vec_poly_minbyte(n_i, d_hat, nbits); // vec_zz_pX
+    len_op1_z2 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);  // vec_zz_pX
+    len_op1_z3 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);  // vec_zz_pX
+    len_op1_valid = 1;                                              // uint8     - 1 byte
+    len_op2_z1 = calc_ser_size_vec_poly_minbyte(n_i, d_hat, nbits); // vec_zz_pX
+    len_op2_z2 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);  // vec_zz_pX
+    len_op2_z3 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);  // vec_zz_pX
+    len_op2_valid = 1;                                              // uint8     - 1 byte
 
     // len_Pi =    len_valid + len_t_A + len_t_y + len_t_g + len_w +         
     //             len_com1_t1 + len_com1_t2 + len_com1_w1 + len_com1_w2 + 
@@ -1057,55 +1059,55 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
         return 0;
     }
     
-    deserialize_vec_poly_zz_pX(Pi.t_A, n, d_hat, Pi_bytes, len_t_A);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.t_A, n, d_hat, nbits, Pi_bytes, len_t_A);
     Pi_bytes += len_t_A;
-    deserialize_vec_poly_zz_pX(Pi.t_y, n256, d_hat, Pi_bytes, len_t_y);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.t_y, n256, d_hat, nbits, Pi_bytes, len_t_y);
     Pi_bytes += len_t_y;
-    deserialize_vec_poly_zz_pX(Pi.t_g, tau0, d_hat, Pi_bytes, len_t_g);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.t_g, tau0, d_hat, nbits, Pi_bytes, len_t_g);
     Pi_bytes += len_t_g;
-    deserialize_vec_poly_zz_pX(Pi.w, n, d_hat, Pi_bytes, len_w);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.w, n, d_hat, nbits, Pi_bytes, len_w);
     Pi_bytes += len_w;
-    deserialize_vec_poly_zz_pX(Pi.com_1.t_1, m1, d_hat, Pi_bytes, len_com1_t1);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.com_1.t_1, m1, d_hat, nbits, Pi_bytes, len_com1_t1);
     Pi_bytes += len_com1_t1;
-    deserialize_vec_poly_zz_pX(Pi.com_1.t_2, m1, d_hat, Pi_bytes, len_com1_t2);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.com_1.t_2, m1, d_hat, nbits, Pi_bytes, len_com1_t2);
     Pi_bytes += len_com1_t2;
-    deserialize_vec_poly_zz_pX(Pi.com_1.w_1, m1, d_hat, Pi_bytes, len_com1_w1);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.com_1.w_1, m1, d_hat, nbits, Pi_bytes, len_com1_w1);
     Pi_bytes += len_com1_w1;
-    deserialize_vec_poly_zz_pX(Pi.com_1.w_2, m1, d_hat, Pi_bytes, len_com1_w2);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.com_1.w_2, m1, d_hat, nbits, Pi_bytes, len_com1_w2);
     Pi_bytes += len_com1_w2;
-    deserialize_vec_poly_zz_pX(Pi.com_2.t_1, m2, d_hat, Pi_bytes, len_com2_t1);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.com_2.t_1, m2, d_hat, nbits, Pi_bytes, len_com2_t1);
     Pi_bytes += len_com2_t1;
-    deserialize_vec_poly_zz_pX(Pi.com_2.t_2, m2, d_hat, Pi_bytes, len_com2_t2);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.com_2.t_2, m2, d_hat, nbits, Pi_bytes, len_com2_t2);
     Pi_bytes += len_com2_t2;
-    deserialize_vec_poly_zz_pX(Pi.com_2.w_1, m2, d_hat, Pi_bytes, len_com2_w1);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.com_2.w_1, m2, d_hat, nbits, Pi_bytes, len_com2_w1);
     Pi_bytes += len_com2_w1;
-    deserialize_vec_poly_zz_pX(Pi.com_2.w_2, m2, d_hat, Pi_bytes, len_com2_w2);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.com_2.w_2, m2, d_hat, nbits, Pi_bytes, len_com2_w2);
     Pi_bytes += len_com2_w2;
-    deserialize_vec_zz_p(Pi.z_3, 256, Pi_bytes, len_z_3);
+    deserialize_minbyte_vec_zz_p(Pi.z_3, 256, nbits, Pi_bytes, len_z_3);
     Pi_bytes += len_z_3;    
-    deserialize_vec_poly_zz_pX(Pi.h, tau0, d_hat, Pi_bytes, len_h);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.h, tau0, d_hat, nbits, Pi_bytes, len_h);
     Pi_bytes += len_h;
-    deserialize_poly_zz_pX(Pi.t, d_hat, Pi_bytes, len_t);
+    deserialize_minbyte_poly_zz_pX(Pi.t, d_hat, nbits, Pi_bytes, len_t);
     Pi_bytes += len_t;    
-    deserialize_poly_zz_pX(Pi.f0, d_hat, Pi_bytes, len_f0);
+    deserialize_minbyte_poly_zz_pX(Pi.f0, d_hat, nbits, Pi_bytes, len_f0);
     Pi_bytes += len_f0;    
-    deserialize_vec_poly_zz_pX(Pi.z_1, m1, d_hat, Pi_bytes, len_z_1);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.z_1, m1, d_hat, nbits, Pi_bytes, len_z_1);
     Pi_bytes += len_z_1;
-    deserialize_vec_poly_zz_pX(Pi.z_2, m2, d_hat, Pi_bytes, len_z_2);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.z_2, m2, d_hat, nbits, Pi_bytes, len_z_2);
     Pi_bytes += len_z_2;
-    deserialize_vec_poly_zz_pX(Pi.op_1.z_1, n_i, d_hat, Pi_bytes, len_op1_z1);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.op_1.z_1, n_i, d_hat, nbits, Pi_bytes, len_op1_z1);
     Pi_bytes += len_op1_z1;
-    deserialize_vec_poly_zz_pX(Pi.op_1.z_2, m1, d_hat, Pi_bytes, len_op1_z2);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.op_1.z_2, m1, d_hat, nbits, Pi_bytes, len_op1_z2);
     Pi_bytes += len_op1_z2;
-    deserialize_vec_poly_zz_pX(Pi.op_1.z_3, m1, d_hat, Pi_bytes, len_op1_z3);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.op_1.z_3, m1, d_hat, nbits, Pi_bytes, len_op1_z3);
     Pi_bytes += len_op1_z3;
     Pi.op_1.valid = Pi_bytes[0];
     Pi_bytes += len_op1_valid;
-    deserialize_vec_poly_zz_pX(Pi.op_2.z_1, n_i, d_hat, Pi_bytes, len_op2_z1);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.op_2.z_1, n_i, d_hat, nbits, Pi_bytes, len_op2_z1);
     Pi_bytes += len_op2_z1;
-    deserialize_vec_poly_zz_pX(Pi.op_2.z_2, m2, d_hat, Pi_bytes, len_op2_z2);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.op_2.z_2, m2, d_hat, nbits, Pi_bytes, len_op2_z2);
     Pi_bytes += len_op2_z2;
-    deserialize_vec_poly_zz_pX(Pi.op_2.z_3, m2, d_hat, Pi_bytes, len_op2_z3);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.op_2.z_3, m2, d_hat, nbits, Pi_bytes, len_op2_z3);
     Pi_bytes += len_op2_z3;
     Pi.op_2.valid = Pi_bytes[0];
     Pi_bytes += len_op2_valid;
