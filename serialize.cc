@@ -33,6 +33,10 @@ size_t calc_ser_size_vec_poly(const long n, const long d) {
     return (n*d*sizeof(long));
 }
 
+size_t calc_ser_size_vec_ZZX(const long n, const long d) {
+    return (n*d*sizeof(long));
+}
+
 size_t calc_ser_size_poly(long d) {
     return (d*sizeof(long));
 }
@@ -47,6 +51,10 @@ size_t calc_ser_size_vec_ZZ(long l) {
 
 size_t calc_ser_size_ZZ(void) {
     return(sizeof(long));
+}
+
+size_t calc_ser_size_big_ZZ(long nbits) {
+    return(static_cast<int>(ceil(nbits / 8.0)));
 }
 
 size_t calc_ser_size_vec_poly_minbyte(const long n, const long d, const int nbits) {
@@ -213,6 +221,33 @@ void deserialize_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d, const 
 }
 
 
+// serialize/deserialize functions for vec_ZZX, 64 bits per coefficient (i.e. 1 long int) 
+void serialize_vec_ZZX(uint8_t* v, const size_t s, const long n, const long d, const vec_ZZX& p) {
+    long i, j;
+    long* data_ptr = reinterpret_cast<long*>(v);
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < d; j++) {
+            // data_ptr[i * d + j] = conv<long>(p[i][j]);
+            data_ptr[i * d + j] = conv<long>(coeff(p[i], j));
+        }
+    }
+}
+
+void deserialize_vec_ZZX(vec_ZZX& p, const long n, const long d, const uint8_t* v, const size_t s) {
+    long i, j;
+    const long* data_ptr = reinterpret_cast<const long*>(v);
+    p.SetLength(n);
+    for (i = 0; i < n; i++) {        
+        p[i].SetLength(d);
+        for (j = 0; j < d; j++) {
+            p[i][j] = data_ptr[i * d + j];
+            // SetCoeff(p[i], j, data_ptr[i * d + j]);
+        }
+        p[i].normalize();
+    }
+}
+
+
 // serialize/deserialize functions for zz_pX, 64 bits per coefficient (i.e. 1 long int) 
 void serialize_poly_zz_pX(uint8_t* v, const size_t s, const long d, const zz_pX& p) {
     long i;
@@ -271,7 +306,7 @@ void deserialize_vec_ZZ(vec_ZZ& p, const long d, const uint8_t* v, const size_t 
 }
 
 
-// serialize/deserialize functions for ZZ, max. 64 bits (i.e. 1 long int)
+// serialize/deserialize functions for "small" ZZ, max. 64 bits (i.e. 1 long int)
 void serialize_ZZ(uint8_t* v, const size_t s, const ZZ& p) {
     long* data_ptr = reinterpret_cast<long*>(v);
     data_ptr[0] = conv<long>(p);
@@ -280,6 +315,16 @@ void serialize_ZZ(uint8_t* v, const size_t s, const ZZ& p) {
 void deserialize_ZZ(ZZ& p, const uint8_t* v, const size_t s) {
     const long* data_ptr = reinterpret_cast<const long*>(v);
     p = data_ptr[0];
+}
+
+
+// serialize/deserialize functions for "big" ZZ, i.e. integers with more than 64 bits
+void serialize_big_ZZ(uint8_t* v, const size_t s, const ZZ& p) {
+    BytesFromZZ(v, p, s);
+}
+
+void deserialize_big_ZZ(ZZ& p, const uint8_t* v, const size_t s) {
+    ZZFromBytes(p, v, s);
 }
 
 
