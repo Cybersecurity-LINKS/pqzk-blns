@@ -330,7 +330,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
                 len_com2_t1 + len_com2_t2 + len_com2_w1 + len_com2_w2 +                     
                 len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2 + 
                 len_op1_z1 + len_op1_z2 + len_op1_z3 + len_op1_valid + 
-                len_op2_z1 + len_op2_z2 + len_op2_z3 + len_op2_valid; // 331779 bytes
+                len_op2_z1 + len_op2_z2 + len_op2_z3 + len_op2_valid;
     cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
         
     // Allocate a vector of bytes to store the proof Pi
@@ -1044,7 +1044,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     //             len_com2_t1 + len_com2_t2 + len_com2_w1 + len_com2_w2 +                     
     //             len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2 + 
     //             len_op1_z1 + len_op1_z2 + len_op1_z3 + len_op1_valid + 
-    //             len_op2_z1 + len_op2_z2 + len_op2_z3 + len_op2_valid; // 331779 bytes
+    //             len_op2_z1 + len_op2_z2 + len_op2_z3 + len_op2_valid;
     // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
 
     // Deserialize the proof Pi

@@ -32,8 +32,7 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
     long            out, mul;
-    zz_pX           a1;
-    vec_zz_pX       a2, c0, c1, a; //mex;
+    vec_zz_pX       a; //mex;
     vec_ZZ          m_i, coeffs_m;
     mat_zz_p        P, C, C0, C1; 
     vec_zz_p        coeffs_m_idx;
@@ -47,15 +46,11 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     // 1. (a′_1, ··· , a′_ℓ) ← attrs′,   a′_i ∈ {0, 1}∗
     // NOTE: l0 = idx_hid + idx_pub = len(attrs),  d0 must divide l0*h0
     // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
-
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
-    a1 = VP.ipk.a1;
-    a2 = VP.ipk.a2;
-    c0 = VP.ipk.c0;
-    c1 = VP.ipk.c1;
-
+    // ipk = VP.ipk;
        
+
     // 3. m′ ← Coeffs^−1(H_M(a′_1), ... , H_M(a′_ℓ)) ∈ R^ℓm_q      
     // mex.SetLength(lm0);    
     coeffs_m.SetLength(l0 * h0);
@@ -83,11 +78,11 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     a[0].SetLength(d0);
     a[0] = zz_pX(1);  
        
-    a[1] = a1;
+    a[1] = VP.ipk.a1;
 
     for(i=0; i<m0; i++)
     {
-        a[2+i] = a2[i];
+        a[2+i] = VP.ipk.a2[i];
     } 
           
           
@@ -102,7 +97,7 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     // NOTE: zero padding of C (d_hat columns) anticipated here, from Verify_ISIS
 
     C0.SetDims(d0, lm0*d0);
-    rot_vect(C0, c0);
+    rot_vect(C0, VP.ipk.c0);
 
     // NOTE: first copy in C the columns for disclosed attributes, then those for undisclosed attributes
     // NOTE: lm0*d0 = l0*h0 = (idx_pub + idx_hid) * h0       
@@ -129,7 +124,7 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     C0.kill(); 
 
     C1.SetDims(d0, lr0*d0);
-    rot_vect(C1, c1);
+    rot_vect(C1, VP.ipk.c1);
 
     for(j=0; j<(lr0*d0); j++)
     {

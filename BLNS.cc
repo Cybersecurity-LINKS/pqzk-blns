@@ -33,11 +33,8 @@ int main()
     Vec<string>     attrs, attrs_prime;
     mat_zz_p        B_f;
     zz_pX           u;
-    vec_ZZ          s;
-    vec_ZZX         w;
-    ZZ              x;
     CRS2_t          crs;
-    uint8_t*        Pi; 
+    uint8_t        *Pi, *Rho2;
     STATE_t         state;
     CRED_t          cred;
     VP_t            VP;
@@ -86,13 +83,13 @@ int main()
    
         ta = GetWallTime();
         cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
-        I_VerCred(s, w, x, seed_crs, crs, B_f, ipk, f, g, F, G, attrs_prime, u, &Pi);
+        I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, f, g, F, G, attrs_prime, u, &Pi);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         cout << "\n- Holder.VerCred2  (unblind signature and store credential)" << endl;
         ta = GetWallTime();        
-        H_VerCred2(cred, ipk, B_f, s, w, x, state);
+        H_VerCred2(cred, ipk, B_f, &Rho2, state);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
         assert(cred.valid);

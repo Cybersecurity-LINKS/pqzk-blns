@@ -448,7 +448,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& cr
     len_z_1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);    // vec_zz_pX
     len_z_2 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);    // vec_zz_pX
 
-    len_Pi = len_valid + len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2; // 102401 bytes
+    len_Pi = len_valid + len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2;
     cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
    
     // Allocate a vector of bytes to store the proof Pi
@@ -1224,7 +1224,7 @@ long Verify_ISIS(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& i
     len_z_1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);    // vec_zz_pX
     len_z_2 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);    // vec_zz_pX
 
-    // len_Pi = len_valid + len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2; // 102401 bytes
+    // len_Pi = len_valid + len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2;
     // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
    
     // Deserialize the proof Pi

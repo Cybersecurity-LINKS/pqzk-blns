@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "Issuer.h"
+#include "serialize.h"
 
 
 //==============================================================================
@@ -85,23 +86,25 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 // - idx_pub:       |idx|, number of disclosed attributes
 // - u, Pi_ptr:     commitment u and proof π, corresponding to the structure ρ_1 
 // 
-// Outputs:
-// - s_0:           short vector (output of GSampler),       s_0 ∈ Z^(2d)
-// - w:             polynomial vector (output of GSampler),  w ∈ R^m
-// - x:             random integer, uniformly sampled from the set [N]
-//                  NOTE: (s_0, w, x) correspond to the structure ρ_2
+// Output:
+// - Rho2_ptr:      pointer to the structure ρ_2 = (s_0, w, x) where:
+//      * s_0:      short vector (output of GSampler),       s_0 ∈ Z^(2d)
+//      * w:        polynomial vector (output of GSampler),  w ∈ R^m
+//      * x:        random integer, uniformly sampled from the set [N]
 //==============================================================================
-void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr)
+void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k, result;
-    zz_pX           a1, fx_u;
-    vec_zz_pX       a2, c0, c1; //mex_prime;
-    vec_ZZ          m_i, coeffs_m;
+    vec_ZZ          s_0, m_i, coeffs_m;
+    vec_ZZX         w;
+    ZZ              x, B_goth2;
+    zz_pX           fx_u;
     mat_zz_p        P0, P1, P; 
-    vec_zz_p        u_vect, prod;   
-    ZZ              B_goth2;
+    vec_zz_p        u_vect, prod;
     long            mul;
+    size_t          len_s0, len_w, len_x, len_Rho2;
+    uint8_t        *Rho2_bytes;
     
     const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
@@ -111,10 +114,6 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
-    a1 = ipk.a1;
-    a2 = ipk.a2;
-    c0 = ipk.c0;
-    c1 = ipk.c1;
 
     // 3. (u, π) ← ρ1
     // NOTE: u, Pi provided as separate inputs
@@ -138,7 +137,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
         }
     }    
 
-    // mex_prime = CoeffsInv(coeffs_m, lm0);
+    // vec_zz_pX mex_prime = CoeffsInv(coeffs_m, lm0);
     // NOTE: coeffs_m is directly used instead of mex_prime
 
 
@@ -147,7 +146,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     // NOTE: zero padding of P (d_hat columns) anticipated here, from Verify_Com
 
     P0.SetDims(d0, lm0*d0);
-    rot_vect(P0, c0);
+    rot_vect(P0, ipk.c0);
 
     // NOTE: only first idx_hid*h0 columns of P0 (corresponding to undisclosed attributes) 
     //       are copied into P, while P1 is fully copied into P.
@@ -163,7 +162,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     }    
 
     P1.SetDims(d0, lr0*d0);
-    rot_vect(P1, c1);
+    rot_vect(P1, ipk.c1);
 
     for(j=0; j<(lr0*d0); j++)
     {
@@ -236,7 +235,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     x = RandomBnd(N0) + 1;
 
     
-    // 11. (s_0, w) ← GSampler(a1, a2, B, s_goth, f(x) + u),   (s_0, w) ∈ Z^(2d) × R^m_q
+    // 11. (s_0, w) ← GSampler(a1, a2, B, s_goth, f(x) + u),   (s_0, w) ∈ Z^(2d) × R^m
     s_0.SetLength(2*d0);    
 
     // Compute  f(x) + u
@@ -305,8 +304,28 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
             
     #endif
     
+    
     // 12. ρ_2 ← (s_0, w, x),   ρ_2 ∈ Z^(2d) × R^m × N
+    
+    // Compute the number of bytes for each component of the structure ρ_2
+    len_s0 = calc_ser_size_vec_ZZ(2*d0);    // vec_ZZ (2*d0*long)     -  8192 bytes
+    len_w  = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
+    len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes    
+    len_Rho2 = len_s0 + len_w + len_x;      //                          20544 bytes
+    cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+  
+    // Allocate a vector of bytes to store the structure ρ_2
+    *Rho2_ptr = new uint8_t[len_Rho2];
+    Rho2_bytes = *Rho2_ptr;
 
-    // 13. return ρ_2    
-    // NOTE: (s_0, w, x) provided as separate outputs         
+    // Serialize (s_0, w, x) in ρ_2
+    serialize_vec_ZZ(Rho2_bytes, len_s0, 2*d0, s_0);
+    Rho2_bytes+= len_s0;
+    serialize_vec_ZZX(Rho2_bytes, len_w, m0, d0, w);
+    Rho2_bytes+= len_w;
+    serialize_big_ZZ(Rho2_bytes, len_x, x-1);    
+    // Rho2_bytes+= len_x;
+
+
+    // 13. return ρ_2
 }
