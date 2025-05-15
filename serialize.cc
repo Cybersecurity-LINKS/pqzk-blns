@@ -320,11 +320,11 @@ void deserialize_ZZ(ZZ& p, const uint8_t* v, const size_t s) {
 
 // serialize/deserialize functions for "big" ZZ, i.e. integers with more than 64 bits
 void serialize_big_ZZ(uint8_t* v, const size_t s, const ZZ& p) {
-    BytesFromZZ(v, p, s);
+    BytesFromZZ(reinterpret_cast<unsigned char*>(v), p, s);
 }
 
 void deserialize_big_ZZ(ZZ& p, const uint8_t* v, const size_t s) {
-    ZZFromBytes(p, v, s);
+    ZZFromBytes(p, reinterpret_cast<const unsigned char*>(v), s);
 }
 
 

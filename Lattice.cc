@@ -185,7 +185,7 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
     conv_hm = vecZZtoUint16(c); // hm is the c in BLNS
     memcpy(hm, conv_hm.data(), min<size_t>(conv_hm.size(), 2*d0) * sizeof(uint16_t));
 
-    // The treshold present inside sign_dyn of Falcon is different from the one in BLNS, so it is necessary a while cycle
+    // The threshold present inside sign_dyn of Falcon is different from the one in BLNS, so it is necessary a while cycle
     const ZZ thres_s = ZZ(sigma2) * ZZ(2*d0);
 
     valid = 0;

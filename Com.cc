@@ -282,7 +282,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     max_len = *max_element(begin(lengths), end(lengths)); 
     buffer = new uint8_t[max_len]; 
 
-    state0 = Hash_Init(reinterpret_cast<const uint8_t*>(&seed_crs[0]), SEED_LEN);
+    state0 = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
     serialize_minbyte_vec_poly_zz_pX(buffer, len_c0, lm0, d0, nbits, ipk.c0);
     Hash_Update(state0, buffer, len_c0);
     serialize_minbyte_vec_poly_zz_pX(buffer, len_c1, lr0, d0, nbits, ipk.c1);
@@ -990,7 +990,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     max_len = *max_element(begin(lengths), end(lengths)); 
     buffer = new uint8_t[max_len]; 
 
-    state = Hash_Init(reinterpret_cast<const uint8_t*>(&seed_crs[0]), SEED_LEN);
+    state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
     serialize_minbyte_vec_poly_zz_pX(buffer, len_c0, lm0, d0, nbits, ipk.c0);
     Hash_Update(state, buffer, len_c0);
     serialize_minbyte_vec_poly_zz_pX(buffer, len_c1, lr0, d0, nbits, ipk.c1);
