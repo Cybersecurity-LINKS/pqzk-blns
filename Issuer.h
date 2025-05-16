@@ -26,10 +26,16 @@ typedef struct
     vec_zz_pX   c1;
 } IPK_t;
 
+typedef struct
+{
+    uint8_t*    u;
+    uint8_t*    Pi;
+} RHO1_t;
+
 #include "Com.h"
 
  
 void    I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
-void    I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr);
+void    I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, RHO1_t& Rho1);
 
 #endif

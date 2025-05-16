@@ -128,7 +128,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     size_t              len_com2_t1, len_com2_t2, len_com2_w1, len_com2_w2;
     size_t              len_op1_z1, len_op1_z2, len_op1_z3, len_op1_valid;
     size_t              len_op2_z1, len_op2_z2, len_op2_z3, len_op2_valid;
-    size_t              len_t, len_f0, len_z_1, len_z_2, len_valid, len_Pi;
+    size_t              len_t, len_f0, len_z_1, len_z_2, len_valid, len_Pi, len_u;
     uint8_t            *buffer, *Pi_bytes;
     vector<size_t>      lengths;
     PROOF_C_t           Pi;
@@ -331,7 +331,10 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
                 len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2 + 
                 len_op1_z1 + len_op1_z2 + len_op1_z3 + len_op1_valid + 
                 len_op2_z1 + len_op2_z2 + len_op2_z3 + len_op2_valid;
-    cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    
+    len_u = calc_ser_size_poly_minbyte(d0, ceil(log2(conv<double>(q0-1)))); // nbits
+    cout << "  Size Rho1: " << (len_u + len_Pi)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
         
     // Allocate a vector of bytes to store the proof Pi
     *Pi_ptr = new uint8_t[len_Pi]; 

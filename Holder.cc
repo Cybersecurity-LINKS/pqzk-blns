@@ -75,22 +75,24 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, unsigned char* seed_crs, Vec<string>& at
 // - idx_pub:       | idx |, number of disclosed attributes 
 // 
 // Outputs:
-// - u, Pi_ptr:     commitment u and proof π, corresponding to the structure ρ_1 
+// - Rho1:          structure ρ_1 that contains the commitment u and proof π
 // - state:         structure that contains the polynomial vectors m and r
 //==============================================================================
-void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char* seed_crs, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs)
+void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const unsigned char* seed_crs, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
     vec_ZZX         mex, r;
     vec_ZZ          m_i, coeffs_m, coeffs_r, s;
+    zz_pX           u;
     mat_zz_p        P0, P1, P; 
     vec_zz_p        u_vect, prod;
     ZZ              range, B_goth2;
     long            mul;
+    size_t          len_u;
 
     const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
-
+    const int           nbits   = ceil(log2(conv<double>(q0-1)));
        
     // 1. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗
     // NOTE: l0 = idx_hid + idx_pub = len(attrs),  d0 must divide l0*h0
@@ -137,7 +139,7 @@ void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char*
     // 5. u ← c0^T * m + c1^T * r ∈ R_q
     u.SetLength(d0);
     u = poly_mult(ipk.c0, conv<vec_zz_pX>(mex)) + poly_mult(ipk.c1, conv<vec_zz_pX>(r));
-    
+
 
     // 6. P ← [rot(c0^T)_(idx_hid) | rot(c1^T)],    P ∈ Z_q^(d × (|idx_hid|·h + ℓr·d))   
     P.SetDims(d0, (idxhlrd + d_hat));
@@ -237,15 +239,25 @@ void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char*
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
    
-        Prove_Com(Pi_ptr, seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, s);
-        // NOTE: P, u are converted from modulo q0 to q1_hat
+        Prove_Com(&(Rho1.Pi), seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, s);
+        // NOTE: P, u_vect are converted from modulo q0 to q1_hat
+        // NOTE: Prove_Com serializes the proof π in Rho1.Pi
     }
 
     P.kill();
    
 
     // 10. ρ_1 ← (u, π)
-    // NOTE: u & Pi are kept separate in the output, for simplicity
+
+    // Allocate a vector of bytes to store u
+    len_u = calc_ser_size_poly_minbyte(d0, nbits);
+    Rho1.u = new uint8_t[len_u];
+    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    
+    // Serialize u in Rho1.u
+    serialize_minbyte_poly_zz_pX(Rho1.u, len_u, d0, nbits, u);
+    // Rho1.u += len_u;
+    
           
     // 11. state ← (m, r) state ∈ R^ℓm × R^ℓr
     state.m = mex;

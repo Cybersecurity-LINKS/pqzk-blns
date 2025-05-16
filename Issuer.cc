@@ -84,7 +84,7 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 // - f, g, F, G:    base polynomials used to build Issuer Secret Key (i.e. matrix of integers B)
 // - attrs_prime:   disclosed attributes (attrs′)
 // - idx_pub:       |idx|, number of disclosed attributes
-// - u, Pi_ptr:     commitment u and proof π, corresponding to the structure ρ_1 
+// - Rho1:          structure ρ_1 that contains the commitment u and proof π
 // 
 // Output:
 // - Rho2_ptr:      pointer to the structure ρ_2 = (s_0, w, x) where:
@@ -92,21 +92,22 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 //      * w:        polynomial vector (output of GSampler),  w ∈ R^m
 //      * x:        random integer, uniformly sampled from the set [N]
 //==============================================================================
-void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr)
+void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, RHO1_t& Rho1)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k, result;
     vec_ZZ          s_0, m_i, coeffs_m;
     vec_ZZX         w;
     ZZ              x, B_goth2;
-    zz_pX           fx_u;
+    zz_pX           u, fx_u;
     mat_zz_p        P0, P1, P; 
     vec_zz_p        u_vect, prod;
     long            mul;
-    size_t          len_s0, len_w, len_x, len_Rho2;
+    size_t          len_u, len_s0, len_w, len_x, len_Rho2;
     uint8_t        *Rho2_bytes;
     
     const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const int           nbits   = ceil(log2(conv<double>(q0-1)));
 
     
     // 1. (a'_1, ... , a'_k) ← attrs',  a'_i ∈ {0, 1}∗
@@ -115,8 +116,18 @@ void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& 
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
 
-    // 3. (u, π) ← ρ1
-    // NOTE: u, Pi provided as separate inputs
+
+    // 3. (u, π) ← ρ1   
+    len_u = calc_ser_size_poly_minbyte(d0, nbits);
+    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+
+    // Deserialize u
+    deserialize_minbyte_poly_zz_pX(u, d0, nbits, Rho1.u, len_u);
+    // Rho1.u += len_u;
+    
+    // Free the vector with serialized u
+    delete[] Rho1.u;
+
 
     // 4. B ← isk,   B ∈ Z^(2d×2d)
     // NOTE: using (f, g, F, G) instead of B
@@ -215,8 +226,9 @@ void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& 
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
 
-        result = Verify_Com(seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, Pi_ptr);
-        // NOTE: P, u are converted from modulo q0 to q1_hat
+        result = Verify_Com(seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, &(Rho1.Pi));
+        // NOTE: P, u_vect are converted from modulo q0 to q1_hat
+        // NOTE: Verify_Com deserializes the proof π in Rho1.Pi
     }
 
     P.kill();
