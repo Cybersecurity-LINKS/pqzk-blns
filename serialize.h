@@ -34,6 +34,10 @@ size_t calc_ser_size_vec_poly_minbyte(const long n, const long d, const int nbit
 size_t calc_ser_size_poly_minbyte(const long d, const int nbits);
 size_t calc_ser_size_vec_zz_p_minbyte(const long l, const int nbits);
 size_t calc_ser_size_vec_ZZ_minbyte(const long l, const int nbits);
+size_t calc_ser_size_vec_poly_minbits(const long n, const long d, const int nbits);
+size_t calc_ser_size_poly_minbits(const long d, const int nbits);
+size_t calc_ser_size_vec_zz_p_minbits(const long l, const int nbits);
+
 
 
 // serialize functions
@@ -51,6 +55,9 @@ void serialize_minbyte_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, 
 void serialize_minbyte_poly_zz_pX(uint8_t* v, const size_t s, const long d, const int nbits, const zz_pX& p);
 void serialize_minbyte_vec_zz_p(uint8_t* v, const size_t s, const long l, const int nbits, const vec_zz_p& p);
 void serialize_minbyte_vec_ZZ(uint8_t* v, const size_t s, const long l, const int nbits, const vec_ZZ& p);
+void serialize_minbits_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, const long d, const int nbits, const vec_zz_pX& p);
+void serialize_minbits_poly_zz_pX(uint8_t* v, const size_t s, const long d, const int nbits, const zz_pX& p);
+void serialize_minbits_vec_zz_p(uint8_t* v, const size_t s, const long l, const int nbits, const vec_zz_p& p);
 
 
 // deserialize functions
@@ -68,3 +75,6 @@ void deserialize_minbyte_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d
 void deserialize_minbyte_poly_zz_pX(zz_pX& p, const long d, const int nbits, const uint8_t* v, const size_t s);
 void deserialize_minbyte_vec_zz_p(vec_zz_p& p, const long l, const int nbits, const uint8_t* v, const size_t s);
 void deserialize_minbyte_vec_ZZ(vec_ZZ& p, const long l, const int nbits, const uint8_t* v, const size_t s);
+void deserialize_minbits_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d, const int nbits, const uint8_t* v, const size_t s);
+void deserialize_minbits_poly_zz_pX(zz_pX& p, const long d, const int nbits, const uint8_t* v, const size_t s);
+void deserialize_minbits_vec_zz_p(vec_zz_p& p, const long l, const int nbits, const uint8_t* v, const size_t s);
