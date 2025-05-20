@@ -594,6 +594,7 @@ void deserialize_minbits_poly_zz_pX(zz_pX& p, const long d, const int nbits, con
         p[i] = vf[k++];
     }
     p.normalize();
+    delete[] vf;
 }
 
 
@@ -643,5 +644,6 @@ void deserialize_minbits_vec_zz_p(vec_zz_p& p, const long l, const int nbits, co
     for (i = 0; i < l; i++) {
         p[i] = vf[k++];
     }
+    delete[] vf;
 }
 
