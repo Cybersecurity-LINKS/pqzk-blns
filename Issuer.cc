@@ -20,7 +20,7 @@
 // I_KeyGen - Issuer.KeyGen function. It generates Issuer Public Key and 
 //            Issuer Secret Key from parameters d and q.
 //
-// Inputs:
+// Input:
 // - None
 //
 // Outputs:
@@ -32,8 +32,6 @@
 //==============================================================================
 void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 {
-    unsigned long i;
-
 #ifdef ENABLE_FALCON
     // Keygen algorithm from the Falcon reference implementation 
     Falcon_keygen(ipk.a1, f, g, F, G);
@@ -42,13 +40,54 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
     NTRU_TrapGen(ipk.a1, f, g, F, G);    
 #endif
     // NOTE: a1 is a Polynomial with d coefficients modulo q (i.e. h in [DLP14])
-    
+   
+
+    // Initialize a 32 byte (256 bit) public seed for completing ipk (i.e. a2, c0, c1),
+    // using the cryptographically strong pseudo-random number generator from NTL
+    RandomStream& RS = GetCurrentRandomStream();
+    RS.get(ipk.seed_ipk, SEED_LEN);
+    // for(long i=0; i<SEED_LEN; i++)
+    // {
+    //     printf("%0x", ipk.seed_ipk[i]);
+    // }
+    // printf("\n");
+
+    CompleteIPK(ipk, ipk.seed_ipk);
+          
+    // Output Issuer Public Key and Issuer Secret Key (i.e. B)
+    // ipk ← (a1, a2, c0, c1)
+    // isk ← (f, g, F, G)
+}
+
+
+//==============================================================================
+// CompleteIPK - CompleteIPK function. It completes the Issuer Public Key
+//               by generating a2, c0, c1 from a public seed.
+//
+// Input:
+// - seed_ipk:  public seed for completing the Issuer Public Key
+//
+// Output:
+// - ipk:       Issuer Public key, completed with a2, c0, c1
+//==============================================================================
+void CompleteIPK(IPK_t& ipk, const unsigned char* seed_ipk)
+{   
+    // NOTE: assuming that current modulus is q0
+
+    unsigned long   i;
+    HASH_STATE_t    *state;
+  
+    // Compute the minimum number of bytes to represent each coefficient of a2, c0, c1
+    const size_t b_coeffs = ceil(log2( conv<double>(q0-1) ) / 8.0);
+
+    state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_ipk), SEED_LEN);
+
     ipk.a2.SetLength(m0);   
     // NOTE: a2 is a vector of m Polynomials with d coefficients modulo q
 
     for(i=0; i<m0; i++)
     {
-        ipk.a2[i] = random_zz_pX(d0);
+        Hash_zz_pX(ipk.a2[i], state, d0, b_coeffs);
     }
 
     ipk.c0.SetLength(lm0);  
@@ -56,7 +95,7 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 
     for(i=0; i<lm0; i++)
     {
-        ipk.c0[i] = random_zz_pX(d0);
+        Hash_zz_pX(ipk.c0[i], state, d0, b_coeffs);
     }
 
     ipk.c1.SetLength(lr0);  
@@ -64,13 +103,16 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 
     for(i=0; i<lr0; i++)
     {
-        ipk.c1[i] = random_zz_pX(d0);
+        Hash_zz_pX(ipk.c1[i], state, d0, b_coeffs);
     }
-          
-    // Output Issuer Public Key and Issuer Secret Key (i.e. B)
-    // ipk ← (a1, a2, c0, c1)
-    // isk ← (f, g, F, G)
+
+    delete state;
+
+    // Return ipk ← (a1, a2, c0, c1)
 }
+
+
+
 
 
 //==============================================================================
