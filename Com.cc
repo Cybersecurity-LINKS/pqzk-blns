@@ -122,7 +122,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     mat_zz_p            R_goth, gamma;
     vec_zz_p            s, e_tmp, coeffs_R_goth_mult_s1, coeffs_y3;
     HASH_STATE_t       *state0, *state;
-    size_t              len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2, max_len;
+    size_t              len_idx_hid, len_u0, len_B_goth2, max_len;
     size_t              len_t_A, len_t_y, len_t_g, len_w, len_z_3, len_h;
     size_t              len_com1_t1, len_com1_t2, len_com1_w1, len_com1_w2;
     size_t              len_com2_t1, len_com2_t2, len_com2_w1, len_com2_w2;
@@ -269,24 +269,19 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     h_part3   = poly_mult_hat(sigma_s_1, s_1) + conv<zz_p>(-B_goth2);
 
     // Initialize the custom Hash function
-    // NOTE: using seed_crs, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init        
+    // NOTE: using seed_crs, seed_ipk, idx_hid, instead of crs, P to speedup Hash_Init        
     // len_seed  = SEED_LEN;                                        // uchar*    - 32 bytes
-    len_c0       = calc_ser_size_vec_poly_minbyte(lm0, d0, nbits);  // vec_zz_pX
-    len_c1       = calc_ser_size_vec_poly_minbyte(lr0, d0, nbits);  // vec_zz_pX
     len_idx_hid  = 1;                                               // uint8     - 1 byte
     len_u0       = calc_ser_size_vec_zz_p_minbyte(d0, nbits);       // vec_zz_p
     len_B_goth2  = calc_ser_size_ZZ();                              // ZZ (long) - 8 bytes
-    // cout << "  Size Hash_Init: " << (SEED_LEN + len_c0 + len_c1 + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Hash_Init: " << (SEED_LEN + SEED_LEN + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
 
-    lengths = {SEED_LEN, len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2};
+    lengths = {len_idx_hid, len_u0, len_B_goth2};
     max_len = *max_element(begin(lengths), end(lengths)); 
     buffer = new uint8_t[max_len]; 
 
     state0 = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
-    serialize_minbyte_vec_poly_zz_pX(buffer, len_c0, lm0, d0, nbits, ipk.c0);
-    Hash_Update(state0, buffer, len_c0);
-    serialize_minbyte_vec_poly_zz_pX(buffer, len_c1, lr0, d0, nbits, ipk.c1);
-    Hash_Update(state0, buffer, len_c1);
+    Hash_Update(state0, reinterpret_cast<const uint8_t*>(ipk.seed_ipk), SEED_LEN);
     buffer[0] = (uint8_t)(idx_hid);
     Hash_Update(state0, buffer, len_idx_hid);
     serialize_minbyte_vec_zz_p(buffer, len_u0, d0, nbits, u0);
@@ -931,7 +926,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     zz_p                sum_z3, B_goth_p;
     ZZ                  norm2_z1, norm2_z2, norm2_z3;
     HASH_STATE_t*       state;
-    size_t              len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2, max_len;
+    size_t              len_idx_hid, len_u0, len_B_goth2, max_len;
     size_t              len_t_A, len_t_y, len_t_g, len_w, len_z_3, len_h;
     size_t              len_com1_t1, len_com1_t2, len_com1_w1, len_com1_w2;
     size_t              len_com2_t1, len_com2_t2, len_com2_w1, len_com2_w2;
@@ -980,24 +975,19 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     CoeffsInvHat(u, u0, d_d_hat);
     
     // Initialize the custom Hash function with (crs, x)
-    // NOTE: using seed_crs, ipk.c0, ipk.c1, idx_hid, instead of crs, P to speedup Hash_Init        
+    // NOTE: using seed_crs, seed_ipk, idx_hid, instead of crs, P to speedup Hash_Init        
     // len_seed  = SEED_LEN;                                        // uchar*    - 32 bytes
-    len_c0       = calc_ser_size_vec_poly_minbyte(lm0, d0, nbits);  // vec_zz_pX
-    len_c1       = calc_ser_size_vec_poly_minbyte(lr0, d0, nbits);  // vec_zz_pX
     len_idx_hid  = 1;                                               // uint8     - 1 byte
     len_u0       = calc_ser_size_vec_zz_p_minbyte(d0, nbits);       // vec_zz_p
     len_B_goth2  = calc_ser_size_ZZ();                              // ZZ (long) - 8 bytes
-    // cout << "  Size Hash_Init: " << (SEED_LEN + len_c0 + len_c1 + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Hash_Init: " << (SEED_LEN + SEED_LEN + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
 
-    lengths = {SEED_LEN, len_c0, len_c1, len_idx_hid, len_u0, len_B_goth2};
+    lengths = {len_idx_hid, len_u0, len_B_goth2};
     max_len = *max_element(begin(lengths), end(lengths)); 
     buffer = new uint8_t[max_len]; 
 
     state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
-    serialize_minbyte_vec_poly_zz_pX(buffer, len_c0, lm0, d0, nbits, ipk.c0);
-    Hash_Update(state, buffer, len_c0);
-    serialize_minbyte_vec_poly_zz_pX(buffer, len_c1, lr0, d0, nbits, ipk.c1);
-    Hash_Update(state, buffer, len_c1);
+    Hash_Update(state, reinterpret_cast<const uint8_t*>(ipk.seed_ipk), SEED_LEN);
     buffer[0] = (uint8_t)(idx_hid);
     Hash_Update(state, buffer, len_idx_hid);
     serialize_minbyte_vec_zz_p(buffer, len_u0, d0, nbits, u0);
