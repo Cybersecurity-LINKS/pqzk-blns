@@ -245,7 +245,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const unsigned char* seed_crs)
     HASH_STATE_t    *state;
     size_t          b_coeffs;
        
-    state = Hash_Init(reinterpret_cast<const uint8_t*>(&seed_crs[0]), SEED_LEN);
+    state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
 
     // Create the crs structure  
     crs.SetLength(2); 

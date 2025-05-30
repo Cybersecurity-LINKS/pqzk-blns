@@ -49,8 +49,8 @@ typedef struct
 
 void    H_Init(CRS2_t& crs, mat_zz_p& B_f, unsigned char* seed_crs, Vec<string>& attrs);
 
-void    H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char* seed_crs, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs);
-void    H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_t& state);
+void    H_VerCred1(RHO1_t& Rho1, STATE_t& state, const unsigned char* seed_crs, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs);
+void    H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, uint8_t** Rho2_ptr, const STATE_t& state);
 void    H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, const CRS2_t& crs, const IPK_t& ipk, const mat_zz_p& B_f, const Vec<string>& attrs);
 
 #endif

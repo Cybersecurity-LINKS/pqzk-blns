@@ -13,13 +13,14 @@
 // limitations under the License.
 
 #include "Issuer.h"
+#include "serialize.h"
 
 
 //==============================================================================
 // I_KeyGen - Issuer.KeyGen function. It generates Issuer Public Key and 
 //            Issuer Secret Key from parameters d and q.
 //
-// Inputs:
+// Input:
 // - None
 //
 // Outputs:
@@ -31,8 +32,6 @@
 //==============================================================================
 void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 {
-    unsigned long i;
-
 #ifdef ENABLE_FALCON
     // Keygen algorithm from the Falcon reference implementation 
     Falcon_keygen(ipk.a1, f, g, F, G);
@@ -41,13 +40,54 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
     NTRU_TrapGen(ipk.a1, f, g, F, G);    
 #endif
     // NOTE: a1 is a Polynomial with d coefficients modulo q (i.e. h in [DLP14])
-    
+   
+
+    // Initialize a 32 byte (256 bit) public seed for completing ipk (i.e. a2, c0, c1),
+    // using the cryptographically strong pseudo-random number generator from NTL
+    RandomStream& RS = GetCurrentRandomStream();
+    RS.get(ipk.seed_ipk, SEED_LEN);
+    // for(long i=0; i<SEED_LEN; i++)
+    // {
+    //     printf("%0x", ipk.seed_ipk[i]);
+    // }
+    // printf("\n");
+
+    CompleteIPK(ipk, ipk.seed_ipk);
+          
+    // Output Issuer Public Key and Issuer Secret Key (i.e. B)
+    // ipk ← (a1, a2, c0, c1)
+    // isk ← (f, g, F, G)
+}
+
+
+//==============================================================================
+// CompleteIPK - CompleteIPK function. It completes the Issuer Public Key
+//               by generating a2, c0, c1 from a public seed.
+//
+// Input:
+// - seed_ipk:  public seed for completing the Issuer Public Key
+//
+// Output:
+// - ipk:       Issuer Public key, completed with a2, c0, c1
+//==============================================================================
+void CompleteIPK(IPK_t& ipk, const unsigned char* seed_ipk)
+{   
+    // NOTE: assuming that current modulus is q0
+
+    unsigned long   i;
+    HASH_STATE_t    *state;
+  
+    // Compute the minimum number of bytes to represent each coefficient of a2, c0, c1
+    const size_t b_coeffs = ceil(log2( conv<double>(q0-1) ) / 8.0);
+
+    state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_ipk), SEED_LEN);
+
     ipk.a2.SetLength(m0);   
     // NOTE: a2 is a vector of m Polynomials with d coefficients modulo q
 
     for(i=0; i<m0; i++)
     {
-        ipk.a2[i] = random_zz_pX(d0);
+        Hash_zz_pX(ipk.a2[i], state, d0, b_coeffs);
     }
 
     ipk.c0.SetLength(lm0);  
@@ -55,7 +95,7 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 
     for(i=0; i<lm0; i++)
     {
-        ipk.c0[i] = random_zz_pX(d0);
+        Hash_zz_pX(ipk.c0[i], state, d0, b_coeffs);
     }
 
     ipk.c1.SetLength(lr0);  
@@ -63,13 +103,16 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 
     for(i=0; i<lr0; i++)
     {
-        ipk.c1[i] = random_zz_pX(d0);
+        Hash_zz_pX(ipk.c1[i], state, d0, b_coeffs);
     }
-          
-    // Output Issuer Public Key and Issuer Secret Key (i.e. B)
-    // ipk ← (a1, a2, c0, c1)
-    // isk ← (f, g, F, G)
+
+    delete state;
+
+    // Return ipk ← (a1, a2, c0, c1)
 }
+
+
+
 
 
 //==============================================================================
@@ -83,27 +126,30 @@ void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 // - f, g, F, G:    base polynomials used to build Issuer Secret Key (i.e. matrix of integers B)
 // - attrs_prime:   disclosed attributes (attrs′)
 // - idx_pub:       |idx|, number of disclosed attributes
-// - u, Pi_ptr:     commitment u and proof π, corresponding to the structure ρ_1 
+// - Rho1:          structure ρ_1 that contains the commitment u and proof π
 // 
-// Outputs:
-// - s_0:           short vector (output of GSampler),       s_0 ∈ Z^(2d)
-// - w:             polynomial vector (output of GSampler),  w ∈ R^m
-// - x:             random integer, uniformly sampled from the set [N]
-//                  NOTE: (s_0, w, x) correspond to the structure ρ_2
+// Output:
+// - Rho2_ptr:      pointer to the structure ρ_2 = (s_0, w, x) where:
+//      * s_0:      short vector (output of GSampler),       s_0 ∈ Z^(2d)
+//      * w:        polynomial vector (output of GSampler),  w ∈ R^m
+//      * x:        random integer, uniformly sampled from the set [N]
 //==============================================================================
-void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, const zz_pX& u, uint8_t** Pi_ptr)
+void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, RHO1_t& Rho1)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k, result;
-    zz_pX           a1, fx_u;
-    vec_zz_pX       a2, c0, c1; //mex_prime;
-    vec_ZZ          m_i, coeffs_m;
+    vec_ZZ          s_0, m_i, coeffs_m;
+    vec_ZZX         w;
+    ZZ              x, B_goth2;
+    zz_pX           u, fx_u;
     mat_zz_p        P0, P1, P; 
-    vec_zz_p        u_vect, prod;   
-    ZZ              B_goth2;
+    vec_zz_p        u_vect, prod;
     long            mul;
+    size_t          len_u, len_s0, len_w, len_x, len_Rho2;
+    uint8_t        *Rho2_bytes;
     
     const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const int           nbits   = ceil(log2(conv<double>(q0-1)));
 
     
     // 1. (a'_1, ... , a'_k) ← attrs',  a'_i ∈ {0, 1}∗
@@ -111,13 +157,19 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
-    a1 = ipk.a1;
-    a2 = ipk.a2;
-    c0 = ipk.c0;
-    c1 = ipk.c1;
 
-    // 3. (u, π) ← ρ1
-    // NOTE: u, Pi provided as separate inputs
+
+    // 3. (u, π) ← ρ1   
+    len_u = calc_ser_size_poly_minbyte(d0, nbits);
+    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+
+    // Deserialize u
+    deserialize_minbyte_poly_zz_pX(u, d0, nbits, Rho1.u, len_u);
+    // Rho1.u += len_u;
+    
+    // Free the vector with serialized u
+    delete[] Rho1.u;
+
 
     // 4. B ← isk,   B ∈ Z^(2d×2d)
     // NOTE: using (f, g, F, G) instead of B
@@ -138,7 +190,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
         }
     }    
 
-    // mex_prime = CoeffsInv(coeffs_m, lm0);
+    // vec_zz_pX mex_prime = CoeffsInv(coeffs_m, lm0);
     // NOTE: coeffs_m is directly used instead of mex_prime
 
 
@@ -147,7 +199,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     // NOTE: zero padding of P (d_hat columns) anticipated here, from Verify_Com
 
     P0.SetDims(d0, lm0*d0);
-    rot_vect(P0, c0);
+    rot_vect(P0, ipk.c0);
 
     // NOTE: only first idx_hid*h0 columns of P0 (corresponding to undisclosed attributes) 
     //       are copied into P, while P1 is fully copied into P.
@@ -163,7 +215,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     }    
 
     P1.SetDims(d0, lr0*d0);
-    rot_vect(P1, c1);
+    rot_vect(P1, ipk.c1);
 
     for(j=0; j<(lr0*d0); j++)
     {
@@ -216,8 +268,9 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
 
-        result = Verify_Com(seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, Pi_ptr);
-        // NOTE: P, u are converted from modulo q0 to q1_hat
+        result = Verify_Com(seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, &(Rho1.Pi));
+        // NOTE: P, u_vect are converted from modulo q0 to q1_hat
+        // NOTE: Verify_Com deserializes the proof π in Rho1.Pi
     }
 
     P.kill();
@@ -236,7 +289,7 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
     x = RandomBnd(N0) + 1;
 
     
-    // 11. (s_0, w) ← GSampler(a1, a2, B, s_goth, f(x) + u),   (s_0, w) ∈ Z^(2d) × R^m_q
+    // 11. (s_0, w) ← GSampler(a1, a2, B, s_goth, f(x) + u),   (s_0, w) ∈ Z^(2d) × R^m
     s_0.SetLength(2*d0);    
 
     // Compute  f(x) + u
@@ -305,8 +358,28 @@ void I_VerCred(vec_ZZ& s_0, vec_ZZX& w, ZZ& x, const unsigned char* seed_crs, co
             
     #endif
     
+    
     // 12. ρ_2 ← (s_0, w, x),   ρ_2 ∈ Z^(2d) × R^m × N
+    
+    // Compute the number of bytes for each component of the structure ρ_2
+    len_s0 = calc_ser_size_vec_ZZ(2*d0);    // vec_ZZ (2*d0*long)     -  8192 bytes
+    len_w  = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
+    len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes    
+    len_Rho2 = len_s0 + len_w + len_x;      //                          20544 bytes
+    cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+  
+    // Allocate a vector of bytes to store the structure ρ_2
+    *Rho2_ptr = new uint8_t[len_Rho2];
+    Rho2_bytes = *Rho2_ptr;
 
-    // 13. return ρ_2    
-    // NOTE: (s_0, w, x) provided as separate outputs         
+    // Serialize (s_0, w, x) in ρ_2
+    serialize_vec_ZZ(Rho2_bytes, len_s0, 2*d0, s_0);
+    Rho2_bytes+= len_s0;
+    serialize_vec_ZZX(Rho2_bytes, len_w, m0, d0, w);
+    Rho2_bytes+= len_w;
+    serialize_big_ZZ(Rho2_bytes, len_x, x-1);    
+    // Rho2_bytes+= len_x;
+
+
+    // 13. return ρ_2
 }

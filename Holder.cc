@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "Holder.h"
+#include "serialize.h"
 
 
 //==============================================================================
@@ -74,31 +75,30 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, unsigned char* seed_crs, Vec<string>& at
 // - idx_pub:       | idx |, number of disclosed attributes 
 // 
 // Outputs:
-// - u, Pi_ptr:     commitment u and proof π, corresponding to the structure ρ_1 
+// - Rho1:          structure ρ_1 that contains the commitment u and proof π
 // - state:         structure that contains the polynomial vectors m and r
 //==============================================================================
-void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char* seed_crs, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs)
+void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const unsigned char* seed_crs, const CRS2_t& crs, const IPK_t& ipk, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
-    vec_zz_pX       c0, c1;
     vec_ZZX         mex, r;
     vec_ZZ          m_i, coeffs_m, coeffs_r, s;
+    zz_pX           u;
     mat_zz_p        P0, P1, P; 
     vec_zz_p        u_vect, prod;
     ZZ              range, B_goth2;
     long            mul;
+    size_t          len_u;
 
     const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
-
+    const int           nbits   = ceil(log2(conv<double>(q0-1)));
        
     // 1. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗
     // NOTE: l0 = idx_hid + idx_pub = len(attrs),  d0 must divide l0*h0
     // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
     
     // 2. (c0, c1) ← ipk,   (c0, c1) ∈ R^ℓm_q × R^ℓr_q
-    c0 = ipk.c0;
-    c1 = ipk.c1;
 
     // 3. m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
     mex.SetLength(lm0);    
@@ -138,15 +138,15 @@ void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char*
 
     // 5. u ← c0^T * m + c1^T * r ∈ R_q
     u.SetLength(d0);
-    u = poly_mult(c0, conv<vec_zz_pX>(mex)) + poly_mult(c1, conv<vec_zz_pX>(r));
-    
+    u = poly_mult(ipk.c0, conv<vec_zz_pX>(mex)) + poly_mult(ipk.c1, conv<vec_zz_pX>(r));
+
 
     // 6. P ← [rot(c0^T)_(idx_hid) | rot(c1^T)],    P ∈ Z_q^(d × (|idx_hid|·h + ℓr·d))   
     P.SetDims(d0, (idxhlrd + d_hat));
     // NOTE: zero padding of P (d_hat columns) anticipated here, from Preprocessing_Com
 
     P0.SetDims(d0, lm0*d0);    
-    rot_vect(P0, c0);
+    rot_vect(P0,  ipk.c0);
 
     // NOTE: only first idx_hid*h0 columns of P0 (corresponding to undisclosed attributes) 
     //       are copied into P, while P1 is fully copied into P.
@@ -162,7 +162,7 @@ void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char*
     }
     
     P1.SetDims(d0, lr0*d0);
-    rot_vect(P1, c1);    
+    rot_vect(P1, ipk.c1);    
 
     for(j=0; j<(lr0*d0); j++)
     {
@@ -239,15 +239,25 @@ void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char*
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
    
-        Prove_Com(Pi_ptr, seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, s);
-        // NOTE: P, u are converted from modulo q0 to q1_hat
+        Prove_Com(&(Rho1.Pi), seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, s);
+        // NOTE: P, u_vect are converted from modulo q0 to q1_hat
+        // NOTE: Prove_Com serializes the proof π in Rho1.Pi
     }
 
     P.kill();
    
 
     // 10. ρ_1 ← (u, π)
-    // NOTE: u & Pi are kept separate in the output, for simplicity
+
+    // Allocate a vector of bytes to store u
+    len_u = calc_ser_size_poly_minbyte(d0, nbits);
+    Rho1.u = new uint8_t[len_u];
+    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    
+    // Serialize u in Rho1.u
+    serialize_minbyte_poly_zz_pX(Rho1.u, len_u, d0, nbits, u);
+    // Rho1.u += len_u;
+    
           
     // 11. state ← (m, r) state ∈ R^ℓm × R^ℓr
     state.m = mex;
@@ -263,37 +273,50 @@ void H_VerCred1(zz_pX& u, uint8_t** Pi_ptr, STATE_t& state, const unsigned char*
 // Inputs:
 // - ipk:            Issuer public key
 // - B_f:            public random matrix B_f ∈ Z^(nd×t)_q
-// - s_0:            short vector (output of GSampler),  s_0 ∈ Z^(2d)
-// - w:              polynomial vector (output of GSampler),  w ∈ R^m
-// - x:              random integer, uniformly sampled from the set [N]
+// - Rho2_ptr:       pointer to the structure ρ_2 = (s_0, w, x)
 // - state:          structure that contains the polynomial vectors m and r
-//                   NOTE: (s_0, w, x) correspond to the structure ρ_2
 // 
 // Outputs:
 // - cred = (s,r,x): triple that corresponds to the credential
 //==============================================================================
-void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_ZZ& s_0, const vec_ZZX& w, const ZZ& x, const STATE_t& state)
+void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, uint8_t** Rho2_ptr, const STATE_t& state)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j;
-    zz_pX           a1, left, right;
-    vec_zz_pX       a2, c0, c1, a;
-    vec_ZZX         m, r, s;
-    ZZ              acc;
-    ZZ              norm_s, norm_r, th_s, th_r;
+    vec_ZZ          s_0;
+    vec_ZZX         w, s;
+    ZZ              x, norm_s, norm_r, th_s, th_r;
+    zz_pX           left, right;
+    vec_zz_pX       a;
+    size_t          len_s0, len_w, len_x;
+    uint8_t        *Rho2_bytes;
 
     // 1. (m, r) ← state,   state ∈ R^(ℓm) × R^(ℓr)
-    m = state.m;
-    r = state.r;
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
-    a1 = ipk.a1;
-    a2 = ipk.a2;
-    c0 = ipk.c0;
-    c1 = ipk.c1;
     
     // 3. (s_0, w, x) ← ρ2,   ρ_2 ∈ Z^(2d) × R^m × N
-    // NOTE: (s_0, w, x) provided as separate inputs  
+    
+    // Compute the number of bytes for each component of the structure ρ_2
+    len_s0 = calc_ser_size_vec_ZZ(2*d0);    // vec_ZZ (2*d0*long)     -  8192 bytes
+    len_w  = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
+    len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes
+    // size_t len_Rho2 = len_s0 + len_w + len_x; //                     20544 bytes
+    // cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+  
+    // Deserialize the structure ρ_2
+    Rho2_bytes = *Rho2_ptr;
+    deserialize_vec_ZZ(s_0, 2*d0, Rho2_bytes, len_s0);
+    Rho2_bytes+= len_s0;
+    deserialize_vec_ZZX(w, m0, d0, Rho2_bytes, len_w);
+    Rho2_bytes+= len_w;
+    deserialize_big_ZZ(x, Rho2_bytes, len_x);
+    x++;
+    // Rho2_bytes+= len_x;
+
+    // Free the vector with serialized structure ρ_2
+    delete[] (*Rho2_ptr);
+
 
     // 4. s ← [Coeffs^(−1)(s_0) | w],   s ∈ R^(m+2)
     // NOTE: s_0 and s are different from s in Holder.VerCred1
@@ -321,7 +344,7 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
     norm_s = Norm2X(s, d0);
     th_s   = ZZ(sigma2) * ZZ( (m0+2)*d0 );
 
-    norm_r = Norm2X(r, d0);
+    norm_r = Norm2X(state.r, d0);
     th_r   = sqr(ZZ(psi0)) * ZZ( lr0*d0 );
 
     // a ← [1|a1|a2^T]
@@ -330,11 +353,11 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
     a[0].SetLength(d0);
     a[0] = zz_pX(1); 
 
-    a[1] = a1;
+    a[1] =  ipk.a1;
 
     for(i=0; i<m0; i++)
     {
-        a[2+i] = a2[i];
+        a[2+i] =  ipk.a2[i];
     }
 
     // left ← [1|a1|a2^T] * s = a * s,   left ∈ R_q
@@ -342,7 +365,7 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
     left.normalize();
 
     // right ← f(x) + c0^T * m + c1^T * r,   right ∈ R_q    
-    right = Compute_f(B_f, x) + poly_mult(c0, conv<vec_zz_pX>(m)) + poly_mult(c1, conv<vec_zz_pX>(r) );
+    right = Compute_f(B_f, x) + poly_mult( ipk.c0, conv<vec_zz_pX>(state.m)) + poly_mult(ipk.c1, conv<vec_zz_pX>(state.r) );
     right.normalize();
     
     cred.valid = 0;
@@ -379,7 +402,7 @@ void H_VerCred2(CRED_t& cred, const IPK_t& ipk, const mat_zz_p& B_f, const vec_Z
     {
         // 8. cred ← (s, r, x),   (s, r, x) ∈ R^(m+2)_q × R^(ℓr) × N
         cred.s = s;
-        cred.r = r;
+        cred.r = state.r;
         cred.x = x;
         cred.valid = 1;
     }
@@ -408,10 +431,8 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
-    zz_pX           a1;
-    vec_zz_pX       a2, c0, c1, a; 
-    vec_ZZX         s, r; //mex
-    ZZ              x;   
+    vec_zz_pX       a; 
+    // vec_ZZX      mex;
     vec_ZZ          m_i, coeffs_m, coeffs_s, coeffs_r, r_vect, coeffs_u;
     vec_zz_p        coeffs_m_idx;
     mat_zz_p        P, C0, C1, C; 
@@ -429,19 +450,9 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
     // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
 
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
-    a1 = ipk.a1;
-    a2 = ipk.a2;
-    c0 = ipk.c0;
-    c1 = ipk.c1;
 
     // 3. (s, r, x) ← cred,   cred ∈ R^(m+2) × R^(ℓr) × N
-    if (cred.valid)
-    {
-        s = cred.s;        
-        r = cred.r;
-        x = cred.x;
-    }
-    else
+    if (cred.valid == 0)
     {
         cout << "\n Invalid credential!" << endl;
         return;
@@ -475,11 +486,11 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
     a[0].SetLength(d0);
     a[0] = zz_pX(1);  
        
-    a[1] = a1;
+    a[1] =  ipk.a1;
 
     for(i=0; i<m0; i++)
     {
-        a[2+i] = a2[i];
+        a[2+i] = ipk.a2[i];
     } 
           
           
@@ -494,7 +505,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
     // NOTE: zero padding of C (d_hat columns) anticipated here, from Preprocessing_ISIS
 
     C0.SetDims(d0, lm0*d0);
-    rot_vect(C0, c0);
+    rot_vect(C0,  ipk.c0);
 
     // NOTE: first copy in C the columns for disclosed attributes, then those for undisclosed attributes
     // NOTE: lm0*d0 = l0*h0 = (idx_pub + idx_hid) * h0       
@@ -521,7 +532,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
     C0.kill();   
 
     C1.SetDims(d0, lr0*d0);  
-    rot_vect(C1, c1);    
+    rot_vect(C1, ipk.c1);    
 
     for(j=0; j<(lr0*d0); j++)
     {
@@ -547,7 +558,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
     // 8. s ← Coeffs(s),   s ∈ Z^((m+2)d)
     coeffs_s.SetLength(m2d + d_hat);
     // NOTE: zero padding of coeffs_s (d_hat values) anticipated here, from Preprocessing_ISIS
-    CoeffsX(coeffs_s, s, (m0+2));
+    CoeffsX(coeffs_s, cred.s, (m0+2));
     
     
     // 9. r ← (Coeffs(m)_(idx_hid), Coeffs(r)),   r ∈ Z^(|idx_hid|·h + ℓr·d)
@@ -555,7 +566,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
     // NOTE: zero padding of r_vect (d_hat values) anticipated here, from Preprocessing_ISIS
     
     coeffs_r.SetLength(lr0*d0);    
-    CoeffsX(coeffs_r, r, lr0);
+    CoeffsX(coeffs_r, cred.r, lr0);
     
     // NOTE: only first idx_hid*h0 coeffs of m (corresponding to undisclosed attributes) 
     //       are copied into r_vect, while coeffs of r is fully copied into r_vect.
@@ -580,7 +591,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
 
     for(i=0; i<t0; i++)
     {
-        coeffs_u[i] = bit(x-1, i);
+        coeffs_u[i] = bit(cred.x-1, i);
     }
     
 
