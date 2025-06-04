@@ -140,7 +140,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     const unsigned long m2          = m2_Com;
     const unsigned long d_d_hat     = (d0/d_hat);
     const unsigned long n256        = (256/d_hat);
-    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau0);
+    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau_Com);
     const int           nbits       = ceil(log2(conv<double>(q1_hat-1)));
 
     // Initialise the "goth" constants
@@ -170,7 +170,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     // A_1     = crs[0];    // ∈ (R^_q^)^(n x m1)
     // A_2     = crs[1];    // ∈ (R^_q^)^(n x m2)
     // B_y     = crs[2];    // ∈ (R^_q^)^(256/d^ x m2)
-    // B_g     = crs[3];    // ∈ (R^_q^)^(tau0 x m2)
+    // B_g     = crs[3];    // ∈ (R^_q^)^(tau_Com x m2)
     // b       = crs[4][0]; // ∈ (R^_q^)^(m2)         NOTE: b in crs is a (1 x m_2) matrix
     // Abar_1  = crs[5];    // ∈ (R^_q^)^(m1 x n1)
     // Abar_2  = crs[6];    // ∈ (R^_q^)^(m2 x n2)
@@ -295,7 +295,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     len_valid = 1;                                                  // uint8     - 1 byte
     len_t_A = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);      // vec_zz_pX
     len_t_y = calc_ser_size_vec_poly_minbyte(n256, d_hat, nbits);   // vec_zz_pX 
-    len_t_g = calc_ser_size_vec_poly_minbyte(tau0, d_hat, nbits);   // vec_zz_pX
+    len_t_g = calc_ser_size_vec_poly_minbyte(tau_Com, d_hat, nbits);// vec_zz_pX
     len_w   = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);      // vec_zz_pX
     len_com1_t1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits); // vec_zz_pX
     len_com1_t2 = len_com1_t1;                                      // vec_zz_pX
@@ -306,7 +306,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
     len_com2_w1 = len_com2_t1;                                      // vec_zz_pX
     len_com2_w2 = len_com2_t1;                                      // vec_zz_pX   
     len_z_3 = calc_ser_size_vec_zz_p_minbyte(256, nbits);           // vec_zz_p     
-    len_h   = calc_ser_size_vec_poly_minbyte(tau0, d_hat, nbits);   // vec_zz_pX
+    len_h   = calc_ser_size_vec_poly_minbyte(tau_Com, d_hat, nbits);// vec_zz_pX
     len_t   = calc_ser_size_poly_minbyte(d_hat, nbits);             // zz_pX    
     len_f0  = calc_ser_size_poly_minbyte(d_hat, nbits);             // zz_pX        
     len_z_1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);     // vec_zz_pX
@@ -390,9 +390,9 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         }
 
         // 13. Random generation of g ∈ R^^(tau)_(q_hat)
-        g.SetLength(tau0);
+        g.SetLength(tau_Com);
 
-        for(i=0; i<tau0; i++)
+        for(i=0; i<tau_Com; i++)
         {
             g[i] = random_zz_pX(d_hat);            
             // g[i][0] = 0;
@@ -418,9 +418,9 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         }
 
         // 16. t_g = B_g*s2 + g,  t_g ∈ R^^(tau)_(q_hat)
-        Pi.t_g.SetLength(tau0);
+        Pi.t_g.SetLength(tau_Com);
 
-        for(i=0; i<tau0; i++)
+        for(i=0; i<tau_Com; i++)
         {
             Pi.t_g[i] = poly_mult_hat(crs[3][i], s_2) + g[i];
         }
@@ -448,7 +448,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_y, n256, d_hat, nbits, Pi.t_y);
         Hash_Update(state, Pi_bytes, len_t_y);
         Pi_bytes += len_t_y;
-        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_g, tau0, d_hat, nbits, Pi.t_g);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_g, tau_Com, d_hat, nbits, Pi.t_g);
         Hash_Update(state, Pi_bytes, len_t_g);
         Pi_bytes += len_t_g;
         serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_w, n, d_hat, nbits, Pi.w);
@@ -517,12 +517,12 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         Hash_Update(state, Pi_bytes, len_z_3);
         Pi_bytes += len_z_3;
 
-        // 26. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_(q_hat)
+        // 26. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau_Com x 256+d0+1)_(q_hat)
         HCom2(gamma, state);
 
 
         // Initialize h ∈ R^^(tau)_(q_hat)
-        Pi.h.SetLength(tau0);
+        Pi.h.SetLength(tau_Com);
 
         // Precompute σ(r_j), h_part1
         sigma_r_.SetDims(256, m1);
@@ -537,7 +537,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
 
 
         // 27. for i ∈ [τ] do
-        for(i=0; i<tau0; i++) 
+        for(i=0; i<tau_Com; i++) 
         {
             // 28. Compute h_i,   h_i ∈ R^_(q_hat)
             acc = g[i];
@@ -559,7 +559,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         }
 
         // 30. a_3 ← h,   a_3 ∈ R^^(tau)_(q_hat)
-        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_h, tau0, d_hat, nbits, Pi.h);
+        serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_h, tau_Com, d_hat, nbits, Pi.h);
         Hash_Update(state, Pi_bytes, len_h);
         Pi_bytes += len_h;
 
@@ -568,14 +568,14 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         HCom3(mu, state);
 
         // 32. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
-        B.SetDims((n256 + tau0), m2);
+        B.SetDims((n256 + tau_Com), m2);
         
         for(i=0; i<n256; i++) 
         {
             B[i]   = crs[2][i];
         }
 
-        for(i=n256; i<(n256 + tau0); i++) 
+        for(i=n256; i<(n256 + tau_Com); i++) 
         {
             B[i]   = crs[3][i-n256];
         }
@@ -599,16 +599,16 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         }
             
         // Compute -B*y2 in a temporary vector
-        tmp_vec.SetLength(n256 + tau0);
+        tmp_vec.SetLength(n256 + tau_Com);
 
-        for(i=0; i<(n256 + tau0); i++)
+        for(i=0; i<(n256 + tau_Com); i++)
         {
             tmp_vec[i] = -poly_mult_hat(B[i], y_2);
         }
         
         k = 0;
 
-        for(i=(2*m1); i<(2*m1 + n256 + tau0); i++) 
+        for(i=(2*m1); i<(2*m1 + n256 + tau_Com); i++) 
         {
             y[i] = tmp_vec[k];        // -B*y2
             k++; 
@@ -617,7 +617,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         sigma_map(tmp_vec, tmp_vec, d_hat);
         k = 0;
 
-        for(i=(2*m1 + n256 + tau0); i<( m1_n256_tau ); i++) 
+        for(i=(2*m1 + n256 + tau_Com); i<( m1_n256_tau ); i++) 
         {
             y[i] = tmp_vec[k]; // σ(-B*y2)
             k++;    
@@ -629,7 +629,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         // sum = 0;
         clear(sum);
                 
-        for(i=0; i<tau0; i++)
+        for(i=0; i<tau_Com; i++)
         {
             sum += ( mu[i] * gamma[i][256+d0] );           
         }
@@ -652,7 +652,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         // 1st entry of d_1 (m1 polynomials)
         acc_vec.SetLength(m1);
         
-        for(i=0; i<tau0; i++)
+        for(i=0; i<tau_Com; i++)
         {
             // Reset acc_vec
             for(j=0; j<m1; j++)
@@ -689,7 +689,7 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
         // 3rd entry of d_1 (256/d_hat polynomials)    
         acc_vec.SetLength(n256);
         
-        for(i=0; i<tau0; i++)
+        for(i=0; i<tau_Com; i++)
         {
             // Reset acc_vec
             for(j=0; j<n256; j++)
@@ -713,15 +713,15 @@ void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs
             }
         } 
         
-        // 4th entry of d_1 (tau0 polynomials)    
+        // 4th entry of d_1 (tau_Com polynomials)    
         k = 0;
 
-        for(i=(2*m1 + n256); i<(2*m1 + n256 + tau0); i++) 
+        for(i=(2*m1 + n256); i<(2*m1 + n256 + tau_Com); i++) 
         {
             d_1[i] = mu[k];
             k++;    
         }
-        // NOTE: skip 5th entry of d_1 (256/d_hat + tau0 zeros)
+        // NOTE: skip 5th entry of d_1 (256/d_hat + tau_Com zeros)
         
                         
         // 36. Definition of f1 ∈ R^_(q_hat)
@@ -943,7 +943,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     const unsigned long m2          = m2_Com;
     const unsigned long d_d_hat     = (d0/d_hat);
     const unsigned long n256        = (256/d_hat);
-    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau0);
+    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau_Com);
     const int           nbits       = ceil(log2(conv<double>(q1_hat-1)));
 
     // Initialise the "goth" constants
@@ -961,7 +961,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     // A_1     = crs[0];    // ∈ (R^_q^)^(n x m1)
     // A_2     = crs[1];    // ∈ (R^_q^)^(n x m2)
     // B_y     = crs[2];    // ∈ (R^_q^)^(256/d^ x m2)
-    // B_g     = crs[3];    // ∈ (R^_q^)^(tau0 x m2)
+    // B_g     = crs[3];    // ∈ (R^_q^)^(tau_Com x m2)
     // b       = crs[4][0]; // ∈ (R^_q^)^(m2)         NOTE: b in crs is a (1 x m_2) matrix
     // Abar_1  = crs[5];    // ∈ (R^_q^)^(m1 x n1)
     // Abar_2  = crs[6];    // ∈ (R^_q^)^(m2 x n2)
@@ -1007,7 +1007,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     len_valid = 1;                                                  // uint8     - 1 byte
     len_t_A = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);      // vec_zz_pX
     len_t_y = calc_ser_size_vec_poly_minbyte(n256, d_hat, nbits);   // vec_zz_pX 
-    len_t_g = calc_ser_size_vec_poly_minbyte(tau0, d_hat, nbits);   // vec_zz_pX
+    len_t_g = calc_ser_size_vec_poly_minbyte(tau_Com, d_hat, nbits);// vec_zz_pX
     len_w   = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);      // vec_zz_pX
     len_com1_t1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits); // vec_zz_pX
     len_com1_t2 = len_com1_t1;                                      // vec_zz_pX
@@ -1018,7 +1018,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     len_com2_w1 = len_com2_t1;                                      // vec_zz_pX
     len_com2_w2 = len_com2_t1;                                      // vec_zz_pX   
     len_z_3 = calc_ser_size_vec_zz_p_minbyte(256, nbits);           // vec_zz_p     
-    len_h   = calc_ser_size_vec_poly_minbyte(tau0, d_hat, nbits);   // vec_zz_pX
+    len_h   = calc_ser_size_vec_poly_minbyte(tau_Com, d_hat, nbits);// vec_zz_pX
     len_t   = calc_ser_size_poly_minbyte(d_hat, nbits);             // zz_pX    
     len_f0  = calc_ser_size_poly_minbyte(d_hat, nbits);             // zz_pX        
     len_z_1 = calc_ser_size_vec_poly_minbyte(m1, d_hat, nbits);     // vec_zz_pX
@@ -1056,7 +1056,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     Pi_bytes += len_t_A;
     deserialize_minbyte_vec_poly_zz_pX(Pi.t_y, n256, d_hat, nbits, Pi_bytes, len_t_y);
     Pi_bytes += len_t_y;
-    deserialize_minbyte_vec_poly_zz_pX(Pi.t_g, tau0, d_hat, nbits, Pi_bytes, len_t_g);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.t_g, tau_Com, d_hat, nbits, Pi_bytes, len_t_g);
     Pi_bytes += len_t_g;
     deserialize_minbyte_vec_poly_zz_pX(Pi.w, n, d_hat, nbits, Pi_bytes, len_w);
     Pi_bytes += len_w;
@@ -1078,7 +1078,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     Pi_bytes += len_com2_w2;
     deserialize_minbyte_vec_zz_p(Pi.z_3, 256, nbits, Pi_bytes, len_z_3);
     Pi_bytes += len_z_3;    
-    deserialize_minbyte_vec_poly_zz_pX(Pi.h, tau0, d_hat, nbits, Pi_bytes, len_h);
+    deserialize_minbyte_vec_poly_zz_pX(Pi.h, tau_Com, d_hat, nbits, Pi_bytes, len_h);
     Pi_bytes += len_h;
     deserialize_minbyte_poly_zz_pX(Pi.t, d_hat, nbits, Pi_bytes, len_t);
     Pi_bytes += len_t;    
@@ -1130,7 +1130,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
-    // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau0 x 256+d0+1)_(q_hat)     
+    // 11. gamma ← H(2, crs, x, a1, a2),   gamma ∈ Z^(tau_Com x 256+d0+1)_(q_hat)     
     Hash_Update(state, Pi_bytes, len_z_3);
     Pi_bytes += len_z_3;
     HCom2(gamma, state);
@@ -1152,10 +1152,10 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
 
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
-    B.SetDims((n256 + tau0), m2);
+    B.SetDims((n256 + tau_Com), m2);
 
     // 15. t_B ← [t_y; t_g],   t_B ∈ R^^(256/d_hat + tau)_(q_hat)
-    t_B.SetLength(n256 + tau0);
+    t_B.SetLength(n256 + tau_Com);
 
     for(i=0; i<n256; i++) 
     {
@@ -1163,7 +1163,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
         t_B[i] = Pi.t_y[i];
     }
 
-    for(i=n256; i<(n256 + tau0); i++) 
+    for(i=n256; i<(n256 + tau_Com); i++) 
     {
         B[i]   = crs[3][i-n256];
         t_B[i] = Pi.t_g[i-n256];
@@ -1188,16 +1188,16 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     }
 
     // Compute (c*t_B − B*z_2) in a temporary vector
-    tmp_vec.SetLength(n256 + tau0);
+    tmp_vec.SetLength(n256 + tau_Com);
     
-    for(i=0; i<(n256 + tau0); i++)
+    for(i=0; i<(n256 + tau_Com); i++)
     {
         tmp_vec[i] = ModPhi_hat_q( c * t_B[i] ) - poly_mult_hat(B[i], Pi.z_2);
     }
     
     k = 0;
 
-    for(i=(2*m1); i<(2*m1 + n256 + tau0); i++) 
+    for(i=(2*m1); i<(2*m1 + n256 + tau_Com); i++) 
     {
         z[i] = tmp_vec[k]; // (c*t_B − B*z_2)
         k++; 
@@ -1207,7 +1207,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     sigma_map(tmp_vec2, tmp_vec, d_hat); 
     k = 0;
 
-    for(i=(2*m1 + n256 + tau0); i<(m1_n256_tau); i++)  
+    for(i=(2*m1 + n256 + tau_Com); i<(m1_n256_tau); i++)  
     {
         z[i] = tmp_vec2[k]; // σ(c*t_B − B*z_2)   
         k++;    
@@ -1219,7 +1219,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     // sum = 0;
     clear(sum);
             
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_Com; i++)
     {
         sum += ( mu[i] * gamma[i][256+d0] );           
     }
@@ -1307,7 +1307,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     // 1st entry of d_1 (m1 polynomials)
     acc_vec.SetLength(m1);
     
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_Com; i++)
     {
         // Reset acc_vec
         for(j=0; j<m1; j++)
@@ -1344,7 +1344,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     // 3rd entry of d_1 (256/d_hat polynomials)    
     acc_vec.SetLength(n256);
   
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_Com; i++)
     {
         // Reset acc_vec
         for(j=0; j<n256; j++)
@@ -1368,15 +1368,15 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
         }
     }
     
-    // 4th entry of d_1 (tau0 polynomials)    
+    // 4th entry of d_1 (tau_Com polynomials)    
     k = 0;
 
-    for(i=(2*m1 + n256); i<(2*m1 + n256 + tau0); i++) 
+    for(i=(2*m1 + n256); i<(2*m1 + n256 + tau_Com); i++) 
     {
         d_1[i] = mu[k];
         k++;    
     }
-    // NOTE: skip 5th entry of d_1 (256/d_hat + tau0 zeros)
+    // NOTE: skip 5th entry of d_1 (256/d_hat + tau_Com zeros)
 
 
     // 19. Definition of d_0 ∈ R^_(q_hat)
@@ -1385,7 +1385,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
 
     B_goth_p = conv<zz_p>(B_goth2);
 
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_Com; i++)
     {            
         sum_z3 = 0;
         
@@ -1437,7 +1437,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
 
     // 20.2 Second condition: h˜_i == 0 for i ∈ [τ] 
     // NOTE: equations in R^^_(q_hat)
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_Com; i++)
     {
         if ( coeff(Pi.h[i], 0) != 0 )
         {
@@ -1486,7 +1486,7 @@ long Verify_Com(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& ip
     
     // 2nd addend (c * d_1^T * z)
     acc_vec.SetLength(m1_n256_tau);
-    // Compute  (c * d_1^T),  (2*m1 + 2*(256/d_hat + tau0)) polynomials
+    // Compute  (c * d_1^T),  (2*m1 + 2*(256/d_hat + tau_Com)) polynomials
     for(i=0; i<m1_n256_tau; i++)    
     {
         acc_vec[i] = ModPhi_hat_q( c * d_1[i] );

@@ -53,7 +53,8 @@ typedef Mat<long>   mat_L;
 #define q2_hat  1125899907006629 // \hat{q}_2 modulus of the proof system Π^ISIS_NIZK (must be divisible by q)
 #define xi0     8               // ξ
 #define nu0     140             // \nu
-#define tau0    8               // τ,  natural number such that 1/p^τ_1 negl(λ)
+#define tau_ISIS 7              // τ   for Π^ISIS_NIZK
+#define tau_Com  8              // τ   for Π^Com_NIZK
 #define n_ISIS  20              // n   for Π^ISIS_NIZK
 #define n_Com   17              // n   for Π^Com_NIZK
 #define m2_ISIS 64              // m_2 for Π^ISIS_NIZK, m2 ≥ n + ℓ

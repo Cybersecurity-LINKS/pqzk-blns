@@ -307,10 +307,10 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const unsigned char* seed_crs)
             }
         }
 
-        // Random generation of B_g ∈ R^(tau0^ x m_2)_(q_hat)
-        crs[0][3].SetDims(tau0, m2);
+        // Random generation of B_g ∈ R^(tau_ISIS^ x m_2)_(q_hat)
+        crs[0][3].SetDims(tau_ISIS, m2);
 
-        for(i=0; i<tau0; i++)
+        for(i=0; i<tau_ISIS; i++)
         {
             for(j=0; j<m2; j++)
             {
@@ -382,10 +382,10 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const unsigned char* seed_crs)
             }
         }
 
-        // Random generation of B_g ∈ R^(tau0^ x m_2)_(q_hat)
-        crs[1][3].SetDims(tau0, m2);
+        // Random generation of B_g ∈ R^(tau_Com^ x m_2)_(q_hat)
+        crs[1][3].SetDims(tau_Com, m2);
 
-        for(i=0; i<tau0; i++)
+        for(i=0; i<tau_Com; i++)
         {
             for(j=0; j<m2; j++)
             {
@@ -518,10 +518,10 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     n257 = 256 + d0 + 1; 
     // NOTE: gamma has 256+d+1 columns in Com, while 256+d+3 in ISIS   
 
-    // Random generation of gamma ∈ Z^(tau0 x 256+d0+1)_q1_hat
-    gamma.SetDims(tau0, n257);
+    // Random generation of gamma ∈ Z^(tau_Com x 256+d0+1)_q1_hat
+    gamma.SetDims(tau_Com, n257);
 
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_Com; i++)
     {
         Hash_v_zz_p(gamma[i], state, n257, b_coeffs);
     }
@@ -540,7 +540,7 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0)
 // - state0:    initial status structure
 //
 // Output:
-// - mu:        vector with tau0 polynomials with d_hat coefficients modulo q1_hat
+// - mu:        vector with tau_Com polynomials with d_hat coefficients modulo q1_hat
 //==============================================================================
 void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0)
 {
@@ -556,10 +556,10 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0)
     const uint8_t v[1] = {3};
     Hash_Update(state, v, 1);
 
-    // Random generation of mu ∈ R^(tau0)_q1_hat
-    mu.SetLength(tau0);
+    // Random generation of mu ∈ R^(tau_Com)_q1_hat
+    mu.SetLength(tau_Com);
 
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_Com; i++)
     {        
         Hash_zz_pX(mu[i], state, d_hat, b_coeffs);
     }
@@ -727,10 +727,10 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     n259 = 256 + d0 + 3;
     // NOTE: gamma has 256+d+3 columns in ISIS, while 256+d+1 in Com 
 
-    // Random generation of gamma ∈ R^(tau0 x 256+d+3)_q2_hat
-    gamma.SetDims(tau0, n259);
+    // Random generation of gamma ∈ R^(tau_ISIS x 256+d+3)_q2_hat
+    gamma.SetDims(tau_ISIS, n259);
 
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_ISIS; i++)
     {
         Hash_v_zz_p(gamma[i], state, n259, b_coeffs);
     }
@@ -749,7 +749,7 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
 // - state0:    initial status structure
 //
 // Output:
-// - mu:        vector with tau0 polynomials with d_hat coefficients modulo q2_hat
+// - mu:        vector with tau_ISIS polynomials with d_hat coefficients modulo q2_hat
 //==============================================================================
 void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0)
 // NOTE: HISIS3 is identical to HCom3, apart the modulo  
@@ -766,10 +766,10 @@ void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0)
     const uint8_t v[1] = {3};
     Hash_Update(state, v, 1);
 
-    // Random generation of mu ∈ R^(tau0)_q2_hat
-    mu.SetLength(tau0);
+    // Random generation of mu ∈ R^(tau_ISIS)_q2_hat
+    mu.SetLength(tau_ISIS);
 
-    for(i=0; i<tau0; i++)
+    for(i=0; i<tau_ISIS; i++)
     {        
         Hash_zz_pX(mu[i], state, d_hat, b_coeffs);
     }
