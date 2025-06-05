@@ -24,7 +24,7 @@ typedef struct
     vec_zz_pX   a2;
     vec_zz_pX   c0;
     vec_zz_pX   c1;
-    unsigned char seed_ipk[SEED_LEN];
+    uint8_t     seed_ipk[SEED_LEN];
 } IPK_t;
 
 typedef struct
@@ -35,10 +35,10 @@ typedef struct
 
 #include "Com.h"
 
- 
-void    I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
-void    CompleteIPK(IPK_t& ipk, const unsigned char* seed_ipk);
 
-void    I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, RHO1_t& Rho1);
+void    I_KeyGen(uint8_t** ipk_prt, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
+void    CompleteIPK(IPK_t& ipk, const uint8_t* ipk_bytes);
+
+void    I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, RHO1_t& Rho1);
 
 #endif

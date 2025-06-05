@@ -17,70 +17,106 @@
 
 
 //==============================================================================
-// I_KeyGen - Issuer.KeyGen function. It generates Issuer Public Key and 
+// I_KeyGen - Issuer.KeyGen function: generate the Issuer Public Key and 
 //            Issuer Secret Key from parameters d and q.
 //
 // Input:
 // - None
 //
 // Outputs:
-// - ipk:        Issuer Public key, containing a1, a2, c0, c1 vectors of polynomials
-// - f, g, F, G: Base polynomials used to build Issuer Secret Key (i.e. matrix of integers B)
+// - ipk_prt:    Issuer Public Key, pointer to serialized bytes (a1 + seed_ipk)
+// - f, g, F, G: Issuer Secret Key (i.e. base polynomials to build matrix B)
 //
 // NOTE: Issuer.KeyGen in BLNS pseudocode, corresponding to
 //       Fig. 18: AnonCreds.Init, pag. 52 in [BLNS23]
 //==============================================================================
-void I_KeyGen(IPK_t& ipk, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
+void I_KeyGen(uint8_t** ipk_prt, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 {
+    zz_pX           a1;
+    size_t          len_a1, len_ipk;
+    uint8_t         *ipk_bytes;
+    unsigned char   *seed_bytes;
+
+    const int   nbits   = ceil(log2(conv<double>(q0-1)));
+
+
 #ifdef ENABLE_FALCON
     // Keygen algorithm from the Falcon reference implementation 
-    Falcon_keygen(ipk.a1, f, g, F, G);
+    Falcon_keygen(a1, f, g, F, G);
 #else
     // NTRU.TrapGen(q, d) algorithm in [BLNS23]
-    NTRU_TrapGen(ipk.a1, f, g, F, G);    
+    NTRU_TrapGen(a1, f, g, F, G);    
 #endif
     // NOTE: a1 is a Polynomial with d coefficients modulo q (i.e. h in [DLP14])
-   
+
+
+    // Allocate a vector of bytes to store ipk (a1 + seed_ipk)
+    len_a1    = calc_ser_size_poly_minbyte(d0, nbits); // zz_pX
+    len_ipk   = len_a1 + SEED_LEN;
+    *ipk_prt  = new uint8_t[len_ipk];
+    ipk_bytes = *ipk_prt;
+    cout << "  Size ipk: " << (len_ipk/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    
+    // Serialize a1 (first bytes in ipk_bytes)
+    serialize_minbyte_poly_zz_pX(ipk_bytes, len_a1, d0, nbits, a1);   
 
     // Initialize a 32 byte (256 bit) public seed for completing ipk (i.e. a2, c0, c1),
-    // using the cryptographically strong pseudo-random number generator from NTL
-    RandomStream& RS = GetCurrentRandomStream();
-    RS.get(ipk.seed_ipk, SEED_LEN);
+    // using the cryptographically strong pseudo-random number generator from NTL.
+    // Store seed_ipk in the last bytes (SEED_LEN) of ipk_bytes
+    seed_bytes = reinterpret_cast<unsigned char*>(ipk_bytes + len_a1);
+    RandomStream& RS = GetCurrentRandomStream();    
+    RS.get(seed_bytes, SEED_LEN);
     // for(long i=0; i<SEED_LEN; i++)
     // {
-    //     printf("%0x", ipk.seed_ipk[i]);
+    //     printf("%0x", seed_bytes[i]);
     // }
     // printf("\n");
-
-    CompleteIPK(ipk, ipk.seed_ipk);
-          
+              
     // Output Issuer Public Key and Issuer Secret Key (i.e. B)
+    // CompleteIPK(ipk, ipk_bytes);
     // ipk ← (a1, a2, c0, c1)
     // isk ← (f, g, F, G)
 }
 
 
 //==============================================================================
-// CompleteIPK - CompleteIPK function. It completes the Issuer Public Key
-//               by generating a2, c0, c1 from a public seed.
+// CompleteIPK - CompleteIPK function: deserialize the Issuer Public Key
+//               and complete it by generating a2, c0, c1 from a public seed.
 //
 // Input:
-// - seed_ipk:  public seed for completing the Issuer Public Key
+// - ipk_bytes: Serialized Issuer Public Key (a1 + seed_ipk)
 //
 // Output:
-// - ipk:       Issuer Public key, completed with a2, c0, c1
+// - ipk:       Deserialized IPK (a1, a2, c0, c1 vectors of polynomials)
 //==============================================================================
-void CompleteIPK(IPK_t& ipk, const unsigned char* seed_ipk)
+void CompleteIPK(IPK_t& ipk, const uint8_t* ipk_bytes)
 {   
     // NOTE: assuming that current modulus is q0
 
     unsigned long   i;
-    HASH_STATE_t    *state;
-  
-    // Compute the minimum number of bytes to represent each coefficient of a2, c0, c1
-    const size_t b_coeffs = ceil(log2( conv<double>(q0-1) ) / 8.0);
+    HASH_STATE_t    *state;  
+    size_t          len_a1;
 
-    state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_ipk), SEED_LEN);
+    // Compute the minimum number of bits and bytes to represent each coefficient of a1, a2, c0, c1
+    const int    nbits    = ceil(log2(conv<double>(q0-1)));
+    const size_t b_coeffs = ceil(log2(conv<double>(q0-1)) / 8.0);
+    
+
+    // Deserialize a1 (first bytes in ipk_bytes)
+    len_a1 = calc_ser_size_poly_minbyte(d0, nbits); // zz_pX
+    deserialize_minbyte_poly_zz_pX(ipk.a1, d0, nbits, ipk_bytes, len_a1);
+    // NOTE: a1 is a Polynomial with d coefficients modulo q (i.e. h in [DLP14])
+
+    // Retrieve seed_ipk (last bytes in ipk_bytes) to generate a2, c0, c1
+    for(i=0; i<SEED_LEN; i++)
+    {
+        ipk.seed_ipk[i] = ipk_bytes[len_a1 + i];
+        // printf("%0x", ipk.seed_ipk[i]);
+    }
+    // printf("\n");
+        
+    // Initialize the Hash function with seed_ipk, to generate a2, c0, c1
+    state = Hash_Init(ipk.seed_ipk, SEED_LEN);
 
     ipk.a2.SetLength(m0);   
     // NOTE: a2 is a vector of m Polynomials with d coefficients modulo q
@@ -113,8 +149,6 @@ void CompleteIPK(IPK_t& ipk, const unsigned char* seed_ipk)
 
 
 
-
-
 //==============================================================================
 // I_VerCred    -   Issuer.VerCred function
 // 
@@ -122,7 +156,7 @@ void CompleteIPK(IPK_t& ipk, const unsigned char* seed_ipk)
 // - seed_crs:      initial public seed for crs structure
 // - crs:           structure with the pair (crs_ISIS, crs_Com), generated by Hcrs
 // - B_f:           public random matrix B_f ∈ Z^(nd×t)_q
-// - ipk:           Issuer Public key, containing a1, a2, c0, c1 vectors of polynomials
+// - ipk_bytes:     serialized Issuer Public Key
 // - f, g, F, G:    base polynomials used to build Issuer Secret Key (i.e. matrix of integers B)
 // - attrs_prime:   disclosed attributes (attrs′)
 // - idx_pub:       |idx|, number of disclosed attributes
@@ -134,10 +168,11 @@ void CompleteIPK(IPK_t& ipk, const unsigned char* seed_ipk)
 //      * w:        polynomial vector (output of GSampler),  w ∈ R^m
 //      * x:        random integer, uniformly sampled from the set [N]
 //==============================================================================
-void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const IPK_t& ipk, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, RHO1_t& Rho1)
+void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const Vec<string>& attrs_prime, RHO1_t& Rho1)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k, result;
+    IPK_t           ipk;
     vec_ZZ          s_0, m_i, coeffs_m;
     vec_ZZX         w;
     ZZ              x, B_goth2;
@@ -157,7 +192,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& 
     // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
-
+    CompleteIPK(ipk, ipk_bytes);
 
     // 3. (u, π) ← ρ1   
     len_u = calc_ser_size_poly_minbyte(d0, nbits);

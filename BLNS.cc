@@ -28,7 +28,7 @@ int main()
     zz_p::init(q0); // Initialize modulus q
     
     ZZX             f, g, F, G;
-    IPK_t           ipk;
+    uint8_t        *ipk;
     unsigned char   seed_crs[SEED_LEN];
     Vec<string>     attrs, attrs_prime;
     mat_zz_p        B_f;
@@ -51,7 +51,7 @@ int main()
         
         cout << "\n- Issuer.KeyGen    (key generation)" << endl;
         t1 = GetWallTime();
-        I_KeyGen(ipk, f, g, F, G);
+        I_KeyGen(&ipk, f, g, F, G);
         t2 = GetWallTime();
         cout << "  CPU time: " << (t2 - t1) << " s" << endl;
         
@@ -115,6 +115,9 @@ int main()
             cout << "  OK!" << endl;
         }   
         assert(valid == 1);
+
+        // Free up memory
+        delete[] ipk;
         
         t3 = GetWallTime();
         cout << "\n=====================================================================\n";

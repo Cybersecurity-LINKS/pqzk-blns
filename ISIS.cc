@@ -414,7 +414,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& cr
     state0 = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
     serialize_minbyte_poly_zz_pX(buffer, len_a1, d0, nbits, ipk.a1);
     Hash_Update(state0, buffer, len_a1);
-    Hash_Update(state0, reinterpret_cast<const uint8_t*>(ipk.seed_ipk), SEED_LEN);
+    Hash_Update(state0, ipk.seed_ipk, SEED_LEN);
     buffer[0] = (uint8_t)(idx_hid);
     Hash_Update(state0, buffer, len_idx_hid);
     serialize_minbyte_vec_zz_p(buffer, len_mex, idx_pub*h0, nbits, mex);
@@ -1174,7 +1174,7 @@ long Verify_ISIS(const unsigned char* seed_crs, const CRS_t& crs, const IPK_t& i
     state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
     serialize_minbyte_poly_zz_pX(buffer, len_a1, d0, nbits, ipk.a1);
     Hash_Update(state, buffer, len_a1);
-    Hash_Update(state, reinterpret_cast<const uint8_t*>(ipk.seed_ipk), SEED_LEN);
+    Hash_Update(state, ipk.seed_ipk, SEED_LEN);
     buffer[0] = (uint8_t)(idx_hid);
     Hash_Update(state, buffer, len_idx_hid);
     serialize_minbyte_vec_zz_p(buffer, len_mex, idx_pub*h0, nbits, mex);
