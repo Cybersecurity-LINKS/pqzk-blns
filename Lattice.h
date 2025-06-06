@@ -18,12 +18,30 @@
 #include "params.h"
 #include "Utils.h"
 
+typedef struct
+{
+    zz_pX       a1;
+    vec_zz_pX   a2;
+    vec_zz_pX   c0;
+    vec_zz_pX   c1;
+    uint8_t     seed_ipk[SEED_LEN];
+} IPK_t; // Issuer Public Key
+
+typedef struct
+{
+    ZZX         f;
+    ZZX         g;
+    ZZX         F;
+    ZZX         G;
+} ISK_t; // Issuer Secret Key
+
+
 #ifdef ENABLE_FALCON
-void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
-void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const zz_pX& d);
+void Falcon_keygen(zz_pX& a1, ISK_t& isk);
+void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ISK_t& isk, const zz_pX& d);
 #endif
 
-void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G);
+void NTRU_TrapGen(zz_pX& a1, ISK_t& isk);
 
 void preGSampler(vec_ZZ& v, const mat_L& B, const vec_ZZ& c);
 void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const mat_L& B, const zz_pX& d);

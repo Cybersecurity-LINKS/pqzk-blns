@@ -20,18 +20,18 @@ extern "C" {
 }
 
 //==============================================================================
-// Falcon_keygen - Generates a1, f, g, F, G (i.e. B) from parameters d and q.
+// Falcon_keygen - Generates a1, isk (i.e. B) from parameters d and q.
 //
 // Inputs:
 // - None
 //
 // Outputs:
 // - a1:         polynomial 
-// - f, g, F, G: Base polynomials used to build Issuer Secret Key (i.e. matrix B)
+// - isk:        Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
 //
 // NOTE: use the keygen function from the Falcon reference implementation.  
 //==============================================================================
-void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
+void Falcon_keygen(zz_pX& a1, ISK_t& isk)
 {
     int8_t          f8[d0], g8[d0], F8[d0], G8[d0];
     uint16_t        h[d0];
@@ -65,12 +65,12 @@ void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 
     // Convert the type of the variables to NTL types
     a1 = uint16ArrayToZZ_pX(vector<uint16_t>(h, h + d0));
-    f = int8ArrayToZZX(vector<int8_t>(f8, f8 + d0));
-    g = int8ArrayToZZX(vector<int8_t>(g8, g8 + d0));
-    F = int8ArrayToZZX(vector<int8_t>(F8, F8 + d0));
-    G = int8ArrayToZZX(vector<int8_t>(G8, G8 + d0));
+    isk.f = int8ArrayToZZX(vector<int8_t>(f8, f8 + d0));
+    isk.g = int8ArrayToZZX(vector<int8_t>(g8, g8 + d0));
+    isk.F = int8ArrayToZZX(vector<int8_t>(F8, F8 + d0));
+    isk.G = int8ArrayToZZX(vector<int8_t>(G8, G8 + d0));
 
-    // return (a1, f, g, F, G)
+    // return (a1, isk)
 }
 
 //==============================================================================
@@ -79,14 +79,14 @@ void Falcon_keygen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 // Inputs:
 // - h:          part of public key, i.e. polynomial        a_1 ∈ R_q
 // - a:          part of public key, i.e. polynomial vector a_2 ∈ R_q^m
-// - f, g, F, G: Base polynomials used to build Issuer Secret Key (i.e. matrix B)
+// - isk:        Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
 // - d:          center (= f(x)+u ), i.e. polynomial  d ∈ R_q
 //
 // Outputs:  
 // - s:          short vector,       s ∈ Z^(2d)
 // - w:          polynomial vector,  w ∈ R^m
 //==============================================================================
-void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ZZX& f, const ZZX& g, const ZZX& F, const ZZX& G, const zz_pX& d)
+void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ISK_t& isk, const zz_pX& d)
 {
     long    i, valid;  
     ZZX     u;         
@@ -161,10 +161,10 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
     // NOTE: computed using Falcon implementation
 
     // Convert to uint8_t format
-    conv_f = convertToUint8(f);
-    conv_g = convertToUint8(g);
-    conv_F = convertToUint8(F);
-    conv_G = convertToUint8(G);
+    conv_f = convertToUint8(isk.f);
+    conv_g = convertToUint8(isk.g);
+    conv_F = convertToUint8(isk.F);
+    conv_G = convertToUint8(isk.G);
     memcpy(f8, conv_f.data(), min<size_t>(conv_f.size(), d0));
     memcpy(g8, conv_g.data(), min<size_t>(conv_g.size(), d0));
     memcpy(F8, conv_F.data(), min<size_t>(conv_F.size(), d0));
@@ -213,19 +213,19 @@ void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, 
 
 
 //==============================================================================
-// NTRU_TrapGen - Generates a1, f, g, F, G (i.e. B) from parameters d and q.
+// NTRU_TrapGen - Generates a1, isk (i.e. B) from parameters d and q.
 //
 // Inputs:
 // - None
 //
 // Outputs:
 // - a1:         polynomial
-// - f, g, F, G: Base polynomials used to build Issuer Secret Key (i.e. matrix B)
+// - isk:        Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
 //
 // NOTE: Algorithm 2 Master Keygen(N, q) at pag. 15 in [DLP14]
 //       equivalent to algorithm NTRU.TrapGen(q, d) in [BLNS23]  
 //==============================================================================
-void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
+void NTRU_TrapGen(zz_pX& a1, ISK_t& isk)
 {
     long    i, valid;
     ZZX     fr, gr, num, den, inv_den, iphi, a, b, rho_f, rho_g, k;
@@ -251,30 +251,30 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
         // 4.   g_i ← ZSampler(σ_f, 0),  g_i ∈ Z
         
         // 5. f ← Sum_{i=0}^{d−1}(f_i * x^i),  f ∈ R
-        f.SetLength(d0);
-        polySampler(f, sigma_f);
+        isk.f.SetLength(d0);
+        polySampler(isk.f, sigma_f);
 
         // 6. g ← Sum_{i=0}^{d−1}(g_i * x^i),  g ∈ R
-        g.SetLength(d0);
-        polySampler(g, sigma_f);
+        isk.g.SetLength(d0);
+        polySampler(isk.g, sigma_f);
 
         // 7. fr ← f_0 − Sum_{i=0}^{d−1}(f_(d−i) * x^i),  fr ∈ R
         fr.SetLength(d0);
-        // fr[0] = f[0];
-        SetCoeff(fr, 0, coeff(f, 0));
+        // fr[0] = isk.f[0];
+        SetCoeff(fr, 0, coeff(isk.f, 0));
 
         // 8. gr ← g_0 − Sum_{i=0}^{d−1}(g_(d−i) * x^i),  gr ∈ R
         gr.SetLength(d0);
-        // gr[0] = g[0];
-        SetCoeff(gr, 0, coeff(g, 0));
+        // gr[0] = isk.g[0];
+        SetCoeff(gr, 0, coeff(isk.g, 0));
 
         for(i=1; i<d0; i++)
         {
-            // fr[i] = -f[d0-i];
-            SetCoeff(fr, i, -coeff(f, d0-i));
+            // fr[i] = -isk.f[d0-i];
+            SetCoeff(fr, i, -coeff(isk.f, d0-i));
 
-            // gr[i] = -g[d0-i];
-            SetCoeff(gr, i, -coeff(g, d0-i));
+            // gr[i] = -isk.g[d0-i];
+            SetCoeff(gr, i, -coeff(isk.g, d0-i));
         }
 
 
@@ -285,13 +285,13 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
         for(i=0; i<d0; i++)
         {
             // acc = acc + g[i]^2 + f[i]^2;
-            acc += sqr( coeff(g, i) ) + sqr( coeff(f, i) );
+            acc += sqr( coeff(isk.g, i) ) + sqr( coeff(isk.f, i) );
         }  
         gamma = sqrt(conv<RR>(acc));
         
         // Compute gamma2 = ∥(q*fr /(f*fr+g*gr)), (q*gr /(f*fr+g*gr))∥
         den.SetLength(d0);
-        den = ModPhi(f * fr + g * gr);
+        den = ModPhi(isk.f * fr + isk.g * gr);
         
         // inv_den = inv(den) % phi
         XGCD(res, inv_den, iphi, den, phi, 0);
@@ -327,7 +327,7 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
         
         // 11.  Using XGCD algorithm, compute ρ_f, ρ_g ∈ R and R_f, R_g ∈ Z
         // 12.1 such that:   −ρ_f*f = R_f mod (x^d + 1)         
-        XGCD(R_f, rho_f, iphi, -f, phi, 0); 
+        XGCD(R_f, rho_f, iphi, -isk.f, phi, 0); 
         
         // 13.2 if GCD(R_f, q) ≠ 1,  go to step 2
         if(GCD(R_f, q)!=1)
@@ -341,7 +341,7 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
         }
         
         // 12.2              −ρ_g*g = R_g mod (x^d + 1)
-        XGCD(R_g, rho_g, iphi, -g, phi, 0); 
+        XGCD(R_g, rho_g, iphi, -isk.g, phi, 0); 
         
         // 13.1 if GCD(R_f, R_g) ≠ 1,  go to step 2        
         // NOTE: this check is combined with steps 14, 15
@@ -364,12 +364,12 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
 
 
     // 16. F ← q·v·ρ_g F ∈ R
-    F.SetLength(d0);
-    F =  q * v * rho_g;
+    isk.F.SetLength(d0);
+    isk.F =  q * v * rho_g;
 
     // 17. G ← −q·u·ρ_f G ∈ R
-    G.SetLength(d0);  
-    G = -q * u * rho_f;
+    isk.G.SetLength(d0);  
+    isk.G = -q * u * rho_f;
 
     k = 1;
 
@@ -377,7 +377,7 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
     while( deg(k) >= 0 )
     {
         // 18. k = [(F*fr + G*gr)/(f*fr + g*gr)] ∈ R
-        num = ModPhi(F * fr + G * gr);
+        num = ModPhi(isk.F * fr + isk.G * gr);
         // den = (f * fr + g * gr) % (phi);    
         // XGCD(res, inv_den, iphi, den, phi, 0);    
         k = ModPhi(num * inv_den);
@@ -389,22 +389,22 @@ void NTRU_TrapGen(zz_pX& a1, ZZX& f, ZZX& g, ZZX& F, ZZX& G)
         }
         
         // 19. F ← F − k*f,  F ∈ R
-        F = ModPhi(F - k*f);
+        isk.F = ModPhi(isk.F - k*isk.f);
 
         // 20. G ← G − k*g,  G ∈ R
-        G = ModPhi(G - k*g);
+        isk.G = ModPhi(isk.G - k*isk.g);
     }
           
     // 21. a1 ← g*f^(−1) mod q ∈ R_q   
     a1.SetLength(d0);
-    inv_f = InvMod( conv<zz_pX>(f), conv<zz_pX>(phi) );
-    a1    = ModPhi_q( conv<zz_pX>(g) * inv_f );
+    inv_f = InvMod( conv<zz_pX>(isk.f), conv<zz_pX>(phi) );
+    a1    = ModPhi_q( conv<zz_pX>(isk.g) * inv_f );
 
     // 22. B ← [rot(g) −rot(f); 
     //          rot(G) −rot(F)] ∈ Z^(2d×2d)
     // NOTE: creation of B moved to I_VerCred
 
-    // 23. return (a1, f, g, F, G)
+    // 23. return (a1, isk)
 }
 
 

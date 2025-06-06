@@ -21,7 +21,6 @@
 #include "Com.h"
 #include "ISIS.h"
 
-
 typedef struct
 {
     vec_ZZX     m;

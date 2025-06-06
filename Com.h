@@ -32,8 +32,6 @@ typedef struct
     LHC_OP_t        op_1, op_2;
 } PROOF_C_t;
 
-#include "Issuer.h"
-
 
 void Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2);
 void Prove_Com(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0);

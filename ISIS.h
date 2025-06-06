@@ -19,8 +19,6 @@
 #include "LHC.h"
 #include "Hash.h"
 #include "Squares.h"
-#include "Issuer.h"
-
 
 typedef struct
 {
