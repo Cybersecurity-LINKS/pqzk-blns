@@ -303,7 +303,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& 
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
 
-        result = Verify_Com(seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, &(Rho1.Pi));
+        result = Verify_Com(seed_crs, crs[1], ipk.seed_ipk, (mul * P), (mul * u_vect), B_goth2, &(Rho1.Pi));
         // NOTE: P, u_vect are converted from modulo q0 to q1_hat
         // NOTE: Verify_Com deserializes the proof π in Rho1.Pi
     }

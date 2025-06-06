@@ -39,7 +39,7 @@ typedef struct
 typedef struct
 {
     // vec_ZZ   cp;
-    const uint8_t* ipk;
+    const uint8_t* ipk_bytes;
     Vec<string> attrs_prime;
     vec_ZZ      idx;
     uint8_t*    Pi;

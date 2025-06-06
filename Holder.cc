@@ -242,7 +242,7 @@ void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const unsigned char* seed_crs, con
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
    
-        Prove_Com(&(Rho1.Pi), seed_crs, crs[1], ipk, (mul * P), (mul * u_vect), B_goth2, s);
+        Prove_Com(&(Rho1.Pi), seed_crs, crs[1], ipk.seed_ipk, (mul * P), (mul * u_vect), B_goth2, s);
         // NOTE: P, u_vect are converted from modulo q0 to q1_hat
         // NOTE: Prove_Com serializes the proof π in Rho1.Pi
     }
@@ -617,7 +617,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
     // VP.cp = VC.cp;
 
     // 14. VP.ipk ← VC.ipk
-    VP.ipk = ipk_bytes;
+    VP.ipk_bytes = ipk_bytes;
 
     // 15. VP.attrs′ ← (attrs_{idx_pub} | {0}_{idx_hid})
     VP.attrs_prime = attrs; 
@@ -651,7 +651,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, cons
         zz_pPush push(q2_hat);
         // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat)) 
     
-        Prove_ISIS(&(VP.Pi), seed_crs, crs[0], ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, idx_pub, sig );
+        Prove_ISIS(&(VP.Pi), seed_crs, crs[0], ipk_bytes, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, idx_pub, sig );
         // NOTE: P, C, B_f are converted from modulo q0 to q2_hat
     }
 

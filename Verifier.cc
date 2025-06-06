@@ -49,7 +49,7 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
-    CompleteIPK(ipk, VP.ipk);
+    CompleteIPK(ipk, VP.ipk_bytes);
     
     // 3. m′ ← Coeffs^−1(H_M(a′_1), ... , H_M(a′_ℓ)) ∈ R^ℓm_q      
     // mex.SetLength(lm0);    
@@ -166,7 +166,7 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
         zz_pPush push(q2_hat);
         // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat)) 
 
-        out = Verify_ISIS(seed_crs, crs[0], ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, idx_pub, &(VP.Pi)); 
+        out = Verify_ISIS(seed_crs, crs[0], VP.ipk_bytes, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, idx_pub, &(VP.Pi)); 
         // NOTE: P, C, B_f are converted from modulo q0 to q2_hat
     }
 
