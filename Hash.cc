@@ -239,13 +239,13 @@ void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num)
 // - crs:       structure with the pair (crs_ISIS, crs_Com)
 // - B_f:       random matrix B_f ∈ Z^(d×t)_q
 //==============================================================================
-void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const unsigned char* seed_crs)
+void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs)
 {
     long            i, j, n, m1, m2, n256;
     HASH_STATE_t    *state;
     size_t          b_coeffs;
        
-    state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
+    state = Hash_Init(seed_crs, SEED_LEN);
 
     // Create the crs structure  
     crs.SetLength(2); 

@@ -27,7 +27,7 @@
 // Output:
 // -  1 or 0:        accept if π is valid, reject if the proof is invalid
 //==============================================================================
-long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f)
+long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;

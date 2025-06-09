@@ -28,7 +28,7 @@
 // - seed_crs:  initial public seed for crs structure
 // - attrs:     attributes
 //==============================================================================
-void H_Init(CRS2_t& crs, mat_zz_p& B_f, unsigned char* seed_crs, Vec<string>& attrs)
+void H_Init(CRS2_t& crs, mat_zz_p& B_f, uint8_t* seed_crs, Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i;
@@ -37,7 +37,7 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, unsigned char* seed_crs, Vec<string>& at
     // Initialize a 32 byte (256 bit) public seed for common random string (crs) structure,
     // using the cryptographically strong pseudo-random number generator from NTL
     RandomStream& RS = GetCurrentRandomStream();
-    RS.get(seed_crs, SEED_LEN);
+    RS.get(reinterpret_cast<unsigned char*>(seed_crs), SEED_LEN);
     // for(i=0; i<SEED_LEN; i++)
     // {
     //     printf("%0x", seed_crs[i]);
@@ -78,7 +78,7 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, unsigned char* seed_crs, Vec<string>& at
 // - Rho1:          structure ρ_1 that contains the commitment u and proof π
 // - state:         structure that contains the polynomial vectors m and r
 //==============================================================================
-void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const unsigned char* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const Vec<string>& attrs)
+void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
@@ -433,7 +433,7 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
 // Output:
 // - VP:             structure for the Verifiable Presentation
 //==============================================================================
-void H_VerPres(VP_t& VP, const CRED_t& cred, const unsigned char* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& B_f, const Vec<string>& attrs)
+void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& B_f, const Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;

@@ -29,7 +29,7 @@ int main()
     
     ISK_t           isk;
     uint8_t        *ipk;
-    unsigned char   seed_crs[SEED_LEN];
+    uint8_t         seed_crs[SEED_LEN];
     Vec<string>     attrs, attrs_prime;
     mat_zz_p        B_f;
     CRS2_t          crs;

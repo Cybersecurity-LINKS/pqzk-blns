@@ -168,7 +168,7 @@ void CompleteIPK(IPK_t& ipk, const uint8_t* ipk_bytes)
 //      * w:        polynomial vector (output of GSampler),  w ∈ R^m
 //      * x:        random integer, uniformly sampled from the set [N]
 //==============================================================================
-void I_VerCred(uint8_t** Rho2_ptr, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const Vec<string>& attrs_prime, RHO1_t& Rho1)
+void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const Vec<string>& attrs_prime, RHO1_t& Rho1)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k, result;

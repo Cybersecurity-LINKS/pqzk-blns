@@ -141,7 +141,7 @@ void  Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_Z
 // Output:
 // -  Pi_ptr:       pointer to proof (π) data 
 //==============================================================================
-void Prove_ISIS(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, const Vec<vec_ZZ>& w0)
+void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, const Vec<vec_ZZ>& w0)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
    
@@ -412,7 +412,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& cr
     max_len = *max_element(begin(lengths), end(lengths)); 
     buffer = new uint8_t[max_len];
     
-    state0 = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
+    state0 = Hash_Init(seed_crs, SEED_LEN);
     Hash_Update(state0, ipk_bytes, (len_a1 + SEED_LEN));
     buffer[0] = (uint8_t)(idx_hid);
     Hash_Update(state0, buffer, len_idx_hid);
@@ -1085,7 +1085,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const unsigned char* seed_crs, const CRS_t& cr
 // Output:
 // -  0 or 1:       reject or accept 
 //==============================================================================
-long Verify_ISIS(const unsigned char* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, uint8_t** Pi_ptr)
+long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, uint8_t** Pi_ptr)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0) 
    
@@ -1171,7 +1171,7 @@ long Verify_ISIS(const unsigned char* seed_crs, const CRS_t& crs, const uint8_t*
     max_len = *max_element(begin(lengths), end(lengths)); 
     buffer = new uint8_t[max_len];
            
-    state = Hash_Init(reinterpret_cast<const uint8_t*>(seed_crs), SEED_LEN);
+    state = Hash_Init(seed_crs, SEED_LEN);
     Hash_Update(state, ipk_bytes, (len_a1 + SEED_LEN));
     buffer[0] = (uint8_t)(idx_hid);
     Hash_Update(state, buffer, len_idx_hid);
