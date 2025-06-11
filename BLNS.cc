@@ -27,9 +27,9 @@ int main()
 {
     zz_p::init(q0); // Initialize modulus q
     
-    ZZX             f, g, F, G;
-    IPK_t           ipk;
-    unsigned char   seed_crs[SEED_LEN];
+    ISK_t           isk;
+    uint8_t        *ipk;
+    uint8_t         seed_crs[SEED_LEN];
     Vec<string>     attrs, attrs_prime;
     mat_zz_p        B_f;
     CRS2_t          crs;
@@ -51,7 +51,7 @@ int main()
         
         cout << "\n- Issuer.KeyGen    (key generation)" << endl;
         t1 = GetWallTime();
-        I_KeyGen(ipk, f, g, F, G);
+        I_KeyGen(&ipk, isk);
         t2 = GetWallTime();
         cout << "  CPU time: " << (t2 - t1) << " s" << endl;
         
@@ -83,7 +83,7 @@ int main()
    
         ta = GetWallTime();
         cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
-        I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, f, g, F, G, attrs_prime, Rho1);
+        I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, isk, attrs_prime, Rho1);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
@@ -115,6 +115,9 @@ int main()
             cout << "  OK!" << endl;
         }   
         assert(valid == 1);
+
+        // Free up memory
+        delete[] ipk;
         
         t3 = GetWallTime();
         cout << "\n=====================================================================\n";

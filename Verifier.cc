@@ -27,10 +27,11 @@
 // Output:
 // -  1 or 0:        accept if π is valid, reject if the proof is invalid
 //==============================================================================
-long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f)
+long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     unsigned long   i, j, k;
+    IPK_t           ipk;
     long            out, mul;
     vec_zz_pX       a; //mex;
     vec_ZZ          m_i, coeffs_m;
@@ -48,9 +49,8 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
-    // ipk = VP.ipk;
-       
-
+    CompleteIPK(ipk, VP.ipk_bytes);
+    
     // 3. m′ ← Coeffs^−1(H_M(a′_1), ... , H_M(a′_ℓ)) ∈ R^ℓm_q      
     // mex.SetLength(lm0);    
     coeffs_m.SetLength(l0 * h0);
@@ -78,11 +78,11 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     a[0].SetLength(d0);
     a[0] = zz_pX(1);  
        
-    a[1] = VP.ipk.a1;
+    a[1] = ipk.a1;
 
     for(i=0; i<m0; i++)
     {
-        a[2+i] = VP.ipk.a2[i];
+        a[2+i] = ipk.a2[i];
     } 
           
           
@@ -97,7 +97,7 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     // NOTE: zero padding of C (d_hat columns) anticipated here, from Verify_ISIS
 
     C0.SetDims(d0, lm0*d0);
-    rot_vect(C0, VP.ipk.c0);
+    rot_vect(C0, ipk.c0);
 
     // NOTE: first copy in C the columns for disclosed attributes, then those for undisclosed attributes
     // NOTE: lm0*d0 = l0*h0 = (idx_pub + idx_hid) * h0       
@@ -124,7 +124,7 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
     C0.kill(); 
 
     C1.SetDims(d0, lr0*d0);
-    rot_vect(C1, VP.ipk.c1);
+    rot_vect(C1, ipk.c1);
 
     for(j=0; j<(lr0*d0); j++)
     {
@@ -166,7 +166,7 @@ long V_Verify(VP_t& VP, const unsigned char* seed_crs, const CRS2_t& crs, const 
         zz_pPush push(q2_hat);
         // NOTE: backup current modulus q0, temporarily set to q2_hat (i.e., zz_p::init(q2_hat)) 
 
-        out = Verify_ISIS(seed_crs, crs[0], VP.ipk, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, idx_pub, &(VP.Pi)); 
+        out = Verify_ISIS(seed_crs, crs[0], VP.ipk_bytes, (mul * P), (mul * C), coeffs_m_idx, (mul * B_f), Bounds, idx_pub, &(VP.Pi)); 
         // NOTE: P, C, B_f are converted from modulo q0 to q2_hat
     }
 
