@@ -45,6 +45,10 @@ size_t calc_ser_size_vec_zz_p(long l) {
     return (l*sizeof(long));
 }
 
+size_t calc_ser_size_vec_UL(long l) {
+    return (l*sizeof(uint8_t));
+}
+
 size_t calc_ser_size_vec_ZZ(long l) {
     return(l*sizeof(long));
 }
@@ -295,6 +299,23 @@ void deserialize_vec_zz_p(vec_zz_p& p, const long d, const uint8_t* v, const siz
     p.SetLength(d);
     for (i = 0; i < d; i++) {
         p[i] = data_ptr[i];
+    }
+}
+
+
+// serialize/deserialize functions for vec_UL, 8 bits per element (i.e. 1 uint8) 
+void serialize_vec_UL(uint8_t* v, const size_t s, const long d, const vec_UL& p) {
+    long i;
+    for (i = 0; i < d; i++) {
+        v[i] = (uint8_t)(p[i]);
+    }
+}
+
+void deserialize_vec_UL(vec_UL& p, const long d, const uint8_t* v, const size_t s) {
+    long i;
+    p.SetLength(d);
+    for (i = 0; i < d; i++) {
+        p[i] = (long)(v[i]);
     }
 }
 

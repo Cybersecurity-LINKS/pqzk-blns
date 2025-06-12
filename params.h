@@ -28,8 +28,8 @@ using namespace NTL;
 
 typedef Vec<double> vec_D;
 typedef Mat<double> mat_D;
-typedef Vec<long>   vec_L; 
-typedef Mat<long>   mat_L; 
+typedef Vec<ulong>  vec_UL;
+typedef Mat<long>   mat_L;
 
 
 //============================================================================================
