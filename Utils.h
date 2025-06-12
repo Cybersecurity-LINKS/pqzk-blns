@@ -59,4 +59,6 @@ double      Norm2D(        const vec_D&   v );
 
 double      InnerProdD(    const vec_D& a, const vec_D& b );
 
+vec_UL       Compute_idx_hid(const vec_UL& vec_idx_pub);
+
 #endif

@@ -769,3 +769,55 @@ double  InnerProdD(const vec_D& a, const vec_D& b)
 
     return prod;
 }
+
+
+//=================================================================================
+// Compute_idx_hid - Compute the vector with indexes of undisclosed attributes, 
+//                   given the indexes of disclosed attributes (vec_idx_pub) 
+//                   and the total number of attributes (l0).
+//=================================================================================
+vec_UL Compute_idx_hid(const vec_UL &vec_idx_pub)
+{
+    ulong   i;
+    long    j, k;
+    vec_UL  vec_idx_hid;
+
+    const long R = vec_idx_pub.length();  // Number of attribute indexes that are disclosed (revealed)
+    const long U = l0 - R;                // Number of attribute indexes that are undisclosed (hidden)
+    
+    if (U < 0)
+    {
+        cout << "ERROR! Invalid indexes of disclosed attributes: " << vec_idx_pub << endl;
+        assert(U >= 0);
+    }
+    
+    for(j=0; j<R; j++)
+    {
+        if ((vec_idx_pub[j] < 0 ) || (vec_idx_pub[j] > (l0 - 1)))
+        {
+            cout << "ERROR! Invalid index of disclosed attributes: " << vec_idx_pub[j] << endl;
+            assert((vec_idx_pub[j] >= 0 ) && (vec_idx_pub[j] < l0));
+        }
+    }
+
+    j = 0;
+    k = 0;
+
+    // Compute the vector of undisclosed indexes
+    vec_idx_hid.SetLength(U);
+
+    for(i=0; i<l0; i++)
+    {
+        if ((R > 0) && (i == vec_idx_pub[j]))
+        {
+            j++;
+        }
+        else
+        {
+            vec_idx_hid[k] = i;
+            k++;
+        }
+    }
+
+    return vec_idx_hid;
+}
