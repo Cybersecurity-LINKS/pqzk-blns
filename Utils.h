@@ -38,13 +38,13 @@ void        rot(         mat_L& M,   const ZZX& f );
 void        rot_T(    mat_zz_p& M, const zz_pX& f );
 void        rot_vect( mat_zz_p& R, const vec_zz_pX& v );
 
-void        CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l);
-void        CoeffsInv(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l);
-void        CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const unsigned long& l);
-void        CoeffsHat(vec_zz_p& coeffs_x, const vec_zz_pX& x, const unsigned long& l);
-void        CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l);
+void        CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const ulong& l);
+void        CoeffsInv(vec_zz_pX& x, const vec_zz_p& c, const ulong& l);
+void        CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const ulong& l);
+void        CoeffsHat(vec_zz_p& coeffs_x, const vec_zz_pX& x, const ulong& l);
+void        CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const ulong& l);
 
-void        sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const unsigned long& d);
+void        sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 
 zz_pX       poly_mult(     const vec_zz_pX& f, const vec_zz_pX& g );
 zz_pX       poly_mult_hat( const vec_zz_pX& f, const vec_zz_pX& g );
@@ -59,6 +59,6 @@ double      Norm2D(        const vec_D&   v );
 
 double      InnerProdD(    const vec_D& a, const vec_D& b );
 
-vec_UL       Compute_idx_hid(const vec_UL& vec_idx_pub);
+vec_UL      Compute_idx_hid(const vec_UL& idx_pub);
 
 #endif

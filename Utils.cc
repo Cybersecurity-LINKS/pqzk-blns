@@ -76,7 +76,7 @@ vector<uint16_t> vecZZtoUint16(const vec_ZZ& input)
 //=================================================================================
 vector<uint8_t> convertToUint8(const ZZX& poly)
 {
-    unsigned long   coefficient;
+    ulong           coefficient;
     vector<uint8_t> poly_uint8;
     poly_uint8.resize(d0 + 1);
     
@@ -264,8 +264,8 @@ void OGS_Ortho(mat_D& Bt, vec_D& Norms2, const mat_L& B)
 //==============================================================================
 void rot(mat_L& M, const ZZX& f)
 {
-    unsigned long   i, j, dfu;
-    long            df;
+    ulong   i, j, dfu;
+    long    df;
     
     // M.SetDims(d0, d0);
     // NOTE: the size of the output matrix M must be (d0, d0)
@@ -307,8 +307,8 @@ void rot(mat_L& M, const ZZX& f)
 //==============================================================================
 void rot_T(mat_zz_p& M, const zz_pX& f)
 {
-    unsigned long   i, j, dfu;
-    long            df;
+    ulong   i, j, dfu;
+    long    df;
 
     // M.SetDims(d0, d0);
     // NOTE: the size of the output matrix M must be (d0, d0)
@@ -352,8 +352,8 @@ void rot_T(mat_zz_p& M, const zz_pX& f)
 //==============================================================================
 void rot_vect( mat_zz_p& R, const vec_zz_pX& v )
 {
-    unsigned long   i, j, k, r, len;
-    mat_zz_p        M;
+    ulong       i, j, k, r, len;
+    mat_zz_p    M;
     
     len = v.length();
     M.SetDims(d0, d0);
@@ -385,11 +385,11 @@ void rot_vect( mat_zz_p& R, const vec_zz_pX& v )
 // CoeffsX(x) - For an input polynomial vector x ∈ R^l, 
 //              it returns the coefficient vector of x, Coeffs(x) ∈ Z^(l*d)
 //==============================================================================
-void CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l)
+void CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const ulong& l)
 {
-    unsigned long i, j;
+    ulong i, j;
     
-    // unsigned long ld = l * d0;
+    // ulong ld = l * d0;
     // coeffs_x.SetLength(ld);
     // NOTE: the size of the output vector coeffs_x must be at least (l * d0)
    
@@ -410,9 +410,9 @@ void CoeffsX(vec_ZZ& coeffs_x, const vec_ZZX& x, const unsigned long& l)
 // CoeffsInv(c) - For an input vector of coefficients c ∈ Z^(l*d),
 //                it returns the polynomial vector x = Coeffs^{−1}(c) ∈ R^l_q
 //==============================================================================
-void CoeffsInv(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l)
+void CoeffsInv(vec_zz_pX& x, const vec_zz_p& c, const ulong& l)
 {
-    unsigned long   i, j;
+    ulong   i, j;
     
     x.SetLength(l);
    
@@ -435,9 +435,9 @@ void CoeffsInv(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l)
 // CoeffsInvX(c) - For an input vector of coefficients c ∈ Z^(l*d),
 //                 it returns the polynomial vector x = Coeffs^{−1}(c) ∈ R^l
 //==============================================================================
-void CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const unsigned long& l)
+void CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const ulong& l)
 {
-    unsigned long   i, j;
+    ulong   i, j;
     
     x.SetLength(l);
    
@@ -460,9 +460,9 @@ void CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const unsigned long& l)
 // CoeffsHat(x) - For an input polynomial vector x ∈ R_hat^l_(q_hat), 
 //                it returns the coefficient vector of x, Coeffs(x) ∈ Z^(l*d_hat)_(q_hat)
 //==============================================================================
-void CoeffsHat(vec_zz_p& coeffs_x, const vec_zz_pX& x, const unsigned long& l)
+void CoeffsHat(vec_zz_p& coeffs_x, const vec_zz_pX& x, const ulong& l)
 {
-    unsigned long   i, j, ld;
+    ulong   i, j, ld;
     
     ld = l * d_hat;   
     coeffs_x.SetLength(ld);    
@@ -484,9 +484,9 @@ void CoeffsHat(vec_zz_p& coeffs_x, const vec_zz_pX& x, const unsigned long& l)
 // CoeffsInvHat(c) - For an input vector of coefficients c ∈ Z^(l*d_hat)_(q_hat),
 //                   it returns the polynomial vector x = Coeffs^{−1}(c) ∈ R_hat^l_(q_hat)
 //==============================================================================
-void CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l)
+void CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const ulong& l)
 {
-    unsigned long   i, j;
+    ulong   i, j;
     
     x.SetLength(l);
    
@@ -512,9 +512,9 @@ void CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const unsigned long& l)
 //                   It takes as input a polynomial vector and its degree.
 //                   It outputs the result of the automorphism.
 //==============================================================================
-void sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const unsigned long& d)
+void sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d)
 {    
-    unsigned long i, j, len;
+    ulong i, j, len;
   
     len = M.length();  
     N.SetLength(len);
@@ -598,13 +598,13 @@ zz_pX  poly_mult_hat(const vec_zz_pX& f, const vec_zz_pX& g)
 //=====================================================================================
 zz_pX   Compute_f(const mat_zz_p& B_f, const ZZ& x)
 {    
-    const unsigned long n = 1;    
+    const ulong n = 1;    
     // NOTE: assuming  n = 1, thus B_f ∈ Z^(d×t)_q  and  f(x) ∈ R_q 
 
-    unsigned long   i;    
-    vec_zz_p        enc_x;
-    vec_zz_pX       vec_f;
-    zz_pX           f_x;
+    ulong       i;    
+    vec_zz_p    enc_x;
+    vec_zz_pX   vec_f;
+    zz_pX       f_x;
     
     // Compute enc(x) ∈ {0, 1}^t, the binary decomposition of (x−1)   
     enc_x.SetLength(t0);
@@ -773,30 +773,30 @@ double  InnerProdD(const vec_D& a, const vec_D& b)
 
 //=================================================================================
 // Compute_idx_hid - Compute the vector with indexes of undisclosed attributes, 
-//                   given the indexes of disclosed attributes (vec_idx_pub) 
+//                   given the indexes of disclosed attributes (idx_pub) 
 //                   and the total number of attributes (l0).
 //=================================================================================
-vec_UL Compute_idx_hid(const vec_UL &vec_idx_pub)
+vec_UL Compute_idx_hid(const vec_UL &idx_pub)
 {
     ulong   i;
     long    j, k;
-    vec_UL  vec_idx_hid;
+    vec_UL  idx_hid;
 
-    const long R = vec_idx_pub.length();  // Number of attribute indexes that are disclosed (revealed)
+    const long R = idx_pub.length();  // Number of attribute indexes that are disclosed (revealed)
     const long U = l0 - R;                // Number of attribute indexes that are undisclosed (hidden)
     
     if (U < 0)
     {
-        cout << "ERROR! Invalid indexes of disclosed attributes: " << vec_idx_pub << endl;
+        cout << "ERROR! Invalid indexes of disclosed attributes: " << idx_pub << endl;
         assert(U >= 0);
     }
     
     for(j=0; j<R; j++)
     {
-        if ((vec_idx_pub[j] < 0 ) || (vec_idx_pub[j] > (l0 - 1)))
+        if ((idx_pub[j] < 0 ) || (idx_pub[j] > (l0 - 1)))
         {
-            cout << "ERROR! Invalid index of disclosed attributes: " << vec_idx_pub[j] << endl;
-            assert((vec_idx_pub[j] >= 0 ) && (vec_idx_pub[j] < l0));
+            cout << "ERROR! Invalid index of disclosed attributes: " << idx_pub[j] << endl;
+            assert((idx_pub[j] >= 0 ) && (idx_pub[j] < l0));
         }
     }
 
@@ -804,20 +804,20 @@ vec_UL Compute_idx_hid(const vec_UL &vec_idx_pub)
     k = 0;
 
     // Compute the vector of undisclosed indexes
-    vec_idx_hid.SetLength(U);
+    idx_hid.SetLength(U);
 
     for(i=0; i<l0; i++)
     {
-        if ((R > 0) && (i == vec_idx_pub[j]))
+        if ((R > 0) && (i == idx_pub[j]))
         {
             j++;
         }
         else
         {
-            vec_idx_hid[k] = i;
+            idx_hid[k] = i;
             k++;
         }
     }
 
-    return vec_idx_hid;
+    return idx_hid;
 }

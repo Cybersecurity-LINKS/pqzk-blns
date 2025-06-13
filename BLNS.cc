@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "params.h"
+#include "Utils.h"
 #include "Issuer.h"
 #include "Holder.h"
 #include "Verifier.h"
@@ -27,6 +28,7 @@ int main()
 {
     zz_p::init(q0); // Initialize modulus q
     
+    vec_UL          idx_pub, idx_hid;
     ISK_t           isk;
     uint8_t        *ipk;
     uint8_t         seed_crs[SEED_LEN];
@@ -38,9 +40,14 @@ int main()
     STATE_t         state;
     CRED_t          cred;
     VP_t            VP;
-    long            iter, N, i, valid;
+    long            iter, N, valid;
     double          t1, t2, t3, ta, tb;  
 
+    idx_pub = conv<vec_UL>("[0 1 2 3]");    // Indexes of disclosed attributes (revealed, i.e. idx)
+    idx_hid = Compute_idx_hid(idx_pub);     // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
+    // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
+    // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
+ 
     N = 10;  // Number of iterations, for demonstration purposes
     
     for(iter=1; iter<=N; iter++)
@@ -57,7 +64,7 @@ int main()
         
         cout << "\n- Holder.Init      (initialize common random string and matrices)" << endl;
         ta = GetWallTime();
-        H_Init(crs, B_f, seed_crs, attrs);
+        H_Init(crs, B_f, seed_crs, attrs, idx_hid.length());
         tb = GetWallTime();
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
@@ -67,23 +74,23 @@ int main()
         cout << "=====================================================================" << endl;
         ta = GetWallTime();     
         cout << "\n- Holder.VerCred1  (prove knowledge of undisclosed attributes)" << endl;
-        H_VerCred1(Rho1, state, seed_crs, crs, ipk, attrs);
+        H_VerCred1(Rho1, state, seed_crs, crs, ipk, attrs, idx_pub);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         // Select disclosed attributes, fill with zeros hidden attributes 
         attrs_prime = attrs;
         
-        for(i=0; i<idx_hid; i++)
+        for(auto &i: idx_hid)
         {
             attrs_prime[i] = "0"; // Zero padding
         }
         // cout << "  attrs  = " << attrs << endl;
         // cout << "  attrs' = " << attrs_prime << endl;
-   
+
         ta = GetWallTime();
         cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
-        I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, isk, attrs_prime, Rho1);
+        I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, isk, attrs_prime, idx_pub, Rho1);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
@@ -93,20 +100,20 @@ int main()
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
         assert(cred.valid);
-        
+
         
         cout << "\n=====================================================================" << endl;
         cout << "  PRESENTATION PROTOCOL" << endl;
         cout << "=====================================================================" << endl;
         ta = GetWallTime();
         cout << "\n- Holder.VerPres   (prove knowledge of signature and attributes)" << endl;
-        H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs);
+        H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs, idx_pub);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         ta = GetWallTime();  
         cout << "\n- Verifier.Verify  (verify proof and authorize)" << endl;
-        valid = V_Verify(VP, seed_crs, crs, B_f);
+        valid = V_Verify(VP, seed_crs, crs, B_f, idx_pub);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 

@@ -20,6 +20,6 @@
 #include "ISIS.h"
 
 
-long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f);
+long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const vec_UL &idx_pub);
 
 #endif
