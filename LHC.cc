@@ -25,36 +25,34 @@
 // - A_i, B_i:  uniformly random matrices (i.e., structure crs_LHC) 
 //              A_i, B_i ∈ R_hat^(m_i x n_i)_(q_hat)
 // - s, y:      vectors of polynomials, s, y ∈ R_hat^m_i_(q_hat)
+// - m:         m1_Com or m2_Com parameter
 //  
 // Outputs:
 // - com:       commitment structure    
 // - st:        status structure
 //==============================================================================
-void LHC_Com(LHC_COM_t& com, LHC_ST_t& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y) 
+void LHC_Com(LHC_COM_t& com, LHC_ST_t& st, const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const vec_zz_pX& s, const vec_zz_pX& y, const long& m) 
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
-    long        i, m;
+    long        i;
     double      alpha_i;
     
     // Manage the invocation with index 1 or 2
     const long n   = n_i;
     const long eta = eta_i; 
  
-    if (index == 1) 
+    if (index == 1)
     {
         alpha_i = double(alpha_bar_1);
-        m       = m1_Com;
     }
     else if (index == 2)
     {
         alpha_i = double(alpha_bar_2);
-        m       = m2_Com;
     }
     else
     {
         cout << "ERROR! index must be 1 or 2" << endl;
         assert((index == 1) || (index == 2));
-        m = 0;
     }     
     // \overline{\mathfrak{s}}_1 (or 2)    
     const double s_goth = alpha_i * double(eta_i * nu0) * sqrt(double((n + 2*m) * d0));
@@ -306,14 +304,15 @@ long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR&
 // - index:   i (1 or 2)
 // - c:       polynomial, generated using H(4,...) in Prove_Com
 // - st:      status structure
+// - m:       m1_Com or m2_Com parameter
 // 
 // Output:  
 // - op:      list of (n + m + m) polynomials of d_hat length, if accept, 
 //            otherwise op = [] (i.e. op = ⊥, reject)
 //==============================================================================
-void LHC_Open(LHC_OP_t& op, const long& index, const zz_pX& c, const LHC_ST_t& st)
+void LHC_Open(LHC_OP_t& op, const long& index, const zz_pX& c, const LHC_ST_t& st, const long& m)
 {
-    long        i, m, b;
+    long        i, b;
     RR          alpha_i;
     vec_zz_pX   v_1, v_2, v_3, z, v;
     
@@ -323,18 +322,15 @@ void LHC_Open(LHC_OP_t& op, const long& index, const zz_pX& c, const LHC_ST_t& s
     if (index == 1) 
     {
         alpha_i = RR(alpha_bar_1);
-        m       = m1_Com;
     }
     else if (index == 2)
     {
         alpha_i = RR(alpha_bar_2);
-        m       = m2_Com;
     }
     else
     {
         cout << "ERROR! index must be 1 or 2" << endl;
         assert((index == 1) || (index == 2));
-        m = 0;
     }
 
     const long n2m = n + 2*m;
@@ -436,14 +432,15 @@ void LHC_Open(LHC_OP_t& op, const long& index, const zz_pX& c, const LHC_ST_t& s
 // - c:         polynomial, generated using H(4,...) in Prove_Com
 // - z:         vector of polynomials, z ∈ R_hat^(m_i)_(q_hat) (z = c*s+y leads to result=1)
 // - op:        list of (n + m + m) polynomials of d_hat length
+// - m:         m1_Com or m2_Com parameter
 // 
 // Output:
 // - 0 or 1:    reject or accept 
 //==============================================================================
-long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const LHC_COM_t& com, const zz_pX& c, const vec_zz_pX& z, const LHC_OP_t& op)
+long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i, const LHC_COM_t& com, const zz_pX& c, const vec_zz_pX& z, const LHC_OP_t& op, const long& m)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
-    long        i, m, n, flag;
+    long        i, n, flag;
     ZZ          alpha_i, s_goth2, thres, norm2_z1, norm2_z2, norm2_z3;
     vec_zz_pX   z_a, z_b;
     
@@ -459,18 +456,15 @@ long LHC_Verify(const long& index, const Mat<zz_pX>& A_i, const Mat<zz_pX>& B_i,
     if (index == 1) 
     {
         alpha_i = alpha_bar_1;
-        m       = m1_Com;
     }
     else if (index == 2)
     {
         alpha_i = alpha_bar_2;
-        m       = m2_Com;
     }
     else
     {
         cout << "\n ERROR! index must be 1 or 2" << endl;
         assert((index == 1) || (index == 2));
-        m = 0;
     }     
     // Compute the square of \overline{\mathfrak{s}}_1 (or 2) 
     s_goth2 = sqr(alpha_i * eta_i * nu0) * ((n + 2*m) * d0);

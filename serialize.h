@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <NTL/lzz_pX.h>
-#include <NTL/ZZX.h>
+#include "params.h"
 
 using namespace std;
 using namespace NTL;
@@ -27,6 +26,7 @@ size_t calc_ser_size_vec_poly(const long n, const long d);
 size_t calc_ser_size_vec_ZZX(const long n, const long d);
 size_t calc_ser_size_poly(long d);
 size_t calc_ser_size_vec_zz_p(long l);
+size_t calc_ser_size_vec_UL(long l);
 size_t calc_ser_size_vec_ZZ(long l);
 size_t calc_ser_size_ZZ(void);
 size_t calc_ser_size_big_ZZ(long nbits);
@@ -48,6 +48,7 @@ void serialize_vec_poly_zz_pX(uint8_t* v, const size_t s, const long n, const lo
 void serialize_vec_ZZX(uint8_t* v, const size_t s, const long n, const long d, const vec_ZZX& p);
 void serialize_poly_zz_pX(uint8_t* v, const size_t s, const long d, const zz_pX& p);
 void serialize_vec_zz_p(uint8_t* v, const size_t s, const long d, const vec_zz_p& p);
+void serialize_vec_UL(uint8_t* v, const size_t s, const long d, const vec_UL& p);
 void serialize_vec_ZZ(uint8_t* v, const size_t s, const long d, const vec_ZZ& p);
 void serialize_ZZ(uint8_t* v, const size_t s, const ZZ& p);
 void serialize_big_ZZ(uint8_t* v, const size_t s, const ZZ& p);
@@ -68,6 +69,7 @@ void deserialize_vec_poly_zz_pX(vec_zz_pX& p, const long n, const long d, const 
 void deserialize_vec_ZZX(vec_ZZX& p, const long n, const long d, const uint8_t* v, const size_t s);
 void deserialize_poly_zz_pX(zz_pX& p, const long d, const uint8_t* v, const size_t s);
 void deserialize_vec_zz_p(vec_zz_p& p, const long d, const uint8_t* v, const size_t s);
+void deserialize_vec_UL(vec_UL& p, const long d, const uint8_t* v, const size_t s);
 void deserialize_vec_ZZ(vec_ZZ& p, const long d, const uint8_t* v, const size_t s);
 void deserialize_ZZ(ZZ& p, const uint8_t* v, const size_t s);
 void deserialize_big_ZZ(ZZ& p, const uint8_t* v, const size_t s);

@@ -20,28 +20,26 @@
 
 //==============================================================================
 // Preprocessing_Com -  Preprocessing function (PreprocessingProve^HCom_Com). 
-//                      It takes as input (P0, s0, B_goth) with B_goth ≥ ||s||. 
-//                      It returns s such that B_goth = ||s||
-//                      and P filled with the appropriate number of zeros.
+//                      It takes as input (s0, B_goth) with B_goth ≥ ||s||. 
+//                      It returns s such that B_goth = ||s||.
 // 
 // Inputs:
-// - P0:            matrix P0 ∈ Z^[d x (|idx_hid|·h + ℓr·d)]_(q_hat)
 // - s0:            vector s0 ∈ Z^(|idx_hid|·h + ℓr·d)
 // - B_goth2:       bound  B_goth^2 ∈ Z≥0 (it is a scalar)
-//  
+// - num_idx_hid:   number of undisclosed attributes (hidden)
+//
 // Output:
-// - P:             matrix P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
 // - s:             vector s  ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
 //==============================================================================
 // NOTE: zero padding of P, s already done in H_VerCred1
-void  Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2)
+void  Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2, const long &num_idx_hid)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long    i;//j;
     ZZ      diff; //a1, a2, a3, a4;
     vec_ZZ  a;
     
-    const long  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const long  idxhlrd = (num_idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
     
     // diff = B_goth^2 − ||s||^2
     diff = (B_goth2 - Norm2(s0));
@@ -97,15 +95,16 @@ void  Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2)
 //                  B_goth^2 ∈ Z≥0 (it is a scalar)
 // - w0:            it contains the vector s0 ∈ Z^(m1*d_hat)
 //                  NOTE: (|idx_hid|*h + l_r*d + d_hat) == (m1 * d_hat)
+// - idx_hid:       indexes of undisclosed attributes (hidden)
 //  
 // Output:
 // - Pi_ptr:        pointer to proof (π) data
 //==============================================================================
-void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0)
+void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0, const vec_UL &idx_hid)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
 
-    unsigned long       i, j, k, idx;
+    ulong               i, j, k, idx;
     long                rst, b1, b2, b3, bbar1, bbar2;
     Mat<zz_pX>          B, D2_2_1;
     vec_zz_pX           u, g;
@@ -134,13 +133,14 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     PROOF_C_t           Pi;
 
 
-    // Initialise constants    
-    const unsigned long n           = n_Com;
-    const unsigned long m1          = m1_Com;
-    const unsigned long m2          = m2_Com;
-    const unsigned long d_d_hat     = (d0/d_hat);
-    const unsigned long n256        = (256/d_hat);
-    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau_Com);
+    // Initialise constants
+    const ulong         num_idx_hid = idx_hid.length(); // number of undisclosed attributes (hidden)
+    const ulong         n           = n_Com;
+    const ulong         m1          = ((num_idx_hid*h0 + lr0*d0 + d_hat)/d_hat);    // m_1 for Π^Com_NIZK
+    const ulong         m2          = m2_Com;                                       // m_2 for Π^Com_NIZK
+    const ulong         d_d_hat     = (d0/d_hat);
+    const ulong         n256        = (256/d_hat);
+    const ulong         m1_n256_tau = 2*m1 + 2*(n256 + tau_Com);
     const int           nbits0      = ceil(log2(conv<double>(q0-1)));
     const int           nbits       = ceil(log2(conv<double>(q1_hat-1)));
 
@@ -187,7 +187,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     // 4. (P, s) ← PreprocessingProve^HCom_Com (P, s, B_goth)
     // P ∈ Z^[d x (|idx_hid|·h + ℓr·d + d_hat]_(q_hat)
     // s ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
-    Preprocessing_Com(s, w0, B_goth2);
+    Preprocessing_Com(s, w0, B_goth2, num_idx_hid);
 
     // 5. Initialize rst ∈ Z, scalar
     rst     = 0;
@@ -271,8 +271,8 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
     // Initialize the custom Hash function
     // NOTE: using seed_crs, seed_ipk, idx_hid, instead of crs, P to speedup Hash_Init        
-    // len_seed  = SEED_LEN;                                        // uchar*    - 32 bytes
-    len_idx_hid  = 1;                                               // uint8     - 1 byte
+    // len_seed  = SEED_LEN;                                        // uint8*    - 32 bytes
+    len_idx_hid  = calc_ser_size_vec_UL(num_idx_hid);               // uint8*    - |idx_hid| bytes
     len_u0       = calc_ser_size_vec_zz_p_minbyte(d0, nbits);       // vec_zz_p
     len_B_goth2  = calc_ser_size_ZZ();                              // ZZ (long) - 8 bytes
     // cout << "  Size Hash_Init: " << (SEED_LEN + SEED_LEN + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
@@ -283,7 +283,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
     state0 = Hash_Init(seed_crs, SEED_LEN);
     Hash_Update(state0, seed_ipk, SEED_LEN);
-    buffer[0] = (uint8_t)(idx_hid);
+    serialize_vec_UL(buffer, len_idx_hid, num_idx_hid, idx_hid);
     Hash_Update(state0, buffer, len_idx_hid);
     serialize_minbyte_vec_zz_p(buffer, len_u0, d0, nbits, u0);
     Hash_Update(state0, buffer, len_u0);
@@ -427,10 +427,10 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
         }
                                             
         // 17. (com_1, st_1) = LHC_Com(1, crs_LHC1, s_1, y_1)    
-        LHC_Com(Pi.com_1, st_1, 1, crs[5], crs[7], s_1, y_1);
+        LHC_Com(Pi.com_1, st_1, 1, crs[5], crs[7], s_1, y_1, m1);
 
         // 18. (com_2, st_2) = LHC_Com(2, crs_LHC2, s_2, y_2)
-        LHC_Com(Pi.com_2, st_2, 2, crs[6], crs[8], s_2, y_2);
+        LHC_Com(Pi.com_2, st_2, 2, crs[6], crs[8], s_2, y_2, m2);
 
         // 19. a1 ← (t_A, t_y, t_g, w, com_1, com_2)
         Pi_bytes = *Pi_ptr;
@@ -483,7 +483,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
         // 21. R_goth = R_goth_0 - R_goth_1
-        HCom1(R_goth, state);
+        HCom1(R_goth, state, m1);
         // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
         //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
@@ -818,7 +818,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
 
         // 44. op_i ← LHC.Open(i, c, st_i),    op_i ∈ {⊥} ∪ R^^(n_i)_(q_hat) × R^^(m_i)_(q_hat) × R^^(m_i)_(q_hat)
-        LHC_Open(Pi.op_1, 1, c, st_1);        
+        LHC_Open(Pi.op_1, 1, c, st_1, m1);        
 
         // 45. if op_i = ⊥ then b_bar_i = 0
         if (Pi.op_1.valid == 0)
@@ -834,7 +834,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
             bbar1 = 1;
         }
 
-        LHC_Open(Pi.op_2, 2, c, st_2);
+        LHC_Open(Pi.op_2, 2, c, st_2, m2);
 
         if (Pi.op_2.valid == 0)
         {
@@ -906,15 +906,16 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 //                  u ∈ Z^(d)_(q_hat)
 //                  B_goth^2 ∈ Z≥0 (it is a scalar)
 // - Pi_ptr:        pointer to proof (π) data
+// - idx_hid:       indexes of undisclosed attributes (hidden)
 //  
 // Output:
 // - 0 or 1:        reject or accept 
 //==============================================================================
-long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, uint8_t** Pi_ptr)
+long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, uint8_t** Pi_ptr, const vec_UL &idx_hid)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
 
-    unsigned long       i, j, k;
+    ulong               i, j, k;
     long                b1, b2;
     Mat<zz_pX>          B, D2_2_1;
     vec_zz_pX           u, t_B, mu, z, tmp_vec, tmp_vec2, r_j, p_j;
@@ -939,12 +940,13 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
     PROOF_C_t           Pi;
 
     // Initialise constants and variables
-    const unsigned long n           = n_Com;
-    const unsigned long m1          = m1_Com;
-    const unsigned long m2          = m2_Com;
-    const unsigned long d_d_hat     = (d0/d_hat);
-    const unsigned long n256        = (256/d_hat);
-    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau_Com);
+    const ulong         num_idx_hid = idx_hid.length(); // number of undisclosed attributes (hidden)
+    const ulong         n           = n_Com;
+    const ulong         m1          = ((num_idx_hid*h0 + lr0*d0 + d_hat)/d_hat);    // m_1 for Π^Com_NIZK
+    const ulong         m2          = m2_Com;                                       // m_2 for Π^Com_NIZK
+    const ulong         d_d_hat     = (d0/d_hat);
+    const ulong         n256        = (256/d_hat);
+    const ulong         m1_n256_tau = 2*m1 + 2*(n256 + tau_Com);
     const int           nbits       = ceil(log2(conv<double>(q1_hat-1)));
 
     // Initialise the "goth" constants
@@ -977,8 +979,8 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
     
     // Initialize the custom Hash function with (crs, x)
     // NOTE: using seed_crs, seed_ipk, idx_hid, instead of crs, P to speedup Hash_Init        
-    // len_seed  = SEED_LEN;                                        // uchar*    - 32 bytes
-    len_idx_hid  = 1;                                               // uint8     - 1 byte
+    // len_seed  = SEED_LEN;                                        // uint8*    - 32 bytes
+    len_idx_hid  = calc_ser_size_vec_UL(num_idx_hid);               // uint8*    - |idx_hid| bytes
     len_u0       = calc_ser_size_vec_zz_p_minbyte(d0, nbits);       // vec_zz_p
     len_B_goth2  = calc_ser_size_ZZ();                              // ZZ (long) - 8 bytes
     // cout << "  Size Hash_Init: " << (SEED_LEN + SEED_LEN + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
@@ -989,7 +991,7 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
 
     state = Hash_Init(seed_crs, SEED_LEN);
     Hash_Update(state, seed_ipk, SEED_LEN);
-    buffer[0] = (uint8_t)(idx_hid);
+    serialize_vec_UL(buffer, len_idx_hid, num_idx_hid, idx_hid);
     Hash_Update(state, buffer, len_idx_hid);
     serialize_minbyte_vec_zz_p(buffer, len_u0, d0, nbits, u0);
     Hash_Update(state, buffer, len_u0);
@@ -1127,7 +1129,7 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
 
     // 9. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)    
     // 10. R_goth = R_goth_0 - R_goth_1
-    HCom1(R_goth, state);
+    HCom1(R_goth, state, m1);
     // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
@@ -1510,8 +1512,8 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
     
 
     // 20.5 Fifth condition: for i ∈ {1, 2}, LHC.Verify_i((A_i, B_i), (com_i, c), (z_i, op_i)) == 1
-    b1 = LHC_Verify(1, crs[5], crs[7], Pi.com_1, c, Pi.z_1, Pi.op_1);
-    b2 = LHC_Verify(2, crs[6], crs[8], Pi.com_2, c, Pi.z_2, Pi.op_2);
+    b1 = LHC_Verify(1, crs[5], crs[7], Pi.com_1, c, Pi.z_1, Pi.op_1, m1);
+    b2 = LHC_Verify(2, crs[6], crs[8], Pi.com_2, c, Pi.z_2, Pi.op_2, m2);
     
     if ((b1==0) || (b2==0))
     {

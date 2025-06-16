@@ -93,7 +93,7 @@ void CompleteIPK(IPK_t& ipk, const uint8_t* ipk_bytes)
 {   
     // NOTE: assuming that current modulus is q0
 
-    unsigned long   i;
+    ulong           i;
     HASH_STATE_t    *state;  
     size_t          len_a1;
 
@@ -159,7 +159,7 @@ void CompleteIPK(IPK_t& ipk, const uint8_t* ipk_bytes)
 // - ipk_bytes:     serialized Issuer Public Key
 // - isk:           Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
 // - attrs_prime:   disclosed attributes (attrs′)
-// - idx_pub:       |idx|, number of disclosed attributes
+// - idx_pub:       indexes of disclosed attributes (revealed)
 // - Rho1:          structure ρ_1 that contains the commitment u and proof π
 // 
 // Output:
@@ -168,10 +168,10 @@ void CompleteIPK(IPK_t& ipk, const uint8_t* ipk_bytes)
 //      * w:        polynomial vector (output of GSampler),  w ∈ R^m
 //      * x:        random integer, uniformly sampled from the set [N]
 //==============================================================================
-void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const Vec<string>& attrs_prime, RHO1_t& Rho1)
+void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const Vec<string>& attrs_prime, const vec_UL &idx_pub, RHO1_t& Rho1)
 {    
     // NOTE: assuming that current modulus is q0 (not q_hat)
-    unsigned long   i, j, k, result;
+    ulong           i, j, k, result;
     IPK_t           ipk;
     vec_ZZ          s_0, m_i, coeffs_m;
     vec_ZZX         w;
@@ -183,13 +183,13 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
     size_t          len_u, len_s0, len_w, len_x, len_Rho2;
     uint8_t        *Rho2_bytes;
     
-    const unsigned long idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
-    const int           nbits   = ceil(log2(conv<double>(q0-1)));
+    const vec_UL    idx_hid = Compute_idx_hid(idx_pub); // Indexes of undisclosed attributes (hidden)
+    const ulong     idxhlrd = (idx_hid.length() * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const int       nbits   = ceil(log2(conv<double>(q0-1)));
 
     
     // 1. (a'_1, ... , a'_k) ← attrs',  a'_i ∈ {0, 1}∗
-    // NOTE: l0 = idx_hid + idx_pub = len(attrs),  d0 must divide l0*h0
-    // NOTE: for every variable of l0 elements, the first are the idx_hid elements, the last are the idx_pub elements
+    // NOTE: l0 = |idx_hid| + |idx_pub| = len(attrs),  d0 must divide l0*h0
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
     CompleteIPK(ipk, ipk_bytes);
@@ -236,18 +236,21 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
     P0.SetDims(d0, lm0*d0);
     rot_vect(P0, ipk.c0);
 
-    // NOTE: only first idx_hid*h0 columns of P0 (corresponding to undisclosed attributes) 
-    //       are copied into P, while P1 is fully copied into P.
+    // NOTE: only idx_hid*h0 columns of P0 (corresponding to undisclosed attributes) 
+    //       are copied as first columns into P, while P1 is fully copied into P.
     k = 0;
 
-    for(j=0; j<(idx_hid*h0); j++)
+    for(auto &idx: idx_hid)
     {
-        for(i=0; i<d0; i++)
-        {   
-            P[i][k] = P0[i][j];
+        for(j=(idx*h0); j<((idx+1)*h0); j++)
+        {
+            for(i=0; i<d0; i++)
+            {
+                P[i][k] = P0[i][j];
+            }
+            k++;
         }
-        k++;
-    }    
+    }
 
     P1.SetDims(d0, lr0*d0);
     rot_vect(P1, ipk.c1);
@@ -268,14 +271,16 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
     u_vect.SetLength(d0); 
     prod.SetLength(d0);
 
-    // NOTE: only last idx_pub*h0 columns of P0 and coeffs_m (corresponding to disclosed attributes) 
+    // NOTE: only idx_pub*h0 columns of P0 and coeffs_m (corresponding to disclosed attributes) 
     //       are considered in the product rot(c0^T)_idx * Coeffs(m')_idx 
     for(j=0; j<d0; j++)
     {
-       for(i=0; i<(idx_pub*h0); i++)
-        {     
-            k = idx_hid*h0 + i;       
-            prod[j] += P0[j][k] * conv<zz_p>( coeffs_m[k] );
+        for(auto &idx: idx_pub)
+        {
+            for(k=(idx*h0); k<((idx+1)*h0); k++)
+            {
+                prod[j] += P0[j][k] * conv<zz_p>( coeffs_m[k] );
+            }
         }
     }
 
@@ -303,7 +308,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
         zz_pPush push(q1_hat); 
         // NOTE: backup current modulus q0, temporarily set to q1_hat (i.e., zz_p::init(q1_hat))
 
-        result = Verify_Com(seed_crs, crs[1], ipk.seed_ipk, (mul * P), (mul * u_vect), B_goth2, &(Rho1.Pi));
+        result = Verify_Com(seed_crs, crs[1], ipk.seed_ipk, (mul * P), (mul * u_vect), B_goth2, &(Rho1.Pi), idx_hid);
         // NOTE: P, u_vect are converted from modulo q0 to q1_hat
         // NOTE: Verify_Com deserializes the proof π in Rho1.Pi
     }

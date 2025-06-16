@@ -20,27 +20,23 @@
 
 //==============================================================================
 // Preprocessing_ISIS - Preprocessing function (PreprocessingProve^HISIS_ISIS). 
-//      It takes as input (P0, s0, B_goth_s, C0, r0, B_goth_r)
+//      It takes as input (s0, B_goth_s, r0, B_goth_r)
 //      with B_goth_s ≥ ||s|| and B_goth_r ≥ ||r||. 
-//      It returns s and r such that B_goth_s = ||s|| and B_goth_r = ||r||, 
-//      together with P and C filled with the appropriate number of zeros.
+//      It returns s and r such that B_goth_s = ||s|| and B_goth_r = ||r||.
 // 
 // Inputs:
-// - P0:            matrix P0 ∈ Z^[d × (m+2)·d]_(q_hat) 
 // - s0:            vector s0 ∈ Z^((m+2)·d)_(q_hat)
-// - B_goth_s2:     bound  B_goth_s^2 ∈ Z≥0 (it is a scalar)
-// - C0:            matrix C0 ∈ Z^[d × (ℓm+ℓr)·d]_(q_hat)
 // - r0:            vector r0 ∈ Z^(|idx_hid|·h + ℓr·d)_(q_hat)
+// - B_goth_s2:     bound  B_goth_s^2 ∈ Z≥0 (it is a scalar)
 // - B_goth_r2:     bound  B_goth_r^2 ∈ Z≥0 (it is a scalar)
+// - num_idx_hid:   number of undisclosed attributes (hidden)
 //  
 // Output:
-// - P:             matrix P ∈ Z^[d × (m+2)·d + d_hat]_(q_hat) 
 // - s:             vector s ∈ Z^((m+2)·d + d_hat)_(q_hat)
-// - C:             matrix C ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat)
 // - r:             vector r ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
 //==============================================================================
 // NOTE: zero padding of P, s, C, r already done in H_VerPres
-void  Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& B_goth_r2)
+void  Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& B_goth_r2, const long &num_idx_hid)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
     long    i;
@@ -48,7 +44,7 @@ void  Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_Z
     vec_ZZ  a;
 
     const long  m2d     = (m0 + 2)*d0;    // (m+2)·d
-    const long  idxhlrd = (idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
+    const long  idxhlrd = (num_idx_hid * h0) + (lr0 * d0); //|idx_hid|·h + ℓr·d
 
     // diff = B_goth_s^2 − ||s||^2
     diff = (B_goth_s2 - Norm2(s0));
@@ -137,15 +133,16 @@ void  Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_Z
 // - (P, C, mex, B_f, 
 //    Bounds, aux): they correspond to x
 // -  w0:           it contains the vectors (s0, r0, u0)
+// -  idx_hid:      indexes of undisclosed attributes (hidden)
 //  
 // Output:
 // -  Pi_ptr:       pointer to proof (π) data 
 //==============================================================================
-void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, const Vec<vec_ZZ>& w0)
+void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, const Vec<vec_ZZ>& w0, const vec_UL &idx_hid)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
    
-    unsigned long   idx, i, j, k;
+    ulong           idx, i, j, k;
     long            rst, b1, b2, b3;
     Mat<zz_pX>      B, D2_2_1;
     vec_zz_pX       g;
@@ -175,17 +172,19 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, con
     PROOF_I_t       Pi;
 
     // Initialise constants
-    const unsigned long n           = n_ISIS;
-    const unsigned long m1          = m1_ISIS;
-    const unsigned long m2          = m2_ISIS;
-    const unsigned long m2ddd       = ((m0 + 2)*d0 + d_hat)/d_hat;          // ((m+2)·d + d^)/d^
-    const unsigned long idxhlrdd    = (idx_hid * h0) + (lr0 * d0) + d_hat;  //|idx_hid|·h + ℓr·d + d^
-    const unsigned long idxhlrddd   = idxhlrdd/d_hat;
-    const unsigned long n256        = (256/d_hat);    
-    const unsigned long t_d         = (t0/d_hat);
-    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau_ISIS);
-    const int           nbits0      = ceil(log2(conv<double>(q0-1)));
-    const int           nbits       = ceil(log2(conv<double>(q2_hat-1)));
+    const ulong     num_idx_hid = idx_hid.length(); // number of undisclosed attributes (hidden)
+    const ulong     num_idx_pub = l0 - num_idx_hid; // number of disclosed attributes (revealed)
+    const ulong     n           = n_ISIS;
+    const ulong     m1          = (((m0+2)*d0 + (num_idx_hid*h0 + lr0*d0) + t0 + 2*d_hat) / d_hat); // m_1 for Π^ISIS_NIZK
+    const ulong     m2          = m2_ISIS;                                                          // m_2 for Π^ISIS_NIZK
+    const ulong     m2ddd       = ((m0 + 2)*d0 + d_hat)/d_hat;              // ((m+2)·d + d^)/d^
+    const ulong     idxhlrdd    = (num_idx_hid * h0) + (lr0 * d0) + d_hat;  //|idx_hid|·h + ℓr·d + d^
+    const ulong     idxhlrddd   = idxhlrdd/d_hat;
+    const ulong     n256        = (256/d_hat);    
+    const ulong     t_d         = (t0/d_hat);
+    const ulong     m1_n256_tau = 2*m1 + 2*(n256 + tau_ISIS);
+    const int       nbits0      = ceil(log2(conv<double>(q0-1)));
+    const int       nbits       = ceil(log2(conv<double>(q2_hat-1)));
 
     // Initialise the "goth" constants
     // M1 := exp(sqrt(2(λ+1)/log e) * 1/α_1 + 1/2α_1^2
@@ -240,7 +239,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, con
     // s ∈ Z^((m+2)·d + d_hat)_(q_hat)
     // C ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat)
     // r ∈ Z^(|idx_hid|·h + ℓr·d + d_hat)_(q_hat)
-    Preprocessing_ISIS(coeffs_s, coeffs_r, w0[0], w0[1], B_goth_s2, B_goth_r2);
+    Preprocessing_ISIS(coeffs_s, coeffs_r, w0[0], w0[1], B_goth_s2, B_goth_r2, num_idx_hid);
     
     // 6. s ← Coeffs^−1(s0)    
     CoeffsInvHat(s, coeffs_s, m2ddd);     // s ∈ R^^(((m+2)·d+d_hat)/d_hat)_(q_hat)
@@ -337,20 +336,20 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, con
     sigma_map(sigma_s_1, s_1, d_hat);
 
     // Create C_m and C_r
-    C_m.SetDims(d0, (idx_pub*h0));
+    C_m.SetDims(d0, (num_idx_pub*h0));
     C_r.SetDims(d0, idxhlrdd); 
     // NOTE: C = [C_m C_r] ∈ Z^[d × ((ℓm+ℓr)·d+d_hat)]_(q_hat), C_m has |idx_pub|·h columns
 
     for(i=0; i<d0; i++)
     {
-        for(j=0; j<(idx_pub*h0); j++)        
+        for(j=0; j<(num_idx_pub*h0); j++)        
         {
             C_m[i][j] = C[i][j];
         }
 
         for(j=0; j<idxhlrdd; j++)        
         {
-            C_r[i][j] = C[i][(idx_pub*h0)+j];
+            C_r[i][j] = C[i][(num_idx_pub*h0)+j];
         }
     }    
 
@@ -400,10 +399,10 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, con
 
     // Initialize the custom Hash function
     // NOTE: using seed_crs, ipk_bytes (a1 + seed_ipk), idx_hid, instead of crs, P, C, B_f to speedup Hash_Init    
-    // len_seed  = SEED_LEN;                                            // uchar*    - 32 bytes
+    // len_seed  = SEED_LEN;                                            // uint8*    - 32 bytes
     len_a1       = calc_ser_size_poly_minbyte(d0, nbits0);              // zz_pX
-    len_idx_hid  = 1;                                                   // uint8     - 1 byte
-    len_mex      = calc_ser_size_vec_zz_p_minbyte(idx_pub*h0, nbits0);  // vec_zz_p
+    len_idx_hid  = calc_ser_size_vec_UL(num_idx_hid);                   // uint8*    - |idx_hid| bytes
+    len_mex      = calc_ser_size_vec_zz_p_minbyte(num_idx_pub*h0, nbits0); // vec_zz_p
     len_Bounds   = calc_ser_size_vec_ZZ(2);                             // vec_ZZ (2*long) - 16 bytes
     len_aux      = 1;                                                   // uint8     - 1 byte   
     // cout << "  Size Hash_Init: " << (SEED_LEN + len_a1 + SEED_LEN + len_idx_hid + len_mex + len_Bounds + len_aux)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
@@ -414,9 +413,9 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, con
     
     state0 = Hash_Init(seed_crs, SEED_LEN);
     Hash_Update(state0, ipk_bytes, (len_a1 + SEED_LEN));
-    buffer[0] = (uint8_t)(idx_hid);
+    serialize_vec_UL(buffer, len_idx_hid, num_idx_hid, idx_hid);
     Hash_Update(state0, buffer, len_idx_hid);
-    serialize_minbyte_vec_zz_p(buffer, len_mex, idx_pub*h0, nbits0, mex);
+    serialize_minbyte_vec_zz_p(buffer, len_mex, num_idx_pub*h0, nbits0, mex);
     Hash_Update(state0, buffer, len_mex);
     serialize_vec_ZZ(buffer, len_Bounds, 2, Bounds);
     Hash_Update(state0, buffer, len_Bounds);
@@ -568,7 +567,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, con
         
         // 20. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
         // 21. R_goth = R_goth_0 - R_goth_1
-        HISIS1(R_goth, state);
+        HISIS1(R_goth, state, m1);
         // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
         //       equivalent to (R_goth_0 - R_goth_1) in BLNS
         
@@ -1080,16 +1079,17 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, con
 // -  ipk_bytes:    serialized Issuer Public Key
 // - (P, C, mex, B_f, 
 //    Bounds, aux): they correspond to x
-// -  Pi_ptr:       pointer to proof (π) data 
+// -  Pi_ptr:       pointer to proof (π) data
+// -  idx_hid:      indexes of undisclosed attributes (hidden)
 //  
 // Output:
 // -  0 or 1:       reject or accept 
 //==============================================================================
-long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, uint8_t** Pi_ptr)
+long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, uint8_t** Pi_ptr, const vec_UL &idx_hid)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0) 
    
-    unsigned long   i, j, k;
+    ulong           i, j, k;
     Mat<zz_pX>      B, D2_2_1;
     vec_zz_pX       t_B, z, d_1, acc_vec, coeffs_ones, sigma_ones;
     vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, sigma_z_1;
@@ -1110,17 +1110,19 @@ long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_b
     PROOF_I_t       Pi;
     
     // Initialise constants
-    const unsigned long n           = n_ISIS;
-    const unsigned long m1          = m1_ISIS;
-    const unsigned long m2          = m2_ISIS;
-    const unsigned long m2ddd       = ((m0 + 2)*d0 + d_hat)/d_hat;          // ((m+2)·d + d^)/d^
-    const unsigned long idxhlrdd    = (idx_hid * h0) + (lr0 * d0) + d_hat;  // |idx_hid|·h + ℓr·d + d^
-    const unsigned long idxhlrddd   = idxhlrdd/d_hat;
-    const unsigned long n256        = (256/d_hat);
-    const unsigned long t_d         = (t0/d_hat);
-    const unsigned long m1_n256_tau = 2*m1 + 2*(n256 + tau_ISIS);
-    const int           nbits0      = ceil(log2(conv<double>(q0-1)));
-    const int           nbits       = ceil(log2(conv<double>(q2_hat-1)));
+    const ulong     num_idx_hid = idx_hid.length(); // number of undisclosed attributes (hidden)
+    const ulong     num_idx_pub = l0 - num_idx_hid; // number of disclosed attributes (revealed)
+    const ulong     n           = n_ISIS;
+    const ulong     m1          = (((m0+2)*d0 + (num_idx_hid*h0 + lr0*d0) + t0 + 2*d_hat) / d_hat); // m_1 for Π^ISIS_NIZK
+    const ulong     m2          = m2_ISIS;                                                          // m_2 for Π^ISIS_NIZK
+    const ulong     m2ddd       = ((m0 + 2)*d0 + d_hat)/d_hat;              // ((m+2)·d + d^)/d^
+    const ulong     idxhlrdd    = (num_idx_hid * h0) + (lr0 * d0) + d_hat;  // |idx_hid|·h + ℓr·d + d^
+    const ulong     idxhlrddd   = idxhlrdd/d_hat;
+    const ulong     n256        = (256/d_hat);
+    const ulong     t_d         = (t0/d_hat);
+    const ulong     m1_n256_tau = 2*m1 + 2*(n256 + tau_ISIS);
+    const int       nbits0      = ceil(log2(conv<double>(q0-1)));
+    const int       nbits       = ceil(log2(conv<double>(q2_hat-1)));
 
     // Initialise the "goth" constants
     // NOTE: all values are squared, to avoid sqrt and floating points
@@ -1159,10 +1161,10 @@ long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_b
 
     // Initialize the custom Hash function with (crs, x)
     // NOTE: using seed_crs, ipk_bytes (a1 + seed_ipk), idx_hid, instead of crs, P, C, B_f to speedup Hash_Init
-    // len_seed  = SEED_LEN;                                            // uchar*    - 32 bytes
+    // len_seed  = SEED_LEN;                                            // uint8*    - 32 bytes
     len_a1       = calc_ser_size_poly_minbyte(d0, nbits0);              // zz_pX
-    len_idx_hid  = 1;                                                   // uint8     - 1 byte
-    len_mex      = calc_ser_size_vec_zz_p_minbyte(idx_pub*h0, nbits0);  // vec_zz_p
+    len_idx_hid  = calc_ser_size_vec_UL(num_idx_hid);                   // uint8*    - |idx_hid| bytes
+    len_mex      = calc_ser_size_vec_zz_p_minbyte(num_idx_pub*h0, nbits0); // vec_zz_p
     len_Bounds   = calc_ser_size_vec_ZZ(2);                             // vec_ZZ (2*long) - 16 bytes
     len_aux      = 1;                                                   // uint8     - 1 byte  
     // cout << "  Size Hash_Init: " << (SEED_LEN + len_a1 + SEED_LEN + len_idx_hid + len_mex + len_Bounds + len_aux)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes 
@@ -1173,9 +1175,9 @@ long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_b
            
     state = Hash_Init(seed_crs, SEED_LEN);
     Hash_Update(state, ipk_bytes, (len_a1 + SEED_LEN));
-    buffer[0] = (uint8_t)(idx_hid);
+    serialize_vec_UL(buffer, len_idx_hid, num_idx_hid, idx_hid);
     Hash_Update(state, buffer, len_idx_hid);
-    serialize_minbyte_vec_zz_p(buffer, len_mex, idx_pub*h0, nbits0, mex);
+    serialize_minbyte_vec_zz_p(buffer, len_mex, num_idx_pub*h0, nbits0, mex);
     Hash_Update(state, buffer, len_mex);
     serialize_vec_ZZ(buffer, len_Bounds, 2, Bounds);
     Hash_Update(state, buffer, len_Bounds);
@@ -1262,7 +1264,7 @@ long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_b
     
     // 10. (R_goth_0, R_goth_1) = H(1, crs, x, a_1)
     // 11. R_goth = R_goth_0 - R_goth_1
-    HISIS1(R_goth, state);
+    HISIS1(R_goth, state, m1);
     // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
@@ -1465,20 +1467,20 @@ long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_b
     }
 
     // Create C_m and C_r
-    C_m.SetDims(d0, (idx_pub*h0));
+    C_m.SetDims(d0, (num_idx_pub*h0));
     C_r.SetDims(d0, idxhlrdd); 
     // NOTE: C = [C_m C_r] ∈ Z^[d × ((ℓm+ℓr)·d+d_hat)]_(q_hat), C_m has |idx_pub|·h columns
     
     for(i=0; i<d0; i++)
     {
-        for(j=0; j<(idx_pub*h0); j++)        
+        for(j=0; j<(num_idx_pub*h0); j++)        
         {
             C_m[i][j] = C[i][j];
         }
 
         for(j=0; j<idxhlrdd; j++)          
         {
-            C_r[i][j] = C[i][(idx_pub*h0)+j];
+            C_r[i][j] = C[i][(num_idx_pub*h0)+j];
         }
     }
 

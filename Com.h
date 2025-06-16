@@ -33,8 +33,8 @@ typedef struct
 } PROOF_C_t;
 
 
-void Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2);
-void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0);
-long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, uint8_t** Pi_ptr);
+void Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2, const long &num_idx_hid);
+void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, const vec_ZZ& w0, const vec_UL &idx_hid);
+long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_ipk, const mat_zz_p& P, const vec_zz_p& u0, const ZZ& B_goth2, uint8_t** Pi_ptr, const vec_UL &idx_hid);
 
 #endif

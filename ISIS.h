@@ -31,8 +31,8 @@ typedef struct
 } PROOF_I_t;
 
 
-void Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& B_goth_r2);
-void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, const Vec<vec_ZZ>& w0);
-long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, uint8_t** Pi_ptr);
+void Preprocessing_ISIS(vec_zz_p& s, vec_zz_p& r, const vec_ZZ& s0, const vec_ZZ& r0, const ZZ& B_goth_s2, const ZZ& B_goth_r2, const long &num_idx_hid);
+void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, const Vec<vec_ZZ>& w0, const vec_UL &idx_hid);
+long Verify_ISIS(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, uint8_t** Pi_ptr, const vec_UL &idx_hid);
 
 #endif

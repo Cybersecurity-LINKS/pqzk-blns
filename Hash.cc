@@ -233,13 +233,14 @@ void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num)
 //              and the random matrix B_f, from the seed seed_crs.
 // 
 // Input:
-// - seed_crs:  initial public seed for crs structure
+// - seed_crs:      initial public seed for crs structure
+// - num_idx_hid:   number of undisclosed attributes (hidden)
 //
 // Output:
-// - crs:       structure with the pair (crs_ISIS, crs_Com)
-// - B_f:       random matrix B_f ∈ Z^(d×t)_q
+// - crs:           structure with the pair (crs_ISIS, crs_Com)
+// - B_f:           random matrix B_f ∈ Z^(d×t)_q
 //==============================================================================
-void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs)
+void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_idx_hid)
 {
     long            i, j, n, m1, m2, n256;
     HASH_STATE_t    *state;
@@ -262,7 +263,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs)
         b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);    
         
         n    = n_ISIS;
-        m1   = m1_ISIS;
+        m1   = (((m0+2)*d0 + (num_idx_hid*h0 + lr0*d0) + t0 + 2*d_hat) / d_hat); // m_1 for Π^ISIS_NIZK
         m2   = m2_ISIS;
         n256 = 256/d_hat;
 
@@ -339,7 +340,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs)
         b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);
 
         n    = n_Com;
-        m1   = m1_Com;
+        m1   = ((num_idx_hid*h0 + lr0*d0 + d_hat)/d_hat); // m_1 for Π^Com_NIZK
         m2   = m2_Com;
         // n256 = 256/d_hat;
 
@@ -459,17 +460,16 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs)
 // 
 // Input:
 // - state0:    initial status structure
+// - m1:        m1_Com parameter
 //
 // Output:
 // - R_goth:    matrix of {-1, 0, 1} mod q1_hat values values,
 //              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
-void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0)
+void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
 {
     long         i;
     HASH_STATE_t *state;
-
-    const long   m1 = m1_Com;
 
     state = Hash_Copy(state0);
 
@@ -667,18 +667,17 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
 // 
 // Input:
 // - state0:    initial status structure
+// - m1:        m1_ISIS parameter
 //
 // Output:
 // - R_goth:    matrix of {-1, 0, 1} mod q2_hat values, 
 //              equivalent to (R_goth_0 - R_goth_1) in BLNS
 //==============================================================================
 // NOTE: HISIS1 is identical to HCom1, apart m1
-void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0)
+void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
 {
     long         i;
     HASH_STATE_t *state;
-
-    const long  m1 = m1_ISIS;
 
     state = Hash_Copy(state0);
 
