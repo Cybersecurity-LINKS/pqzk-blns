@@ -747,28 +747,9 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
     // Free the vector with serialized structure ρ
     delete[] (*Rho_ptr);
 
-
-    // 3. s ← [Coeffs^(−1)(s_0) | w],   s ∈ R^(m+2)
-    // NOTE: s_0 and s are different from s in Holder.VerCred1
-    s.SetLength(m0+2);
-
-    for(i=0; i<2; i++)
-    {
-        s[i].SetLength(d0);
-
-        for(j=0; j<d0; j++)     
-        {
-            // s[i][j] =  s_0[d0*i + j] );
-            SetCoeff(s[i], j, s_0[d0*i + j] );
-        }        
-    }     
-
-    for(i=0; i<m0; i++)
-    {
-        s[i+2] = w[i];
-    }
-
     
+    // 3. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗ 
+
     // 4. m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
     mex.SetLength(lm0);
     coeffs_m.SetLength(l0 * h0);
@@ -789,7 +770,28 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
     CoeffsInvX(mex, coeffs_m, lm0);
 
 
-    // 5. if {∥s∥ > sigma0·√((m + 2)d))} ∨ {∥r∥ > ψ·√(ℓr·d)} ∨ {[1|a1|a2^T]*s != f(x) + c0^T*m + c1^T*r}
+    // 5. s ← [Coeffs^(−1)(s_0) | w],   s ∈ R^(m+2)
+    // NOTE: s_0 and s are different from s in Holder.VerCred1
+    s.SetLength(m0+2);
+
+    for(i=0; i<2; i++)
+    {
+        s[i].SetLength(d0);
+
+        for(j=0; j<d0; j++)     
+        {
+            // s[i][j] =  s_0[d0*i + j] );
+            SetCoeff(s[i], j, s_0[d0*i + j] );
+        }        
+    }     
+
+    for(i=0; i<m0; i++)
+    {
+        s[i+2] = w[i];
+    }
+
+
+    // 6. if {∥s∥ > sigma0·√((m + 2)d))} ∨ {∥r∥ > ψ·√(ℓr·d)} ∨ {[1|a1|a2^T]*s != f(x) + c0^T*m + c1^T*r}
     // NOTE: equations in ZZ, with squared norms and thresholds
     norm_s = Norm2X(s, d0);
     th_s   = ZZ(sigma2) * ZZ( (m0+2)*d0 );
@@ -820,42 +822,42 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
     
     cred.valid = 0;
 
-    // 5.1 if {∥s∥ > sigma0·√((m + 2)d))} 
+    // 6.1 if {∥s∥ > sigma0·√((m + 2)d))} 
     if (norm_s > th_s)
     {
-        // 6.    return ⊥
+        // 7.    return ⊥
         cout << "First  condition failed - Invalid s norm!" << endl;
         // cout << " norm_s = " << norm_s << " > " << th_s << endl;
         return;
     }
     
-    // 5.2 ... or {∥r∥ > ψ·√(ℓr·d)} 
+    // 6.2 ... or {∥r∥ > ψ·√(ℓr·d)} 
     else if (norm_r > th_r)
     {
-        // 6.    return ⊥
+        // 7.    return ⊥
         cout << "Second condition failed - Invalid r norm!" << endl;
         // cout << " norm_r = " << norm_r << " > " << th_r << endl;        
         return;               
     }
 
-    // 5.3 ... or {[1|a1|a2^T]*s != f(x) + c0^T*m + c1^T*r}
+    // 6.3 ... or {[1|a1|a2^T]*s != f(x) + c0^T*m + c1^T*r}
     else if (left != right)
     {
-        // 6.    return ⊥
+        // 7.    return ⊥
         cout << "Third  condition failed - left != right!" << endl;
         // cout << " " << left << " != " << right << endl;        
         return; 
     }
     
-    // 7. else
+    // 8. else
     else
     {
-        // 8. cred ← (s, r, x),   (s, r, x) ∈ R^(m+2) × R^(ℓr) × N
+        // 9. cred ← (s, r, x),   (s, r, x) ∈ R^(m+2) × R^(ℓr) × N
         cred.s = s;
         cred.r = r;
         cred.x = x;
         cred.valid = 1;
     }
 
-    // 9. return cred
+    // 10. return cred
 }
