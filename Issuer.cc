@@ -209,7 +209,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
     // 4. B ← isk,   B ∈ Z^(2d×2d)
     // NOTE: using (f, g, F, G) instead of B
 
-    // 5. m′← Coeffs^−1(H_M(a′_1), . . . , H_M(a′_k )) ∈ R^ℓm_q    
+    // 5. m′← Coeffs^−1(H_M(a′_1), . . . , H_M(a′_k )) ∈ R^ℓm    
     coeffs_m.SetLength(l0 * h0);
     k = 0;
 
@@ -422,4 +422,184 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
 
 
     // 13. return ρ_2
+}
+
+
+
+//==============================================================================
+// I_VerCred_Plain - Issuer.VerCred function for Plaintext VC
+// 
+// Inputs:
+// - B_f:           public random matrix B_f ∈ Z^(nd×t)_q
+// - ipk_bytes:     serialized Issuer Public Key
+// - isk:           Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
+// - attrs:         attributes
+// 
+// Output:
+// - Rho_ptr:       pointer to the structure ρ = (s_0, w, x, r) where:
+//      * s_0:      short vector (output of GSampler),       s_0 ∈ Z^(2d)
+//      * w:        polynomial vector (output of GSampler),  w ∈ R^m
+//      * x:        random integer, uniformly sampled from the set [N]
+//      * r:        random polynomial vector,                r ∈ R^ℓr
+//==============================================================================
+// NOTE: there are no hidden attributes, all (l0) attributes known to the Issuer
+void I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const Vec<string>& attrs)
+{
+    // NOTE: assuming that current modulus is q0 (not q_hat)
+    ulong           i, j, k;
+    IPK_t           ipk;
+    vec_ZZ          s_0, m_i, coeffs_m;
+    vec_ZZX         w, mex, r;
+    ZZ              range, x;
+    zz_pX           u, fx_u;
+    size_t          len_s0, len_w, len_x, len_r, len_Rho;
+    uint8_t        *Rho_bytes;
+    
+    
+    // 1. (a_1, ... , a_k) ← attrs,  a_i ∈ {0, 1}∗    
+    
+    // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
+    CompleteIPK(ipk, ipk_bytes);
+
+    // 3. m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
+    mex.SetLength(lm0);    
+    coeffs_m.SetLength(l0 * h0);
+    k = 0;
+
+    for(i=0; i<l0; i++)
+    {                  
+        // a_i = attrs[i];        
+        HM(m_i, attrs[i] );        
+
+        for(j=0; j<h0; j++)     
+        {
+            coeffs_m[k] = m_i[j];
+            k++;
+        }
+    }    
+
+    CoeffsInvX(mex, coeffs_m, lm0);
+
+
+    // 4. r ← S^ℓr_ψ,   r ∈ R^ℓr
+    r.SetLength(lr0);   
+    range = 2*psi0 + 1;
+    
+    for(i=0; i<lr0; i++)
+    {
+        r[i].SetLength(d0);
+        
+        for(j=0; j<d0; j++)     
+        {
+            r[i][j] = RandomBnd(range) - psi0;
+            // NOTE: each coefficient is in the range [−psi0, psi0];
+        }
+    }
+
+    
+    // 5. u ← c0^T * m + c1^T * r ∈ R_q
+    u.SetLength(d0);
+    u = poly_mult(ipk.c0, conv<vec_zz_pX>(mex)) + poly_mult(ipk.c1, conv<vec_zz_pX>(r));
+
+    // 6. B ← isk,   B ∈ Z^(2d×2d)
+    // NOTE: using (f, g, F, G) instead of B
+
+    // 7. x ← [N],   x ∈ {1, 2, ... , N}
+    x = RandomBnd(N0) + 1;
+
+    // 8. (s_0, w) ← GSampler(a1, a2, B, s_goth, f(x) + u),   (s_0, w) ∈ Z^(2d) × R^m
+    s_0.SetLength(2*d0);    
+
+    // Compute  f(x) + u
+    fx_u = Compute_f(B_f, x) + u;
+    
+    
+    #ifdef ENABLE_FALCON
+
+        Falcon_GSampler(s_0, w, ipk.a1, ipk.a2, isk, fx_u);
+
+    #else
+
+        mat_L           A, B;
+
+        // B ← [rot(g) −rot(f) 
+        //      rot(G) −rot(F)] ∈ Z^(2d×2d)
+        B.SetDims(2*d0, 2*d0);
+        A.SetDims(d0, d0);
+
+        rot(A, isk.g);
+
+        for(i=0; i<d0; i++)
+        {
+            for(j=0; j<d0; j++)
+            {
+                B[i][j] = A[i][j];
+            }
+        }
+        
+        rot(A, -isk.f); 
+
+        for(i=0; i<d0; i++)
+        {
+            for(j=0; j<d0; j++)
+            {
+                B[i][j+d0] = A[i][j];
+            }
+        }
+
+        rot(A, isk.G); 
+
+        for(i=0; i<d0; i++)
+        {
+            for(j=0; j<d0; j++)
+            {
+                B[i+d0][j] = A[i][j];
+            }
+        }
+
+        rot(A, -isk.F); 
+
+        for(i=0; i<d0; i++)
+        {
+            for(j=0; j<d0; j++)
+            {
+                B[i+d0][j+d0] = A[i][j];
+            }
+        }
+
+        A.kill();
+
+        // Gaussian sampling  
+        GSampler(s_0, w, ipk.a1, ipk.a2, B, fx_u);
+
+        B.kill();
+            
+    #endif
+
+
+    // 9. ρ ← (s_0, w, x, r),   ρ ∈ Z^(2d) × R^m × N × R^ℓr
+    
+    // Compute the number of bytes for each component of the structure ρ
+    len_s0  = calc_ser_size_vec_ZZ(2*d0);    // vec_ZZ (2*d0*long)     -  8192 bytes
+    len_w   = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
+    len_x   = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes 
+    len_r   = calc_ser_size_vec_ZZX(lr0, d0);// vec_ZZX (lr0*d0*long)  -  8192 bytes
+    len_Rho = len_s0 + len_w + len_x + len_r;//                          28736 bytes
+    cout << "  Size Rho: " << (len_Rho/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+
+    // Allocate a vector of bytes to store the structure ρ
+    *Rho_ptr = new uint8_t[len_Rho];
+    Rho_bytes = *Rho_ptr;
+
+    // Serialize (s_0, w, x, r) in ρ
+    serialize_vec_ZZ(Rho_bytes, len_s0, 2*d0, s_0);
+    Rho_bytes+= len_s0;
+    serialize_vec_ZZX(Rho_bytes, len_w, m0, d0, w);
+    Rho_bytes+= len_w;
+    serialize_big_ZZ(Rho_bytes, len_x, x-1);    
+    Rho_bytes+= len_x;
+    serialize_vec_ZZX(Rho_bytes, len_r, lr0, d0, r);
+    // Rho_bytes+= len_r;
+
+    // 10. return ρ    
 }

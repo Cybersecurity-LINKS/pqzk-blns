@@ -31,4 +31,6 @@ void    CompleteIPK(IPK_t& ipk, const uint8_t* ipk_bytes);
 
 void    I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const Vec<string>& attrs_prime, const vec_UL &idx_pub, RHO1_t& Rho1);
 
+void    I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const Vec<string>& attrs);
+
 #endif
