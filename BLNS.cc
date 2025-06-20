@@ -18,6 +18,11 @@
 #include "Holder.h"
 #include "Verifier.h"
 
+// Enable or disable the simplified Issuing protocol with Plaintext VC
+#define USE_PLAINTEXT_ISSUING       1
+// #define USE_PLAINTEXT_ISSUING    0
+
+
 
 //=========================================================================================
 // Main - Implementation of the framework for Post-Quantum Anonymous Verifiable Credentials 
@@ -32,12 +37,9 @@ int main()
     ISK_t           isk;
     uint8_t        *ipk;
     uint8_t         seed_crs[SEED_LEN];
-    Vec<string>     attrs, attrs_prime;
+    Vec<string>     attrs;
     mat_zz_p        B_f;
     CRS2_t          crs;
-    RHO1_t          Rho1;
-    uint8_t        *Rho2;
-    STATE_t         state;
     CRED_t          cred;
     VP_t            VP;
     long            iter, N, valid;
@@ -56,63 +58,92 @@ int main()
         cout << "  ITERATION: " << iter << " of " << N << endl;
         cout << "#####################################################################" << endl;
         
-        cout << "\n- Issuer.KeyGen    (key generation)" << endl;
+        cout << "\n- Issuer.KeyGen         (key generation)" << endl;
         t1 = GetWallTime();
         I_KeyGen(&ipk, isk);
         t2 = GetWallTime();
         cout << "  CPU time: " << (t2 - t1) << " s" << endl;
-        
-        cout << "\n- Holder.Init      (initialize common random string and matrices)" << endl;
+
+        cout << "\n- Holder.Init           (init common random string and matrices)" << endl;
         ta = GetWallTime();
         H_Init(crs, B_f, seed_crs, attrs, idx_hid.length());
         tb = GetWallTime();
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
+        #if USE_PLAINTEXT_ISSUING
         
-        cout << "\n=====================================================================" << endl;
-        cout << "  ISSUING PROTOCOL" << endl;
-        cout << "=====================================================================" << endl;
-        ta = GetWallTime();     
-        cout << "\n- Holder.VerCred1  (prove knowledge of undisclosed attributes)" << endl;
-        H_VerCred1(Rho1, state, seed_crs, crs, ipk, attrs, idx_pub);
-        tb = GetWallTime();        
-        cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            cout << "\n=====================================================================" << endl;
+            cout << "  ISSUING PROTOCOL  --  Plaintext VC" << endl;
+            cout << "=====================================================================" << endl;
 
-        // Select disclosed attributes, fill with zeros hidden attributes 
-        attrs_prime = attrs;
-        
-        for(auto &i: idx_hid)
-        {
-            attrs_prime[i] = "0"; // Zero padding
-        }
-        // cout << "  attrs  = " << attrs << endl;
-        // cout << "  attrs' = " << attrs_prime << endl;
+            uint8_t        *Rho;
+            
+            ta = GetWallTime();
+            cout << "\n- Issuer.VerCred_Plain  (sign plaintext attributes)" << endl;
+            I_VerCred_Plain(&Rho, B_f, ipk, isk, attrs);
+            tb = GetWallTime();        
+            cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
-        ta = GetWallTime();
-        cout << "\n- Issuer.VerCred   (verify proof and compute blind signature)" << endl;
-        I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, isk, attrs_prime, idx_pub, Rho1);
-        tb = GetWallTime();        
-        cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            cout << "\n- Holder.VerCred_Plain  (verify signature and store VC)" << endl;
+            ta = GetWallTime();        
+            H_VerCred_Plain(cred, ipk, B_f, &Rho, attrs);
+            tb = GetWallTime();        
+            cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            assert(cred.valid);
+                
+        #else
+            
+            cout << "\n=====================================================================" << endl;
+            cout << "  ISSUING PROTOCOL  --  Anonymous Credential" << endl;
+            cout << "=====================================================================" << endl;
 
-        cout << "\n- Holder.VerCred2  (unblind signature and store credential)" << endl;
-        ta = GetWallTime();        
-        H_VerCred2(cred, ipk, B_f, &Rho2, state);
-        tb = GetWallTime();        
-        cout << "  CPU time: " << (tb - ta) << " s" << endl;
-        assert(cred.valid);
+            Vec<string>     attrs_prime;
+            RHO1_t          Rho1;
+            uint8_t        *Rho2;
+            STATE_t         state;
 
+            ta = GetWallTime();
+            cout << "\n- Holder.VerCred1       (prove knowledge of undisclosed attributes)" << endl;
+            H_VerCred1(Rho1, state, seed_crs, crs, ipk, attrs, idx_pub);
+            tb = GetWallTime();        
+            cout << "  CPU time: " << (tb - ta) << " s" << endl;
+
+            // Select disclosed attributes, fill with zeros hidden attributes 
+            attrs_prime = attrs;
+            
+            for(auto &i: idx_hid)
+            {
+                attrs_prime[i] = "0"; // Zero padding
+            }
+            // cout << "  attrs  = " << attrs << endl;
+            // cout << "  attrs' = " << attrs_prime << endl;
+
+            ta = GetWallTime();
+            cout << "\n- Issuer.VerCred        (verify proof and compute blind signature)" << endl;
+            I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, isk, attrs_prime, idx_pub, Rho1);
+            tb = GetWallTime();        
+            cout << "  CPU time: " << (tb - ta) << " s" << endl;
+
+            cout << "\n- Holder.VerCred2       (unblind signature and store credential)" << endl;
+            ta = GetWallTime();        
+            H_VerCred2(cred, ipk, B_f, &Rho2, state);
+            tb = GetWallTime();        
+            cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            assert(cred.valid);
+
+        #endif
         
         cout << "\n=====================================================================" << endl;
         cout << "  PRESENTATION PROTOCOL" << endl;
         cout << "=====================================================================" << endl;
         ta = GetWallTime();
-        cout << "\n- Holder.VerPres   (prove knowledge of signature and attributes)" << endl;
+        cout << "\n- Holder.VerPres        (prove knowledge of signature and attributes)" << endl;
         H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs, idx_pub);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
-        ta = GetWallTime();  
-        cout << "\n- Verifier.Verify  (verify proof and authorize)" << endl;
+        ta = GetWallTime();
+        cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
         valid = V_Verify(VP, seed_crs, crs, B_f, idx_pub);
         tb = GetWallTime();        
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
@@ -128,7 +159,7 @@ int main()
         
         t3 = GetWallTime();
         cout << "\n=====================================================================\n";
-        cout << "  TOT time: " << (t3 - t1) << " s (" << (t3 - t2) << " s)" << endl;
+        cout << "  TOT time: " << (t3 - t1) << " s  (" << (t3 - t2) << " s)" << endl;
     }
 
     return 0;
