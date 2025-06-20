@@ -19,8 +19,8 @@
 #include "Verifier.h"
 
 // Enable or disable the simplified Issuing protocol with Plaintext VC
-#define USE_PLAINTEXT_ISSUING       1
-// #define USE_PLAINTEXT_ISSUING    0
+// #define USE_PLAINTEXT_ISSUING    1
+#define USE_PLAINTEXT_ISSUING       0
 
 
 
@@ -70,7 +70,7 @@ int main()
         tb = GetWallTime();
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
-        #if USE_PLAINTEXT_ISSUING
+        #if USE_PLAINTEXT_ISSUING // == 1
         
             cout << "\n=====================================================================" << endl;
             cout << "  ISSUING PROTOCOL  --  Plaintext VC" << endl;
@@ -91,7 +91,7 @@ int main()
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
             assert(cred.valid);
                 
-        #else
+        #else // USE_PLAINTEXT_ISSUING == 0
             
             cout << "\n=====================================================================" << endl;
             cout << "  ISSUING PROTOCOL  --  Anonymous Credential" << endl;
