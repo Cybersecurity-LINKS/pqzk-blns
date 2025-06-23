@@ -413,7 +413,7 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
     // 7. else
     else
     {
-        // 8. cred ← (s, r, x),   (s, r, x) ∈ R^(m+2)_q × R^(ℓr) × N
+        // 8. cred ← (s, r, x),   (s, r, x) ∈ R^(m+2) × R^(ℓr) × N
         cred.s = s;
         cred.r = state.r;
         cred.x = x;
@@ -690,4 +690,174 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2
     {
         VP.valid = 0;
     }
+}
+
+
+
+//==============================================================================
+// H_VerCred_Plain - Holder.VerCred function for Plaintext VC
+// 
+// Inputs:
+// - ipk_bytes:     serialized Issuer Public Key
+// - B_f:           public random matrix B_f ∈ Z^(nd×t)_q
+// - Rho_ptr:       pointer to the structure ρ = (s_0, w, x, r)
+// - attrs:         attributes
+// 
+// Outputs:
+// - cred = (s,r,x): triple that corresponds to the credential
+//==============================================================================
+void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uint8_t** Rho_ptr, const Vec<string>& attrs)
+{
+    // NOTE: assuming that current modulus is q0 (not q_hat)
+    ulong           i, j, k;
+    IPK_t           ipk;
+    vec_ZZ          s_0, m_i, coeffs_m;
+    vec_ZZX         w, s, mex, r;
+    ZZ              x, norm_s, norm_r, th_s, th_r;
+    zz_pX           left, right;
+    vec_zz_pX       a;
+    size_t          len_s0, len_w, len_x, len_r;
+    uint8_t        *Rho_bytes;
+    
+    // 1. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
+    CompleteIPK(ipk, ipk_bytes);
+    
+    // 2. (s_0, w, x, r) ← ρ,       ρ ∈ Z^(2d) × R^m × N × R^ℓr
+    
+    // Compute the number of bytes for each component of the structure ρ
+    len_s0  = calc_ser_size_vec_ZZ(2*d0);    // vec_ZZ (2*d0*long)     -  8192 bytes
+    len_w   = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
+    len_x   = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes
+    len_r   = calc_ser_size_vec_ZZX(lr0, d0);// vec_ZZX (lr0*d0*long)  -  8192 bytes
+    // size_t len_Rho = len_s0 + len_w + len_x + len_r;//                28736 bytes
+    // cout << "  Size Rho: " << (len_Rho/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+  
+    // Deserialize the structure ρ
+    Rho_bytes = *Rho_ptr;
+    deserialize_vec_ZZ(s_0, 2*d0, Rho_bytes, len_s0);
+    Rho_bytes+= len_s0;
+    deserialize_vec_ZZX(w, m0, d0, Rho_bytes, len_w);
+    Rho_bytes+= len_w;
+    deserialize_big_ZZ(x, Rho_bytes, len_x);
+    x++;
+    Rho_bytes+= len_x;
+    deserialize_vec_ZZX(r, lr0, d0, Rho_bytes, len_r);
+    // Rho_bytes+= len_r;
+
+    // Free the vector with serialized structure ρ
+    delete[] (*Rho_ptr);
+
+    
+    // 3. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗ 
+
+    // 4. m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
+    mex.SetLength(lm0);
+    coeffs_m.SetLength(l0 * h0);
+    k = 0;
+
+    for(i=0; i<l0; i++)
+    {                  
+        // a_i = attrs[i];        
+        HM(m_i, attrs[i] );        
+
+        for(j=0; j<h0; j++)     
+        {
+            coeffs_m[k] = m_i[j];
+            k++;
+        }
+    }    
+
+    CoeffsInvX(mex, coeffs_m, lm0);
+
+
+    // 5. s ← [Coeffs^(−1)(s_0) | w],   s ∈ R^(m+2)
+    // NOTE: s_0 and s are different from s in Holder.VerCred1
+    s.SetLength(m0+2);
+
+    for(i=0; i<2; i++)
+    {
+        s[i].SetLength(d0);
+
+        for(j=0; j<d0; j++)     
+        {
+            // s[i][j] =  s_0[d0*i + j] );
+            SetCoeff(s[i], j, s_0[d0*i + j] );
+        }        
+    }     
+
+    for(i=0; i<m0; i++)
+    {
+        s[i+2] = w[i];
+    }
+
+
+    // 6. if {∥s∥ > sigma0·√((m + 2)d))} ∨ {∥r∥ > ψ·√(ℓr·d)} ∨ {[1|a1|a2^T]*s != f(x) + c0^T*m + c1^T*r}
+    // NOTE: equations in ZZ, with squared norms and thresholds
+    norm_s = Norm2X(s, d0);
+    th_s   = ZZ(sigma2) * ZZ( (m0+2)*d0 );
+
+    norm_r = Norm2X(r, d0);
+    th_r   = sqr(ZZ(psi0)) * ZZ( lr0*d0 );
+
+    // a ← [1|a1|a2^T]
+    a.SetLength(m0+2);
+    
+    a[0].SetLength(d0);
+    a[0] = zz_pX(1); 
+
+    a[1] =  ipk.a1;
+
+    for(i=0; i<m0; i++)
+    {
+        a[2+i] =  ipk.a2[i];
+    }
+
+    // left ← [1|a1|a2^T] * s = a * s,   left ∈ R_q
+    left = poly_mult(a, conv<vec_zz_pX>(s) );
+    left.normalize();
+
+    // right ← f(x) + c0^T * m + c1^T * r,   right ∈ R_q    
+    right = Compute_f(B_f, x) + poly_mult(ipk.c0, conv<vec_zz_pX>(mex)) + poly_mult(ipk.c1, conv<vec_zz_pX>(r));
+    right.normalize();
+    
+    cred.valid = 0;
+
+    // 6.1 if {∥s∥ > sigma0·√((m + 2)d))} 
+    if (norm_s > th_s)
+    {
+        // 7.    return ⊥
+        cout << "First  condition failed - Invalid s norm!" << endl;
+        // cout << " norm_s = " << norm_s << " > " << th_s << endl;
+        return;
+    }
+    
+    // 6.2 ... or {∥r∥ > ψ·√(ℓr·d)} 
+    else if (norm_r > th_r)
+    {
+        // 7.    return ⊥
+        cout << "Second condition failed - Invalid r norm!" << endl;
+        // cout << " norm_r = " << norm_r << " > " << th_r << endl;        
+        return;               
+    }
+
+    // 6.3 ... or {[1|a1|a2^T]*s != f(x) + c0^T*m + c1^T*r}
+    else if (left != right)
+    {
+        // 7.    return ⊥
+        cout << "Third  condition failed - left != right!" << endl;
+        // cout << " " << left << " != " << right << endl;        
+        return; 
+    }
+    
+    // 8. else
+    else
+    {
+        // 9. cred ← (s, r, x),   (s, r, x) ∈ R^(m+2) × R^(ℓr) × N
+        cred.s = s;
+        cred.r = r;
+        cred.x = x;
+        cred.valid = 1;
+    }
+
+    // 10. return cred
 }
