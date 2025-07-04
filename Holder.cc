@@ -439,7 +439,7 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
 // Output:
 // - VP:             structure for the Verifiable Presentation
 //==============================================================================
-void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& B_f, const Vec<string>& attrs, const vec_UL &idx_pub)
+void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& B_f, Vec<string>& attrs, const vec_UL &idx_pub)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     ulong           i, j, k;
@@ -462,6 +462,14 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2
        
     // 1. (a_1, ... , a_l) ← attrs,   a_i ∈ {0, 1}∗
     // NOTE: l0 = |idx_hid| + |idx_pub| = len(attrs),  d0 must divide l0*h0
+
+    #ifdef USE_REVOCATION
+
+        // Get the timestamp for the current date/time and update the corresponding attribute
+        attrs[IDX_TIMESTAMP] = Get_timestamp(0);
+
+    #endif
+
 
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
     CompleteIPK(ipk, ipk_bytes);
@@ -706,7 +714,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2
 // Outputs:
 // - cred = (s,r,x): triple that corresponds to the credential
 //==============================================================================
-void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uint8_t** Rho_ptr, const Vec<string>& attrs)
+void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uint8_t** Rho_ptr, Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     ulong           i, j, k;
@@ -748,7 +756,15 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
     delete[] (*Rho_ptr);
 
     
-    // 3. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗ 
+    // 3. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗
+
+    #ifdef USE_REVOCATION
+
+        // Get the timestamp for the current date/time and update the corresponding attribute
+        attrs[IDX_TIMESTAMP] = Get_timestamp(0);
+
+    #endif
+
 
     // 4. m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
     mex.SetLength(lm0);

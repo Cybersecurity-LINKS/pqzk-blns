@@ -18,11 +18,6 @@
 #include "Holder.h"
 #include "Verifier.h"
 
-// Enable or disable the simplified Issuing protocol with Plaintext VC
-// #define USE_PLAINTEXT_ISSUING    1
-#define USE_PLAINTEXT_ISSUING       0
-
-
 
 //=========================================================================================
 // Main - Implementation of the framework for Post-Quantum Anonymous Verifiable Credentials 
@@ -45,12 +40,12 @@ int main()
     long            iter, N, valid;
     double          t1, t2, t3, ta, tb;  
 
-    idx_pub = conv<vec_UL>("[0 1 2 3]");    // Indexes of disclosed attributes (revealed, i.e. idx)
+    idx_pub = conv<vec_UL>("[4 5 6 7]");    // Indexes of disclosed attributes (revealed, i.e. idx)
     idx_hid = Compute_idx_hid(idx_pub);     // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    N = 10;  // Number of iterations, for demonstration purposes
+    N = 1; //10;  // Number of iterations, for demonstration purposes
     
     for(iter=1; iter<=N; iter++)
     {
@@ -70,7 +65,7 @@ int main()
         tb = GetWallTime();
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
-        #if USE_PLAINTEXT_ISSUING // == 1
+        #ifdef USE_PLAINTEXT_ISSUING
         
             cout << "\n=====================================================================" << endl;
             cout << "  ISSUING PROTOCOL  --  Plaintext VC" << endl;
@@ -81,7 +76,7 @@ int main()
             ta = GetWallTime();
             cout << "\n- Issuer.VerCred_Plain  (sign plaintext attributes)" << endl;
             I_VerCred_Plain(&Rho, B_f, ipk, isk, attrs);
-            tb = GetWallTime();        
+            tb = GetWallTime();
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
             cout << "\n- Holder.VerCred_Plain  (verify signature and store VC)" << endl;
@@ -90,8 +85,8 @@ int main()
             tb = GetWallTime();        
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
             assert(cred.valid);
-                
-        #else // USE_PLAINTEXT_ISSUING == 0
+            
+        #else // Not USE_PLAINTEXT_ISSUING
             
             cout << "\n=====================================================================" << endl;
             cout << "  ISSUING PROTOCOL  --  Anonymous Credential" << endl;
@@ -154,12 +149,75 @@ int main()
         }   
         assert(valid == 1);
 
-        // Free up memory
-        delete[] ipk;
         
+        #ifdef USE_REVOCATION
+
+            cout << "\n=====================================================================\n";
+            // WAIT until the next integer minute for demonstration purposes            
+            // NOTE: 1 minute is the selected granularity for the revocation mechanism
+            Wait_till_next_min(0, 61);
+            cout << "=====================================================================\n";
+
+            cout << "\n- Holder.VerPres        (prove knowledge of signature and attributes)" << endl;
+            H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs, idx_pub);
+            
+            cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
+            valid = V_Verify(VP, seed_crs, crs, B_f, idx_pub);
+            
+            if (valid == 0)
+            {
+                cout << "\n  Credential EXPIRED!" << endl;
+            }   
+            assert(valid == 0);
+
+            // WAIT 5 seconds for demonstration purposes
+            cout << "  Sleep for 5 s" << endl;
+            sleep(5);
+
+            cout << "\n=====================================================================\n";
+            cout << "  UPDATE CREDENTIAL" << endl;
+            cout << "=====================================================================\n";
+
+            #ifdef USE_PLAINTEXT_ISSUING
+                
+                cout << "\n- Issuer.VerCred_Plain  (sign plaintext attributes)" << endl;
+                I_VerCred_Plain(&Rho, B_f, ipk, isk, attrs);
+                
+                cout << "\n- Holder.VerCred_Plain  (verify signature and store VC)" << endl;
+                H_VerCred_Plain(cred, ipk, B_f, &Rho, attrs);
+                assert(cred.valid);
+                
+            #else // Not USE_PLAINTEXT_ISSUING
+
+                // TODO
+            
+            #endif
+
+
+            cout << "\n=====================================================================" << endl;
+            cout << "  PRESENTATION PROTOCOL" << endl;
+            cout << "=====================================================================" << endl;
+
+            cout << "\n- Holder.VerPres        (prove knowledge of signature and attributes)" << endl;
+            H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs, idx_pub);
+            
+            cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
+            valid = V_Verify(VP, seed_crs, crs, B_f, idx_pub);
+
+            if (valid)
+            {
+                cout << "  OK!" << endl;
+            }   
+            assert(valid == 1);
+
+        #endif
+       
         t3 = GetWallTime();
         cout << "\n=====================================================================\n";
         cout << "  TOT time: " << (t3 - t1) << " s  (" << (t3 - t2) << " s)" << endl;
+        
+        // Free up memory
+        delete[] ipk;
     }
 
     return 0;

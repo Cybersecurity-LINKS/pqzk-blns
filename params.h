@@ -91,32 +91,39 @@ typedef Mat<long>   mat_L;
 
 
 // Proof systems parameters
-#define d_hat   64              // \hat{d},   degree of the cyclotomic ring Rˆ          NOTE: it is a power of two that divides λ
-#define q2_hat  1125899907006629// \hat{q}_2, modulus of the proof system Π^ISIS_NIZK   NOTE: must be divisible by q
-#define xi0     8               // ξ
-#define nu0     140             // \nu
-#define tau_ISIS 7              // τ   for Π^ISIS_NIZK
-#define tau_Com  8              // τ   for Π^Com_NIZK
-#define n_ISIS  20              // n   for Π^ISIS_NIZK
-#define n_Com   17              // n   for Π^Com_NIZK
-#define m2_ISIS 64              // m_2 for Π^ISIS_NIZK, m2 ≥ n + ℓ
-#define m2_Com  55              // m_2 for Π^Com_NIZK,  m2 ≥ n + ℓ
-#define q1_hat  2199023288779   // \hat{q}_1 modulus of the proof system Π^Com_NIZK     NOTE: must be divisible by q
-#define p_bar   68527215        // \overline{p}, an odd integer co-prime to \hat{q}
-#define n_i     28              // n_1 == n_2
-#define eta_i   1               // η_1 == η_2
+#define d_hat   64                  // \hat{d},   degree of the cyclotomic ring Rˆ          NOTE: it is a power of two that divides λ
+#define q2_hat  1125899907006629    // \hat{q}_2, modulus of the proof system Π^ISIS_NIZK   NOTE: must be divisible by q
+#define xi0     8                   // ξ
+#define nu0     140                 // \nu
+#define tau_ISIS 7                  // τ   for Π^ISIS_NIZK
+#define tau_Com  8                  // τ   for Π^Com_NIZK
+#define n_ISIS  20                  // n   for Π^ISIS_NIZK
+#define n_Com   17                  // n   for Π^Com_NIZK
+#define m2_ISIS 64                  // m_2 for Π^ISIS_NIZK, m2 ≥ n + ℓ
+#define m2_Com  55                  // m_2 for Π^Com_NIZK,  m2 ≥ n + ℓ
+#define q1_hat  2199023288779       // \hat{q}_1 modulus of the proof system Π^Com_NIZK     NOTE: must be divisible by q
+#define p_bar   68527215            // \overline{p}, an odd integer co-prime to \hat{q}
+#define n_i     28                  // n_1 == n_2
+#define eta_i   1                   // η_1 == η_2
 
 // Other parameters
-#define l0          8           // ℓ,  number of attributes     NOTE: ℓ = |idx_pub|+|idx_hid|, d must divide ℓ·h
-#define m0          3           // \textit{m}, length of a2
-#define alpha_1     44          // α_1 ∈ O(√λ)
-#define alpha_2     44          // α_2 ∈ O(√λ)
-#define alpha_3     44          // α_3 ∈ O(√λ)
-#define alpha_bar_1 44          // \overline{α}_1 ∈ O(√λ)
-#define alpha_bar_2 44          // \overline{α}_2 ∈ O(√λ)
-#define N1          lambda0     // \textsf{N} ∈ O(λ)            NOTE: it is different from N0, domain size of the function f
-#define k0          32          // k, parameter related to c ∈ C (see BLNS Fig. 8, pag. 26)
-#define SEED_LEN    32          // length of random seeds (for crs and ipk) in byte
+#define l0          8               // ℓ,  number of attributes     NOTE: ℓ = |idx_pub|+|idx_hid|, d must divide ℓ·h
+#define m0          3               // \textit{m}, length of a2
+#define alpha_1     44              // α_1 ∈ O(√λ)
+#define alpha_2     44              // α_2 ∈ O(√λ)
+#define alpha_3     44              // α_3 ∈ O(√λ)
+#define alpha_bar_1 44              // \overline{α}_1 ∈ O(√λ)
+#define alpha_bar_2 44              // \overline{α}_2 ∈ O(√λ)
+#define N1          lambda0         // \textsf{N} ∈ O(λ)            NOTE: it is different from N0, domain size of the function f
+#define k0          32              // k, parameter related to c ∈ C (see BLNS Fig. 8, pag. 26)
+#define SEED_LEN    32              // length of random seeds (for crs and ipk) in byte
+
+#define USE_PLAINTEXT_ISSUING       // Enable or disable the simplified Issuing protocol with Plaintext VC
+
+#define USE_REVOCATION              // Enable or disable the timestamp-based revocation mechanism
+#define IDX_TIMESTAMP   7           // Index of the attribute dedicated to the timestamp
+                                    // NOTE: it must be a disclosed attribute (revealed)
+
 //============================================================================================
 
 

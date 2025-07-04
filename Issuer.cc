@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "Issuer.h"
-#include "serialize.h"
 
 
 //==============================================================================
@@ -443,7 +442,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
 //      * r:        random polynomial vector,                r ∈ R^ℓr
 //==============================================================================
 // NOTE: there are no hidden attributes, all (l0) attributes known to the Issuer
-void I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const Vec<string>& attrs)
+void I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, Vec<string>& attrs)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     ulong           i, j, k;
@@ -456,7 +455,19 @@ void I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_
     uint8_t        *Rho_bytes;
     
     
-    // 1. (a_1, ... , a_k) ← attrs,  a_i ∈ {0, 1}∗    
+    // 1. (a_1, ... , a_k) ← attrs,  a_i ∈ {0, 1}∗
+
+    #ifdef USE_REVOCATION
+            
+        // If necessary, WAIT until the next integer minute for demonstration purposes
+        Wait_till_next_min(0, 10);
+        // NOTE: avoid to issue a credential that will expire in next 10 seconds
+
+        // Get the timestamp for the current date/time and update the corresponding attribute
+        attrs[IDX_TIMESTAMP] = Get_timestamp(1);
+
+    #endif
+
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
     CompleteIPK(ipk, ipk_bytes);
@@ -467,9 +478,9 @@ void I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_
     k = 0;
 
     for(i=0; i<l0; i++)
-    {                  
-        // a_i = attrs[i];        
-        HM(m_i, attrs[i] );        
+    {
+        // a_i = attrs[i];
+        HM(m_i, attrs[i]);
 
         for(j=0; j<h0; j++)     
         {

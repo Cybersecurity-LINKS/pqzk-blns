@@ -834,7 +834,7 @@ vec_UL Compute_idx_hid(const vec_UL &idx_pub)
         time_t  ts = time(NULL);
         struct  tm datetime = *localtime(&ts);
 
-        strftime(timestamp, 50, "%e%B%Y_%H:%M", &datetime);
+        strftime(timestamp, 50, "%e-%B-%Y-%H:%M", &datetime);
 
         if (print_timestamp)
         {
