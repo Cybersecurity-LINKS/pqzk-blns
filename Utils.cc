@@ -16,95 +16,95 @@
 
 
 #ifdef ENABLE_FALCON
-//===============================================================
-// Function to convert a vector<int8_t> into an ZZX polynomial.
-// Convert each int8_t value into ZZ and set it as a coefficient.
-//===============================================================
-ZZX int8ArrayToZZX(const vector<int8_t>& vec)
-{
-    ZZX poly;
-
-    for (size_t i = 0; i < vec.size(); i++) 
+    //===============================================================
+    // Function to convert a vector<int8_t> into an ZZX polynomial.
+    // Convert each int8_t value into ZZ and set it as a coefficient.
+    //===============================================================
+    ZZX int8ArrayToZZX(const vector<int8_t>& vec)
     {
-        SetCoeff(poly, i, ZZ(vec[i]));  // Set coefficient i to vec[i]
-    }
-    return poly;
-}
+        ZZX poly;
 
-//=================================================================================
-// Function to convert vector<uint16_t> into zz_pX over a finite field modulo q0.
-// Convert uint16_t values into zz_p elements and set them as coefficients.
-//=================================================================================
-zz_pX uint16ArrayToZZ_pX(const vector<uint16_t>& vec)
-{
-    // NOTE: assuming that current modulus is q0
-    zz_pX poly;
-
-    for (size_t i = 0; i < vec.size(); i++) 
-    {
-        SetCoeff(poly, i, zz_p(vec[i]));  // Set coefficient i to vec[i] mod q0
+        for (size_t i = 0; i < vec.size(); i++) 
+        {
+            SetCoeff(poly, i, ZZ(vec[i]));  // Set coefficient i to vec[i]
+        }
+        return poly;
     }
 
-    return poly;
-}
-
-//=================================================================================
-// Function to convert vec_ZZ to vector<uint16_t>.
-//=================================================================================
-vector<uint16_t> vecZZtoUint16(const vec_ZZ& input)
-{
-    unsigned int        val;
-    vector<uint16_t>    output;    
-    output.reserve(input.length());  // Reserve space for efficiency
-
-    for (long i = 0; i < input.length(); i++)
+    //=================================================================================
+    // Function to convert vector<uint16_t> into zz_pX over a finite field modulo q0.
+    // Convert uint16_t values into zz_p elements and set them as coefficients.
+    //=================================================================================
+    zz_pX uint16ArrayToZZ_pX(const vector<uint16_t>& vec)
     {
-        val = conv<unsigned int>(input[i]);  // Convert ZZ to uint first
-        //if (val < 0 || val > 65535) {  // Ensure it's within uint16_t range
-        //    throw runtime_error("Value out of range for uint16_t.");
-        //}
+        // NOTE: assuming that current modulus is q0
+        zz_pX poly;
 
-        // Extract lower 16 bits only, it doesn't use the 16 higher (2^17>>12289)
-        output.push_back(static_cast<uint16_t>(val & 0xFFFF));
+        for (size_t i = 0; i < vec.size(); i++) 
+        {
+            SetCoeff(poly, i, zz_p(vec[i]));  // Set coefficient i to vec[i] mod q0
+        }
 
-    }
-    return output;
-}
-
-//=================================================================================
-// Function to convert ZZX to vector<uint8_t>.
-//=================================================================================
-vector<uint8_t> convertToUint8(const ZZX& poly)
-{
-    ulong           coefficient;
-    vector<uint8_t> poly_uint8;
-    poly_uint8.resize(d0 + 1);
-    
-    for (long i = 0; i <= d0; i++)
-    {
-        coefficient = conv<long>(coeff(poly,i));  // Convert coefficient to long
-        poly_uint8[i] = static_cast<uint8_t>(static_cast<uint8_t>(coefficient + 256) & 0xFF); // Ensure it's uint8_t
+        return poly;
     }
 
-    return poly_uint8;
-}
-
-//=================================================================================
-// Function to convert an int16_t array to a vec_ZZ.
-//=================================================================================
-vec_ZZ int16ToVecZZ(const int16_t* arr, size_t len)
-{
-    vec_ZZ result;  // Create an empty vec_ZZ
-    result.SetLength(len);  // Set the length to match the input array
-
-    // Convert each element from int16_t to ZZ and store in vec_ZZ
-    for (size_t i = 0; i < len; i++)
+    //=================================================================================
+    // Function to convert vec_ZZ to vector<uint16_t>.
+    //=================================================================================
+    vector<uint16_t> vecZZtoUint16(const vec_ZZ& input)
     {
-        result[i] = conv<ZZ>(arr[i]);  // Convert int16_t to ZZ and store in the vec_ZZ
+        unsigned int        val;
+        vector<uint16_t>    output;    
+        output.reserve(input.length());  // Reserve space for efficiency
+
+        for (long i = 0; i < input.length(); i++)
+        {
+            val = conv<unsigned int>(input[i]);  // Convert ZZ to uint first
+            //if (val < 0 || val > 65535) {  // Ensure it's within uint16_t range
+            //    throw runtime_error("Value out of range for uint16_t.");
+            //}
+
+            // Extract lower 16 bits only, it doesn't use the 16 higher (2^17>>12289)
+            output.push_back(static_cast<uint16_t>(val & 0xFFFF));
+
+        }
+        return output;
     }
 
-    return result;
-}
+    //=================================================================================
+    // Function to convert ZZX to vector<uint8_t>.
+    //=================================================================================
+    vector<uint8_t> convertToUint8(const ZZX& poly)
+    {
+        ulong           coefficient;
+        vector<uint8_t> poly_uint8;
+        poly_uint8.resize(d0 + 1);
+        
+        for (long i = 0; i <= d0; i++)
+        {
+            coefficient = conv<long>(coeff(poly,i));  // Convert coefficient to long
+            poly_uint8[i] = static_cast<uint8_t>(static_cast<uint8_t>(coefficient + 256) & 0xFF); // Ensure it's uint8_t
+        }
+
+        return poly_uint8;
+    }
+
+    //=================================================================================
+    // Function to convert an int16_t array to a vec_ZZ.
+    //=================================================================================
+    vec_ZZ int16ToVecZZ(const int16_t* arr, size_t len)
+    {
+        vec_ZZ result;  // Create an empty vec_ZZ
+        result.SetLength(len);  // Set the length to match the input array
+
+        // Convert each element from int16_t to ZZ and store in vec_ZZ
+        for (size_t i = 0; i < len; i++)
+        {
+            result[i] = conv<ZZ>(arr[i]);  // Convert int16_t to ZZ and store in the vec_ZZ
+        }
+
+        return result;
+    }
 
 #endif
 
@@ -821,3 +821,63 @@ vec_UL Compute_idx_hid(const vec_UL &idx_pub)
 
     return idx_hid;
 }
+
+
+#ifdef  USE_REVOCATION
+
+    //=================================================================================
+    // Get_timestamp - Return the timestamp for the current date/time.
+    //=================================================================================
+    string Get_timestamp(const bool print_timestamp)
+    {
+        char    timestamp[50];
+        time_t  ts = time(NULL);
+        struct  tm datetime = *localtime(&ts);
+
+        strftime(timestamp, 50, "%e%B%Y_%H:%M", &datetime);
+
+        if (print_timestamp)
+        {
+            cout << "  Timestamp: " << timestamp << endl;
+        }
+
+        return string(timestamp);
+    }
+
+
+    //=================================================================================
+    // Wait_till_next_min - If necessary, WAIT until the next integer minute.
+    //=================================================================================
+    void Wait_till_next_min(const bool print_timestamp, const int min_interval)
+    {
+        char    sec[3];
+        int     interval;
+        time_t  ts = time(NULL);
+        struct  tm datetime = *localtime(&ts);
+        
+        if (print_timestamp)
+        {
+            Get_timestamp(print_timestamp);
+        }
+        
+        // Compute the remaining interval in seconds until the next integer minute
+        strftime(sec, 3, "%S", &datetime);
+        interval = 60 - conv<int>(sec);
+
+        // If necessary, WAIT until the next integer minute
+        if (interval < min_interval)
+        {
+            cout << "  Wait until next minute. Sleep for " << interval << " s..." << endl;
+            sleep(interval);
+
+            ts = time(NULL);
+            datetime = *localtime(&ts);
+        }
+
+        if (print_timestamp)
+        {
+            Get_timestamp(print_timestamp);
+        }
+    }
+
+#endif

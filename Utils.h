@@ -18,11 +18,11 @@
 #include "params.h"
 
 #ifdef ENABLE_FALCON
-ZZX         int8ArrayToZZX(const vector<int8_t>& vec);
-zz_pX       uint16ArrayToZZ_pX(const vector<uint16_t>& vec);
-vector<uint16_t> vecZZtoUint16(const vec_ZZ& input);
-vector<uint8_t> convertToUint8(const ZZX& poly);
-vec_ZZ      int16ToVecZZ(const int16_t* arr, size_t len);
+    ZZX         int8ArrayToZZX(const vector<int8_t>& vec);
+    zz_pX       uint16ArrayToZZ_pX(const vector<uint16_t>& vec);
+    vector<uint16_t> vecZZtoUint16(const vec_ZZ& input);
+    vector<uint8_t> convertToUint8(const ZZX& poly);
+    vec_ZZ      int16ToVecZZ(const int16_t* arr, size_t len);
 #endif
 
 ZZX         Phi();
@@ -60,5 +60,14 @@ double      Norm2D(        const vec_D&   v );
 double      InnerProdD(    const vec_D& a, const vec_D& b );
 
 vec_UL      Compute_idx_hid(const vec_UL& idx_pub);
+
+#ifdef  USE_REVOCATION
+
+    #include <unistd.h>        // Needed for using the sleep function
+
+    string  Get_timestamp(const bool print_timestamp);
+    void    Wait_till_next_min(const bool print_timestamp, const int min_interval);
+
+#endif
 
 #endif
