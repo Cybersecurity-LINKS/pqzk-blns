@@ -49,13 +49,6 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
     
     // 1. (a′_1, ··· , a′_ℓ) ← attrs′,   a′_i ∈ {0, 1}∗
     // NOTE: l0 = |idx_hid| + |idx_pub| = len(attrs),  d0 must divide l0*h0
-
-    #ifdef USE_REVOCATION
-
-        // Get the timestamp for the current date/time and update the corresponding attribute
-        VP.attrs_prime[IDX_TIMESTAMP] = Get_timestamp(1);
-
-    #endif
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
     CompleteIPK(ipk, VP.ipk_bytes);
@@ -67,9 +60,19 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
 
     for(i=0; i<l0; i++)
     {                  
-        // a_i = VP.attrs_prime[i];        
-        HM(m_i, VP.attrs_prime[i] );
-
+        #ifdef USE_REVOCATION
+            if (i == IDX_TIMESTAMP)
+            {
+                // Get the timestamp for the current date/time and use it instead of the corresponding attribute
+                HM(m_i, Get_timestamp(1));
+            }
+            else
+        #endif
+            {
+                // a_i = VP.attrs_prime[i];
+                HM(m_i, VP.attrs_prime[i]);
+            }
+        
         for(j=0; j<h0; j++)     
         {
             coeffs_m[k] = m_i[j];
