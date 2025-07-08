@@ -19,6 +19,7 @@
 
 #include "params.h"
 #include "shake128.h"
+#include "Utils.h"
 
 
 typedef      Vec<Mat<zz_pX>>   CRS_t;

@@ -15,10 +15,13 @@
 #ifndef BLNS_ISIS_H
 #define BLNS_ISIS_H
 
+#include <algorithm>
+
 #include "params.h"
 #include "LHC.h"
 #include "Hash.h"
 #include "Squares.h"
+#include "serialize.h"
 
 typedef struct
 {

@@ -15,10 +15,13 @@
 #ifndef BLNS_COM_H
 #define BLNS_COM_H
 
+#include <algorithm>
+
 #include "params.h"
 #include "LHC.h"
 #include "Hash.h"
 #include "Squares.h"
+#include "serialize.h"
 
 typedef struct
 {

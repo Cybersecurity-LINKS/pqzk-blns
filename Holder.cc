@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "Holder.h"
-#include "serialize.h"
 
 
 //==============================================================================
@@ -77,7 +76,7 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, uint8_t* seed_crs, Vec<string>& attrs, c
 // - Rho1:          structure ρ_1 that contains the commitment u and proof π
 // - state:         structure that contains the polynomial vectors m and r
 //==============================================================================
-void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const Vec<string>& attrs, const vec_UL &idx_pub)
+void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, Vec<string>& attrs, const vec_UL &idx_pub)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     ulong           i, j, k;
@@ -97,6 +96,18 @@ void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS
        
     // 1. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗
     // NOTE: l0 = |idx_hid| + |idx_pub| = len(attrs),  d0 must divide l0*h0
+
+    #ifdef USE_REVOCATION
+            
+        // If necessary, WAIT until the next integer minute for demonstration purposes
+        Wait_till_next_min(0, 10);
+        // NOTE: avoid to request a credential that will expire in next 10 seconds
+
+        // Get the timestamp for the current date/time and update the corresponding attribute
+        attrs[IDX_TIMESTAMP] = Get_timestamp(1);
+
+    #endif
+
     
     // 2. (c0, c1) ← ipk,   (c0, c1) ∈ R^ℓm_q × R^ℓr_q
     CompleteIPK(ipk, ipk_bytes);
@@ -281,7 +292,6 @@ void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS
 // H_VerCred2   -   Holder.VerCred2 function
 // 
 // Inputs:
-
 // - ipk_bytes:     serialized Issuer Public Key
 // - B_f:           public random matrix B_f ∈ Z^(nd×t)_q
 // - Rho2_ptr:      pointer to the structure ρ_2 = (s_0, w, x)
@@ -296,7 +306,7 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
     ulong           i, j;
     IPK_t           ipk;
     vec_ZZ          s_0;
-    vec_ZZX         w, s;
+    vec_ZZX         w, s, mex;
     ZZ              x, norm_s, norm_r, th_s, th_r;
     zz_pX           left, right;
     vec_zz_pX       a;
@@ -304,7 +314,34 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
     uint8_t        *Rho2_bytes;
 
     // 1. (m, r) ← state,   state ∈ R^(ℓm) × R^(ℓr)
-    
+    mex = state.m;
+    // r = state.r;
+
+    #ifdef USE_REVOCATION
+
+        ulong   k;
+        vec_ZZ  m_i, coeffs_m;
+
+        // Get the timestamp for the current date/time and use it instead of the corresponding attribute
+        HM(m_i, Get_timestamp(1));
+        // NOTE: i == IDX_TIMESTAMP
+
+        // m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
+        coeffs_m.SetLength(l0 * h0);    
+        CoeffsX(coeffs_m, mex, lm0);
+        k = IDX_TIMESTAMP * h0;
+
+        for(j=0; j<h0; j++)     
+        {
+            coeffs_m[k] = m_i[j];
+            k++;
+        } 
+
+        CoeffsInvX(mex, coeffs_m, lm0);
+
+    #endif
+
+
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
     CompleteIPK(ipk, ipk_bytes);
     
@@ -378,7 +415,7 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
     left.normalize();
 
     // right ← f(x) + c0^T * m + c1^T * r,   right ∈ R_q    
-    right = Compute_f(B_f, x) + poly_mult( ipk.c0, conv<vec_zz_pX>(state.m)) + poly_mult(ipk.c1, conv<vec_zz_pX>(state.r) );
+    right = Compute_f(B_f, x) + poly_mult( ipk.c0, conv<vec_zz_pX>(mex)) + poly_mult(ipk.c1, conv<vec_zz_pX>(state.r) );
     right.normalize();
     
     cred.valid = 0;

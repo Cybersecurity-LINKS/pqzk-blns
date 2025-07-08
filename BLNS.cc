@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "params.h"
-#include "Utils.h"
 #include "Issuer.h"
 #include "Holder.h"
 #include "Verifier.h"
@@ -38,7 +37,7 @@ int main()
     CRED_t          cred;
     VP_t            VP;
     long            iter, N, valid;
-    double          t1, t2, t3, ta, tb;  
+    double          t1, t2, ta, tb;  
 
     idx_pub = conv<vec_UL>("[4 5 6 7]");    // Indexes of disclosed attributes (revealed, i.e. idx)
     idx_hid = Compute_idx_hid(idx_pub);     // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
@@ -78,6 +77,7 @@ int main()
             I_VerCred_Plain(&Rho, B_f, ipk, isk, attrs);
             tb = GetWallTime();
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            // cout << "  attrs  = " << attrs << endl;
 
             cout << "\n- Holder.VerCred_Plain  (verify signature and store VC)" << endl;
             ta = GetWallTime();        
@@ -177,8 +177,9 @@ int main()
             cout << "\n=====================================================================\n";
             cout << "  UPDATE CREDENTIAL" << endl;
             cout << "=====================================================================\n";
+            // TODO: dedicated function(s) for updating the credential (based on commitment u & timestamp)
 
-            #ifdef USE_PLAINTEXT_ISSUING
+            #ifdef USE_PLAINTEXT_ISSUING // Plaintext VC
                 
                 cout << "\n- Issuer.VerCred_Plain  (sign plaintext attributes)" << endl;
                 I_VerCred_Plain(&Rho, B_f, ipk, isk, attrs);
@@ -187,10 +188,28 @@ int main()
                 H_VerCred_Plain(cred, ipk, B_f, &Rho, attrs);
                 assert(cred.valid);
                 
-            #else // Not USE_PLAINTEXT_ISSUING
+            #else // Not USE_PLAINTEXT_ISSUING - Anonymous Credential
 
-                // TODO
-            
+                cout << "\n- Holder.VerCred1       (prove knowledge of undisclosed attributes)" << endl;
+                H_VerCred1(Rho1, state, seed_crs, crs, ipk, attrs, idx_pub);
+
+                // Select disclosed attributes, fill with zeros hidden attributes 
+                attrs_prime = attrs;
+                
+                for(auto &i: idx_hid)
+                {
+                    attrs_prime[i] = "0"; // Zero padding
+                }
+                // cout << "  attrs  = " << attrs << endl;
+                // cout << "  attrs' = " << attrs_prime << endl;
+
+                cout << "\n- Issuer.VerCred        (verify proof and compute blind signature)" << endl;
+                I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, isk, attrs_prime, idx_pub, Rho1);
+                
+                cout << "\n- Holder.VerCred2       (unblind signature and store credential)" << endl;
+                H_VerCred2(cred, ipk, B_f, &Rho2, state);
+                assert(cred.valid);
+
             #endif
 
 
@@ -210,11 +229,20 @@ int main()
             }   
             assert(valid == 1);
 
-        #endif
+            if (iter<N)
+            {
+                // WAIT 5 seconds for demonstration purposes
+                cout << "\n  Sleep for 5 s" << endl;
+                sleep(5);
+            }
+
+        #else
        
-        t3 = GetWallTime();
-        cout << "\n=====================================================================\n";
-        cout << "  TOT time: " << (t3 - t1) << " s  (" << (t3 - t2) << " s)" << endl;
+            double t3 = GetWallTime();
+            cout << "\n=====================================================================\n";
+            cout << "  TOT time: " << (t3 - t1) << " s  (" << (t3 - t2) << " s)" << endl;
+
+        #endif
         
         // Free up memory
         delete[] ipk;

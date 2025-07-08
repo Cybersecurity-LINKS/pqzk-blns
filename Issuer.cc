@@ -214,8 +214,18 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
 
     for(i=0; i<l0; i++)
     {                  
-        // a_i =  attrs_prime[i];        
-        HM(m_i, attrs_prime[i] );        
+        #ifdef USE_REVOCATION
+            if (i == IDX_TIMESTAMP)
+            {
+                // Get the timestamp for the current date/time and use it instead of the corresponding attribute
+                HM(m_i, Get_timestamp(1));
+            }
+            else
+        #endif
+            {
+                // a_i = attrs_prime[i];
+                HM(m_i, attrs_prime[i]);
+            }
 
         for(j=0; j<h0; j++)     
         {
