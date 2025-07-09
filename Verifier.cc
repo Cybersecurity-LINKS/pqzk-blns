@@ -46,6 +46,16 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
     const ulong     m2d     = (m0 + 2)*d0;    // (m+2)·d
     const ulong     lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
 
+
+    #ifdef USE_REVOCATION
+        // Check if the attribute with the timestamp contains the current date/time
+        if ( VP.attrs_prime[IDX_TIMESTAMP] != Get_timestamp(1) )
+        {
+            cout << "\n  Credential EXPIRED!" << endl;
+            return 0;
+        }
+    #endif
+
     
     // 1. (a′_1, ··· , a′_ℓ) ← attrs′,   a′_i ∈ {0, 1}∗
     // NOTE: l0 = |idx_hid| + |idx_pub| = len(attrs),  d0 must divide l0*h0
@@ -59,19 +69,9 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
     k = 0;
 
     for(i=0; i<l0; i++)
-    {                  
-        #ifdef USE_REVOCATION
-            if (i == IDX_TIMESTAMP)
-            {
-                // Get the timestamp for the current date/time and use it instead of the corresponding attribute
-                HM(m_i, Get_timestamp(1));
-            }
-            else
-        #endif
-            {
-                // a_i = VP.attrs_prime[i];
-                HM(m_i, VP.attrs_prime[i]);
-            }
+    {
+        // a_i = VP.attrs_prime[i];
+        HM(m_i, VP.attrs_prime[i]);
         
         for(j=0; j<h0; j++)     
         {
