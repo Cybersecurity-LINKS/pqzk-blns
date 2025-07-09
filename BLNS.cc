@@ -177,7 +177,6 @@ int main()
             cout << "\n=====================================================================\n";
             cout << "  UPDATE CREDENTIAL" << endl;
             cout << "=====================================================================\n";
-            // TODO: dedicated function(s) for updating the credential (based on commitment u & timestamp)
 
             #ifdef USE_PLAINTEXT_ISSUING // Plaintext VC
                 
@@ -190,21 +189,14 @@ int main()
                 
             #else // Not USE_PLAINTEXT_ISSUING - Anonymous Credential
 
-                cout << "\n- Holder.VerCred1       (prove knowledge of undisclosed attributes)" << endl;
-                H_VerCred1(Rho1, state, seed_crs, crs, ipk, attrs, idx_pub);
+                uint8_t *u;
+                string  old_timestamp, new_timestamp;
 
-                // Select disclosed attributes, fill with zeros hidden attributes 
-                attrs_prime = attrs;
+                cout << "\n- Holder.ReqUpdate      (request an updated signature)" << endl;
+                H_ReqUpdate(&u, old_timestamp, new_timestamp, state, attrs, ipk);
                 
-                for(auto &i: idx_hid)
-                {
-                    attrs_prime[i] = "0"; // Zero padding
-                }
-                // cout << "  attrs  = " << attrs << endl;
-                // cout << "  attrs' = " << attrs_prime << endl;
-
-                cout << "\n- Issuer.VerCred        (verify proof and compute blind signature)" << endl;
-                I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, isk, attrs_prime, idx_pub, Rho1);
+                cout << "\n- Issuer.UpdateSign     (update signature)" << endl;
+                I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
                 
                 cout << "\n- Holder.VerCred2       (unblind signature and store credential)" << endl;
                 H_VerCred2(cred, ipk, B_f, &Rho2, state);

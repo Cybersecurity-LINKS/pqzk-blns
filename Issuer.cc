@@ -189,6 +189,11 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
     
     // 1. (a'_1, ... , a'_k) ← attrs',  a'_i ∈ {0, 1}∗
     // NOTE: l0 = |idx_hid| + |idx_pub| = len(attrs),  d0 must divide l0*h0
+
+    #ifdef USE_REVOCATION
+        // Check if the attribute with the timestamp contains the current date/time
+        assert( attrs_prime[IDX_TIMESTAMP] == Get_timestamp(1) );
+    #endif
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
     CompleteIPK(ipk, ipk_bytes);
@@ -214,18 +219,8 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
 
     for(i=0; i<l0; i++)
     {                  
-        #ifdef USE_REVOCATION
-            if (i == IDX_TIMESTAMP)
-            {
-                // Get the timestamp for the current date/time and use it instead of the corresponding attribute
-                HM(m_i, Get_timestamp(1));
-            }
-            else
-        #endif
-            {
-                // a_i = attrs_prime[i];
-                HM(m_i, attrs_prime[i]);
-            }
+        // a_i = attrs_prime[i];
+        HM(m_i, attrs_prime[i]);
 
         for(j=0; j<h0; j++)     
         {
@@ -624,3 +619,213 @@ void I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_
 
     // 10. return ρ    
 }
+
+
+#ifdef USE_REVOCATION
+//==============================================================================
+// I_UpdateSign  -  Modified Issuer.VerCred function, for updating the signature
+// 
+// Inputs:
+// - B_f:           public random matrix B_f ∈ Z^(nd×t)_q
+// - ipk_bytes:     serialized Issuer Public Key
+// - isk:           Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
+// - u_bytes:       serialized commitment u (with old_timestamp)
+// - old_timestamp: old timestamp (expired)
+// - new_timestamp: updated timestamp (current date/time)
+// 
+// Output:
+// - Rho2_ptr:      pointer to the structure ρ_2 = (s_0, w, x) where:
+//      * s_0:      short vector (output of GSampler),       s_0 ∈ Z^(2d)
+//      * w:        polynomial vector (output of GSampler),  w ∈ R^m
+//      * x:        random integer, uniformly sampled from the set [N]
+//==============================================================================
+void I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const uint8_t* u_bytes, const string& old_timestamp, const string& new_timestamp)
+{    
+    // NOTE: assuming that current modulus is q0 (not q_hat)
+    ulong           j, k;
+    IPK_t           ipk;
+    vec_ZZ          s_0, m_i;
+    vec_zz_p        coeffs_m;
+    vec_ZZX         w;
+    ZZ              x;
+    zz_pX           u, fx_u;
+    mat_zz_p        P0;
+    zz_p            prod;
+    size_t          len_u, len_s0, len_w, len_x, len_Rho2;
+    uint8_t        *Rho2_bytes;
+    
+    const int       nbits   = ceil(log2(conv<double>(q0-1)));
+
+    
+    // Check if new_timestamp corresponds to the current time
+    assert( new_timestamp == Get_timestamp(1) );
+    // NOTE: Issuer must also check that u and old_timestamp correspond to a previously issued credential (not revoked)
+
+        
+    // (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
+    CompleteIPK(ipk, ipk_bytes);
+
+    // Deserialize u  
+    len_u = calc_ser_size_poly_minbyte(d0, nbits);
+    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    
+    deserialize_minbyte_poly_zz_pX(u, d0, nbits, u_bytes, len_u);
+    
+    // Free the vector with serialized u
+    delete[] u_bytes;
+   
+    
+    // Use the old_timestamp instead of the corresponding attribute
+    HM(m_i, old_timestamp);
+    // NOTE: i == IDX_TIMESTAMP
+
+    // m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
+    coeffs_m.SetLength(h0);
+    coeffs_m = conv<vec_zz_p>(m_i);
+
+    // Remove old_timestamp from u
+    // u ← Coeffs(u) − rot(c0^T)_idx * Coeffs(m')_idx ∈ Z_q^d   
+    P0.SetDims(d0, lm0*d0);
+    rot_vect(P0, ipk.c0);
+
+    for(j=0; j<d0; j++)
+    {
+        prod = 0;
+        
+        for(k=0; k<h0; k++)
+        {
+            prod += P0[j][k + (IDX_TIMESTAMP*h0)] * coeffs_m[k];
+        }
+
+        // u[j] = u[j] - prod[j];
+        u[j] = coeff(u, j) - prod;
+    }
+
+
+    // Use the new_timestamp instead of the corresponding attribute
+    HM(m_i, new_timestamp);
+    // NOTE: i == IDX_TIMESTAMP
+
+    // m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
+    coeffs_m = conv<vec_zz_p>(m_i);
+        
+    for(j=0; j<d0; j++)
+    {
+        prod = 0;
+        
+        for(k=0; k<h0; k++)
+        {
+            prod += P0[j][k + (IDX_TIMESTAMP*h0)] * coeffs_m[k];
+        }
+
+        // u[j] = u[j] + prod[j];
+        u[j] += prod;
+    }
+
+    u.normalize();
+    P0.kill();
+
+    
+    // B ← isk,   B ∈ Z^(2d×2d)
+    // NOTE: using (f, g, F, G) instead of B
+
+    // x ← [N],   x ∈ {1, 2, ... , N}
+    x = RandomBnd(N0) + 1;
+
+    
+    // (s_0, w) ← GSampler(a1, a2, B, s_goth, f(x) + u),   (s_0, w) ∈ Z^(2d) × R^m
+    s_0.SetLength(2*d0);    
+
+    // Compute  f(x) + u
+    fx_u = Compute_f(B_f, x) + u;
+    
+    
+    #ifdef ENABLE_FALCON
+
+        Falcon_GSampler(s_0, w, ipk.a1, ipk.a2, isk, fx_u);
+
+    #else
+
+        ulong   i;   
+        mat_L   A, B;
+
+        // B ← [rot(g) −rot(f) 
+        //      rot(G) −rot(F)] ∈ Z^(2d×2d)
+        B.SetDims(2*d0, 2*d0);
+        A.SetDims(d0, d0);
+
+        rot(A, isk.g);
+
+        for(i=0; i<d0; i++)
+        {
+            for(j=0; j<d0; j++)
+            {
+                B[i][j] = A[i][j];
+            }
+        }
+        
+        rot(A, -isk.f); 
+
+        for(i=0; i<d0; i++)
+        {
+            for(j=0; j<d0; j++)
+            {
+                B[i][j+d0] = A[i][j];
+            }
+        }
+
+        rot(A, isk.G); 
+
+        for(i=0; i<d0; i++)
+        {
+            for(j=0; j<d0; j++)
+            {
+                B[i+d0][j] = A[i][j];
+            }
+        }
+
+        rot(A, -isk.F); 
+
+        for(i=0; i<d0; i++)
+        {
+            for(j=0; j<d0; j++)
+            {
+                B[i+d0][j+d0] = A[i][j];
+            }
+        }
+
+        A.kill();
+
+        // Gaussian sampling  
+        GSampler(s_0, w, ipk.a1, ipk.a2, B, fx_u);
+
+        B.kill();
+            
+    #endif
+    
+    
+    // ρ_2 ← (s_0, w, x),   ρ_2 ∈ Z^(2d) × R^m × N
+    
+    // Compute the number of bytes for each component of the structure ρ_2
+    len_s0 = calc_ser_size_vec_ZZ(2*d0);    // vec_ZZ (2*d0*long)     -  8192 bytes
+    len_w  = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
+    len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes    
+    len_Rho2 = len_s0 + len_w + len_x;      //                          20544 bytes
+    cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+  
+    // Allocate a vector of bytes to store the structure ρ_2
+    *Rho2_ptr = new uint8_t[len_Rho2];
+    Rho2_bytes = *Rho2_ptr;
+
+    // Serialize (s_0, w, x) in ρ_2
+    serialize_vec_ZZ(Rho2_bytes, len_s0, 2*d0, s_0);
+    Rho2_bytes+= len_s0;
+    serialize_vec_ZZX(Rho2_bytes, len_w, m0, d0, w);
+    Rho2_bytes+= len_w;
+    serialize_big_ZZ(Rho2_bytes, len_x, x-1);    
+    // Rho2_bytes+= len_x;
+
+
+    // return ρ_2
+}
+#endif

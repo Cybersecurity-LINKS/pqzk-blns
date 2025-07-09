@@ -55,4 +55,8 @@ void    H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const C
 
 void    H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uint8_t** Rho_ptr, const Vec<string>& attrs);
 
+#ifdef USE_REVOCATION
+void    H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, STATE_t& state, Vec<string>& attrs, const uint8_t* ipk_bytes);
+#endif
+
 #endif
