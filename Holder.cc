@@ -481,8 +481,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2
     // NOTE: assuming that current modulus is q0 (not q_hat)
     ulong           i, j, k;
     IPK_t           ipk;
-    vec_zz_pX       a; 
-    // vec_ZZX      mex;
+    vec_zz_pX       a;
     vec_ZZ          m_i, coeffs_m, coeffs_s, coeffs_r, r_vect, coeffs_u;
     vec_zz_p        coeffs_m_idx;
     mat_zz_p        P, C0, C1, C; 
@@ -511,8 +510,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2
     }
 
       
-    // 4. m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
-    // mex.SetLength(lm0);    
+    // 4. m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm   
     coeffs_m.SetLength(l0 * h0);
     k = 0;
 
@@ -536,9 +534,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2
             coeffs_m[k] = m_i[j];
             k++;
         }
-    }    
-
-    // mex = CoeffsInvX(coeffs_m, lm0);
+    }
     // NOTE: coeffs_m is directly used instead of mex
 
     

@@ -227,9 +227,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
             coeffs_m[k] = m_i[j];
             k++;
         }
-    }    
-
-    // vec_zz_pX mex_prime = CoeffsInv(coeffs_m, lm0);
+    }
     // NOTE: coeffs_m is directly used instead of mex_prime
 
 

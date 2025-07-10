@@ -118,10 +118,10 @@ typedef Mat<long>   mat_L;
 #define k0          32              // k, parameter related to c ∈ C (see BLNS Fig. 8, pag. 26)
 #define SEED_LEN    32              // length of random seeds (for crs and ipk) in byte
 
-#define USE_PLAINTEXT_ISSUING       // Enable or disable the simplified Issuing protocol with Plaintext VC
+// #define USE_PLAINTEXT_ISSUING    // Enable or disable the simplified Issuing protocol with Plaintext VC
 
-#define USE_REVOCATION              // Enable or disable the timestamp-based revocation mechanism
-#define IDX_TIMESTAMP   7           // Index of the attribute dedicated to the timestamp
+// #define USE_REVOCATION           // Enable or disable the timestamp-based revocation mechanism
+// #define IDX_TIMESTAMP   7        // Index of the attribute dedicated to the timestamp
                                     // NOTE: it must be a disclosed attribute (revealed)
 
 //============================================================================================

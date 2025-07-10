@@ -34,7 +34,7 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
     ulong           i, j, k;
     IPK_t           ipk;
     long            out, mul;
-    vec_zz_pX       a; //mex;
+    vec_zz_pX       a;
     vec_ZZ          m_i, coeffs_m;
     mat_zz_p        P, C, C0, C1; 
     vec_zz_p        coeffs_m_idx;
@@ -63,8 +63,7 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
     CompleteIPK(ipk, VP.ipk_bytes);
     
-    // 3. m′ ← Coeffs^−1(H_M(a′_1), ... , H_M(a′_ℓ)) ∈ R^ℓm_q      
-    // mex.SetLength(lm0);    
+    // 3. m′ ← Coeffs^−1(H_M(a′_1), ... , H_M(a′_ℓ)) ∈ R^ℓm_q
     coeffs_m.SetLength(l0 * h0);
     k = 0;
 
@@ -78,9 +77,7 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
             coeffs_m[k] = m_i[j];
             k++;
         }
-    }    
-
-    // mex = CoeffsInv(coeffs_m, lm0);
+    }
     // NOTE: coeffs_m is directly used instead of mex
 
 
