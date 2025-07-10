@@ -36,7 +36,7 @@ void    I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs
 void    I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, Vec<string>& attrs);
 
 #ifdef USE_REVOCATION
-void    I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const uint8_t* u_bytes, const string& old_timestamp, const string& new_timestamp);
+    void I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_bytes, const ISK_t& isk, const uint8_t* u_bytes, const string& old_timestamp, const string& new_timestamp);
 #endif
 
 #endif

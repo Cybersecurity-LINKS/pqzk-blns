@@ -923,7 +923,8 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
 
 #ifdef USE_REVOCATION
 //==============================================================================
-// H_ReqUpdate   -  Modified Holder.VerCred1 function, to request an updated VC
+// H_ReqUpdate   -  Modified Holder.VerCred1 function, to request an updated
+//                  signature for Anonymous Credential
 // 
 // Inputs:
 // - state:         structure that contains the polynomial vectors m and r
@@ -940,7 +941,7 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
 void H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, STATE_t& state, Vec<string>& attrs, const uint8_t* ipk_bytes)
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
-    ulong           i, j, k;
+    ulong           j, k;
     IPK_t           ipk;
     vec_ZZX         mex, r;
     vec_ZZ          m_i, coeffs_m;
@@ -988,6 +989,65 @@ void H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, 
 
 
     // Update m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
+    HM(m_i, new_timestamp);
+    // NOTE: i == IDX_TIMESTAMP
+    
+    coeffs_m.SetLength(l0 * h0);
+    CoeffsX(coeffs_m, mex, lm0);
+    k = IDX_TIMESTAMP * h0;
+
+    for(j=0; j<h0; j++)     
+    {
+        coeffs_m[k] = m_i[j];
+        k++;
+    } 
+
+    CoeffsInvX(mex, coeffs_m, lm0);
+
+    
+    // Update m in state ← (m, r)  state ∈ R^ℓm × R^ℓr
+    state.m = mex;
+
+    // Return (u_ptr, old_timestamp, new_timestamp, state, attrs) 
+}
+
+
+//==============================================================================
+// H_ReqUpd_Plain  - Modified Holder.VerCred1 function, to request an updated
+//                   signature for Plaintext VC
+// 
+// Inputs:
+// - attrs:          attributes
+// - ipk_bytes:      serialized Issuer Public Key
+// - cred = (s,r,x): triple that corresponds to the credential
+// 
+// Outputs:
+// - u_ptr:          pointer to the serialized commitment u (with old_timestamp)
+// - old_timestamp:  old timestamp (expired)
+// - new_timestamp:  updated timestamp (current date/time)
+// - state:          structure that contains the polynomial vectors m and r
+// - attrs:          attributes with updated timestamp
+//==============================================================================
+void H_ReqUpd_Plain(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, STATE_t& state, Vec<string>& attrs, const uint8_t* ipk_bytes, const CRED_t& cred)
+{
+    // NOTE: assuming that current modulus is q0 (not q_hat)
+    ulong           i, j, k;
+    IPK_t           ipk;
+    vec_ZZX         mex, r;
+    vec_ZZ          m_i, coeffs_m;
+    zz_pX           u;
+    size_t          len_u;
+
+    const int       nbits   = ceil(log2(conv<double>(q0-1)));
+       
+    // (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗
+    // NOTE: l0 = |idx_hid| + |idx_pub| = len(attrs),  d0 must divide l0*h0
+    
+    // (c0, c1) ← ipk,   (c0, c1) ∈ R^ℓm_q × R^ℓr_q
+    CompleteIPK(ipk, ipk_bytes);
+    
+    // m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
+    mex.SetLength(lm0);
     coeffs_m.SetLength(l0 * h0);
     k = 0;
 
@@ -1005,9 +1065,54 @@ void H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, 
 
     CoeffsInvX(mex, coeffs_m, lm0);
 
+
+    // Retrieve r from cred - r ∈ R^ℓr 
+    r.SetLength(lr0);
+    r = cred.r;
+
+
+    // Compute u ← c0^T * m + c1^T * r ∈ R_q  (with old_timestamp)
+    u.SetLength(d0);
+    u = poly_mult(ipk.c0, conv<vec_zz_pX>(mex)) + poly_mult(ipk.c1, conv<vec_zz_pX>(r));
+  
+
+    // Allocate a vector of bytes to store u
+    len_u = calc_ser_size_poly_minbyte(d0, nbits);
+    *u_ptr = new uint8_t[len_u];
+    cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
     
-    // Update m in state ← (m, r)  state ∈ R^ℓm × R^ℓr
+    // Serialize u
+    serialize_minbyte_poly_zz_pX(*u_ptr, len_u, d0, nbits, u);
+    
+    
+    // If necessary, WAIT until the next integer minute for demonstration purposes
+    Wait_till_next_min(0, 10);
+    // NOTE: avoid to request a credential that will expire in next 10 seconds
+
+    // Get the timestamp for the current date/time and update the corresponding attribute
+    old_timestamp = attrs[IDX_TIMESTAMP];
+    new_timestamp = Get_timestamp(1);
+    attrs[IDX_TIMESTAMP] = new_timestamp;
+
+    // Update m ← Coeffs^−1( H_M(a1), ... , H_M(a_l) ) ∈ R^ℓm
+    HM(m_i, new_timestamp);
+    // NOTE: i == IDX_TIMESTAMP
+    
+    CoeffsX(coeffs_m, mex, lm0);
+    k = IDX_TIMESTAMP * h0;
+
+    for(j=0; j<h0; j++)     
+    {
+        coeffs_m[k] = m_i[j];
+        k++;
+    } 
+
+    CoeffsInvX(mex, coeffs_m, lm0);
+
+    
+    // Store state ← (m, r)  state ∈ R^ℓm × R^ℓr
     state.m = mex;
+    state.r = r;
 
     // Return (u_ptr, old_timestamp, new_timestamp, state, attrs) 
 }

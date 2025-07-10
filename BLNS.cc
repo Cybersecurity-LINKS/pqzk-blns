@@ -164,46 +164,43 @@ int main()
             cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
             valid = V_Verify(VP, seed_crs, crs, B_f, idx_pub);
             
-            if (valid == 0)
-            {
-                cout << "\n  Credential EXPIRED!" << endl;
-            }   
+            // cout << "\n  Credential EXPIRED!" << endl;
             assert(valid == 0);
 
             // WAIT 5 seconds for demonstration purposes
             cout << "  Sleep for 5 s" << endl;
             sleep(5);
 
+
             cout << "\n=====================================================================\n";
             cout << "  UPDATE CREDENTIAL" << endl;
             cout << "=====================================================================\n";
 
-            #ifdef USE_PLAINTEXT_ISSUING // Plaintext VC
-                
-                cout << "\n- Issuer.VerCred_Plain  (sign plaintext attributes)" << endl;
-                I_VerCred_Plain(&Rho, B_f, ipk, isk, attrs);
-                
-                cout << "\n- Holder.VerCred_Plain  (verify signature and store VC)" << endl;
-                H_VerCred_Plain(cred, ipk, B_f, &Rho, attrs);
-                assert(cred.valid);
-                
-            #else // Not USE_PLAINTEXT_ISSUING - Anonymous Credential
+            uint8_t *u;
+            string  old_timestamp, new_timestamp;
 
-                uint8_t *u;
-                string  old_timestamp, new_timestamp;
+            #ifdef USE_PLAINTEXT_ISSUING // Plaintext VC
+
+                uint8_t        *Rho2;
+                STATE_t         state;
+
+                cout << "\n- Holder.ReqUpd_Plain   (request an updated signature)" << endl;
+                H_ReqUpd_Plain(&u, old_timestamp, new_timestamp, state, attrs, ipk, cred);
+                
+            #else // Not USE_PLAINTEXT_ISSUING - Anonymous Credential                
 
                 cout << "\n- Holder.ReqUpdate      (request an updated signature)" << endl;
                 H_ReqUpdate(&u, old_timestamp, new_timestamp, state, attrs, ipk);
-                
-                cout << "\n- Issuer.UpdateSign     (update signature)" << endl;
-                I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
-                
-                cout << "\n- Holder.VerCred2       (unblind signature and store credential)" << endl;
-                H_VerCred2(cred, ipk, B_f, &Rho2, state);
-                assert(cred.valid);
 
             #endif
-
+                
+            cout << "\n- Issuer.UpdateSign     (update signature)" << endl;
+            I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
+            
+            cout << "\n- Holder.VerCred2       (check signature and store credential)" << endl;
+            H_VerCred2(cred, ipk, B_f, &Rho2, state);
+            assert(cred.valid);
+            
 
             cout << "\n=====================================================================" << endl;
             cout << "  PRESENTATION PROTOCOL" << endl;
