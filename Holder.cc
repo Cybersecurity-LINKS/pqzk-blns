@@ -738,7 +738,7 @@ void H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2
 
 
 //==============================================================================
-// H_VerCred_Plain - Holder.VerCred function for Plaintext VC
+// H_VerCred_Plain - Holder.VerCred function for Issuer Signature (Plaintext VC)
 // 
 // Inputs:
 // - ipk_bytes:     serialized Issuer Public Key
@@ -920,7 +920,7 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
 #ifdef USE_REVOCATION
 //==============================================================================
 // H_ReqUpdate   -  Modified Holder.VerCred1 function, to request an updated
-//                  signature for Anonymous Credential
+//                  signature in case of a Blind Signature
 // 
 // Inputs:
 // - state:         structure that contains the polynomial vectors m and r
@@ -1010,7 +1010,7 @@ void H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, 
 
 //==============================================================================
 // H_ReqUpd_Plain  - Modified Holder.VerCred1 function, to request an updated
-//                   signature for Plaintext VC
+//                   Issuer Signature (Plaintext VC)
 // 
 // Inputs:
 // - attrs:          attributes

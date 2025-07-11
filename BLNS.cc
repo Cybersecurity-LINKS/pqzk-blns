@@ -44,7 +44,7 @@ int main()
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    N = 1; //10;  // Number of iterations, for demonstration purposes
+    N = 1; //1000;  // Number of iterations, for demonstration purposes
     
     for(iter=1; iter<=N; iter++)
     {
@@ -64,10 +64,10 @@ int main()
         tb = GetWallTime();
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
-        #ifdef USE_PLAINTEXT_ISSUING
+        #ifdef USE_ISSUER_SIGNATURE // Issuer Signature on Plaintext VC
         
             cout << "\n=====================================================================" << endl;
-            cout << "  ISSUING PROTOCOL  --  Plaintext VC" << endl;
+            cout << "  ISSUING PROTOCOL  --  Issuer Signature" << endl;
             cout << "=====================================================================" << endl;
 
             uint8_t        *Rho;
@@ -86,10 +86,12 @@ int main()
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
             assert(cred.valid);
             
-        #else // Not USE_PLAINTEXT_ISSUING
+        #endif
+        // #else
+        #ifdef USE_ISSUER_BLIND_SIGNATURE
             
             cout << "\n=====================================================================" << endl;
-            cout << "  ISSUING PROTOCOL  --  Anonymous Credential" << endl;
+            cout << "  ISSUING PROTOCOL  --  Blind Signature" << endl;
             cout << "=====================================================================" << endl;
 
             Vec<string>     attrs_prime;
@@ -179,7 +181,7 @@ int main()
             uint8_t *u;
             string  old_timestamp, new_timestamp;
 
-            #ifdef USE_PLAINTEXT_ISSUING // Plaintext VC
+            #ifdef USE_ISSUER_SIGNATURE
 
                 uint8_t        *Rho2;
                 STATE_t         state;
@@ -187,7 +189,9 @@ int main()
                 cout << "\n- Holder.ReqUpd_Plain   (request an updated signature)" << endl;
                 H_ReqUpd_Plain(&u, old_timestamp, new_timestamp, state, attrs, ipk, cred);
                 
-            #else // Not USE_PLAINTEXT_ISSUING - Anonymous Credential                
+            #endif
+            // #else
+            #ifdef USE_ISSUER_BLIND_SIGNATURE
 
                 cout << "\n- Holder.ReqUpdate      (request an updated signature)" << endl;
                 H_ReqUpdate(&u, old_timestamp, new_timestamp, state, attrs, ipk);

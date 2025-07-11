@@ -149,7 +149,7 @@ void CompleteIPK(IPK_t& ipk, const uint8_t* ipk_bytes)
 
 
 //==============================================================================
-// I_VerCred    -   Issuer.VerCred function
+// I_VerCred    -   Issuer.VerCred function for Blind Signature
 // 
 // Inputs:
 // - seed_crs:      initial public seed for crs structure
@@ -429,7 +429,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
 
 
 //==============================================================================
-// I_VerCred_Plain - Issuer.VerCred function for Plaintext VC
+// I_VerCred_Plain - Issuer.VerCred function for Issuer Signature (Plaintext VC)
 // 
 // Inputs:
 // - B_f:           public random matrix B_f ∈ Z^(nd×t)_q
