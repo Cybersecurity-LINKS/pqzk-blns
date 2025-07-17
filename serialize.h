@@ -14,9 +14,6 @@
 
 #include "params.h"
 
-using namespace std;
-using namespace NTL;
-
 
 // compute size functions
 size_t calc_ser_size(const long r, const long c);

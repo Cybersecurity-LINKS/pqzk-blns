@@ -37,8 +37,8 @@ typedef struct
 
 
 #ifdef ENABLE_FALCON
-void Falcon_keygen(zz_pX& a1, ISK_t& isk);
-void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ISK_t& isk, const zz_pX& d);
+    void Falcon_keygen(zz_pX& a1, ISK_t& isk);
+    void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ISK_t& isk, const zz_pX& d);
 #endif
 
 void NTRU_TrapGen(zz_pX& a1, ISK_t& isk);

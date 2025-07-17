@@ -30,9 +30,6 @@ SOFTWARE.
 
 #include "shake128.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define SHAKE128_RATE 168
 #define NROUNDS 24
 #define ROL(a, offset) ((a << offset) ^ (a >> (64 - offset)))

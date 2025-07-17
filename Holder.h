@@ -20,6 +20,7 @@
 #include "Hash.h"
 #include "Com.h"
 #include "ISIS.h"
+#include "serialize.h"
 
 typedef struct
 {
@@ -48,10 +49,15 @@ typedef struct
 
 void    H_Init(CRS2_t& crs, mat_zz_p& B_f, uint8_t* seed_crs, Vec<string>& attrs, const long &num_idx_hid);
 
-void    H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const Vec<string>& attrs, const vec_UL &idx_pub);
+void    H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, Vec<string>& attrs, const vec_UL &idx_pub);
 void    H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uint8_t** Rho2_ptr, const STATE_t& state);
 void    H_VerPres(VP_t& VP, const CRED_t& cred, const uint8_t* seed_crs, const CRS2_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& B_f, const Vec<string>& attrs, const vec_UL &idx_pub);
 
 void    H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uint8_t** Rho_ptr, const Vec<string>& attrs);
+
+#ifdef USE_REVOCATION
+    void H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, STATE_t& state, Vec<string>& attrs, const uint8_t* ipk_bytes);
+    void H_ReqUpd_Plain(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, STATE_t& state, Vec<string>& attrs, const uint8_t* ipk_bytes, const CRED_t& cred);
+#endif
 
 #endif

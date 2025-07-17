@@ -15,199 +15,200 @@
 #include "Lattice.h"
 
 #ifdef ENABLE_FALCON
-extern "C" {
-    #include "inner.h"
-}
 
-//==============================================================================
-// Falcon_keygen - Generates a1, isk (i.e. B) from parameters d and q.
-//
-// Inputs:
-// - None
-//
-// Outputs:
-// - a1:         polynomial 
-// - isk:        Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
-//
-// NOTE: use the keygen function from the Falcon reference implementation.  
-//==============================================================================
-void Falcon_keygen(zz_pX& a1, ISK_t& isk)
-{
-    int8_t          f8[d0], g8[d0], F8[d0], G8[d0];
-    uint16_t        h[d0];
-    
-    #if (d0 == 512)
-        const size_t FALCON_BUFF_SIZE = FALCON_KEYGEN_TEMP_9;
-    #elif (d0 == 1024)
-        const size_t FALCON_BUFF_SIZE = FALCON_KEYGEN_TEMP_10;
-    #endif
-    assert((d0 == 512)||(d0 == 1024));
-    // NOTE: this release supports only Falcon512 or Falcon1024 parameters
+    extern "C" {
+        #include "inner.h"
+    }
 
-    // Structure for a PRNG suitable to Falcon (see inner.h)
-    union {
-        uint8_t b[FALCON_BUFF_SIZE];
-        uint64_t dummy_u64;
-    } tmp;
-
-    // Initialize an explicit 48-byte seed, using get_seed from Falcon (see inner.h)
-    unsigned char seed[48];
-    Zf(get_seed)(seed,48);
-        
-    // Initialize a SHAKE256 context from Falcon (see inner.h) suitable to the keygen
-    inner_shake256_context sc;
-    inner_shake256_init(&sc);
-    inner_shake256_inject(&sc, seed, 48);
-    inner_shake256_flip(&sc);
-
-    // Use Falcon keygen
-    Zf(keygen)(&sc, f8, g8, F8, G8, h, log2(d0), tmp.b);
-
-    // Convert the type of the variables to NTL types
-    a1 = uint16ArrayToZZ_pX(vector<uint16_t>(h, h + d0));
-    isk.f = int8ArrayToZZX(vector<int8_t>(f8, f8 + d0));
-    isk.g = int8ArrayToZZX(vector<int8_t>(g8, g8 + d0));
-    isk.F = int8ArrayToZZX(vector<int8_t>(F8, F8 + d0));
-    isk.G = int8ArrayToZZX(vector<int8_t>(G8, G8 + d0));
-
-    // return (a1, isk)
-}
-
-//==============================================================================
-// Falcon_GSampler - Computes the Gaussian sampling from Falcon implementation
-// 
-// Inputs:
-// - h:          part of public key, i.e. polynomial        a_1 ∈ R_q
-// - a:          part of public key, i.e. polynomial vector a_2 ∈ R_q^m
-// - isk:        Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
-// - d:          center (= f(x)+u ), i.e. polynomial  d ∈ R_q
-//
-// Outputs:  
-// - s:          short vector,       s ∈ Z^(2d)
-// - w:          polynomial vector,  w ∈ R^m
-//==============================================================================
-void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ISK_t& isk, const zz_pX& d)
-{
-    long    i, valid;  
-    ZZX     u;         
-    vec_ZZ  c, d_u, v;
-    mat_L   R;
-    int16_t s1[d0], s2[d0], s_int16[2*d0];
-    inner_shake256_context rng;
-    uint8_t tmp[78*d0+7];
-    uint16_t hm[2*d0];
-    vector<uint16_t> conv_hm;
-    int8_t f8[d0], g8[d0], F8[d0], G8[d0];
-    vector<uint8_t> conv_f, conv_g, conv_F, conv_G;
-
-    const ZZ thres_w = ZZ(sigma2) * ZZ(d0*m0);
- 
-    // NOTE: loop to find a valid w (i.e. small norm, see Holder.VerCred2, row 5)
-    valid = 0;
-    w.SetLength(m0);
-    u.SetLength(d0); // u ∈ R
-    
-    while(valid == 0) 
+    //==============================================================================
+    // Falcon_keygen - Generates a1, isk (i.e. B) from parameters d and q.
+    //
+    // Inputs:
+    // - None
+    //
+    // Outputs:
+    // - a1:         polynomial 
+    // - isk:        Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
+    //
+    // NOTE: use the keygen function from the Falcon reference implementation.  
+    //==============================================================================
+    void Falcon_keygen(zz_pX& a1, ISK_t& isk)
     {
-        // 1. u ← 0    
-        clear(u);
-
-        // 2. a ← (a_1, ... , a_m) ∈ R_q^m,   a_i ∈ R_q
+        int8_t          f8[d0], g8[d0], F8[d0], G8[d0];
+        uint16_t        h[d0];
         
-        // 3. for i ← 1, ... , m  do 
-        for(i=0; i<m0; i++)
+        #if (d0 == 512)
+            const size_t FALCON_BUFF_SIZE = FALCON_KEYGEN_TEMP_9;
+        #elif (d0 == 1024)
+            const size_t FALCON_BUFF_SIZE = FALCON_KEYGEN_TEMP_10;
+        #endif
+        assert((d0 == 512)||(d0 == 1024));
+        // NOTE: this release supports only Falcon512 or Falcon1024 parameters
+
+        // Structure for a PRNG suitable to Falcon (see inner.h)
+        union {
+            uint8_t b[FALCON_BUFF_SIZE];
+            uint64_t dummy_u64;
+        } tmp;
+
+        // Initialize an explicit 48-byte seed, using get_seed from Falcon (see inner.h)
+        unsigned char seed[48];
+        Zf(get_seed)(seed,48);
+            
+        // Initialize a SHAKE256 context from Falcon (see inner.h) suitable to the keygen
+        inner_shake256_context sc;
+        inner_shake256_init(&sc);
+        inner_shake256_inject(&sc, seed, 48);
+        inner_shake256_flip(&sc);
+
+        // Use Falcon keygen
+        Zf(keygen)(&sc, f8, g8, F8, G8, h, log2(d0), tmp.b);
+
+        // Convert the type of the variables to NTL types
+        a1 = uint16ArrayToZZ_pX(vector<uint16_t>(h, h + d0));
+        isk.f = int8ArrayToZZX(vector<int8_t>(f8, f8 + d0));
+        isk.g = int8ArrayToZZX(vector<int8_t>(g8, g8 + d0));
+        isk.F = int8ArrayToZZX(vector<int8_t>(F8, F8 + d0));
+        isk.G = int8ArrayToZZX(vector<int8_t>(G8, G8 + d0));
+
+        // return (a1, isk)
+    }
+
+    //==============================================================================
+    // Falcon_GSampler - Computes the Gaussian sampling from Falcon implementation
+    // 
+    // Inputs:
+    // - h:          part of public key, i.e. polynomial        a_1 ∈ R_q
+    // - a:          part of public key, i.e. polynomial vector a_2 ∈ R_q^m
+    // - isk:        Issuer Secret Key (i.e. f, g, F, G polynomials to build matrix B)
+    // - d:          center (= f(x)+u ), i.e. polynomial  d ∈ R_q
+    //
+    // Outputs:  
+    // - s:          short vector,       s ∈ Z^(2d)
+    // - w:          polynomial vector,  w ∈ R^m
+    //==============================================================================
+    void Falcon_GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const ISK_t& isk, const zz_pX& d)
+    {
+        long    i, valid;  
+        ZZX     u;         
+        vec_ZZ  c, d_u, v;
+        mat_L   R;
+        int16_t s1[d0], s2[d0], s_int16[2*d0];
+        inner_shake256_context rng;
+        uint8_t tmp[78*d0+7];
+        uint16_t hm[2*d0];
+        vector<uint16_t> conv_hm;
+        int8_t f8[d0], g8[d0], F8[d0], G8[d0];
+        vector<uint8_t> conv_f, conv_g, conv_F, conv_G;
+
+        const ZZ thres_w = ZZ(sigma2) * ZZ(d0*m0);
+    
+        // NOTE: loop to find a valid w (i.e. small norm, see Holder.VerCred2, row 5)
+        valid = 0;
+        w.SetLength(m0);
+        u.SetLength(d0); // u ∈ R
+        
+        while(valid == 0) 
         {
-            // 4. w_i ← polySampler(σ, 0),  w_i ∈ R     
-            polySampler(w[i], sqrt(sigma2));
+            // 1. u ← 0    
+            clear(u);
 
-            // 5. u ← u + w_i * a_i,   u ∈ R            
-            u += ModPhi( w[i] * conv<ZZX>( a[i]) );
+            // 2. a ← (a_1, ... , a_m) ∈ R_q^m,   a_i ∈ R_q
+            
+            // 3. for i ← 1, ... , m  do 
+            for(i=0; i<m0; i++)
+            {
+                // 4. w_i ← polySampler(σ, 0),  w_i ∈ R     
+                polySampler(w[i], sqrt(sigma2));
+
+                // 5. u ← u + w_i * a_i,   u ∈ R            
+                u += ModPhi( w[i] * conv<ZZX>( a[i]) );
+            }
+            // 6. w ← (w_1, ... , w_m),   w ∈ R^m 
+            
+            if ( Norm2X(w, d0)  <=  thres_w )
+            {
+                valid = 1;
+            }        
         }
-        // 6. w ← (w_1, ... , w_m),   w ∈ R^m 
+
+        // 7. A ← [  I_d   ]
+        //        [ rot(h) ] ∈ Z^(2d×d)
+        // NOTE: next steps do not use matrix A
+
         
-        if ( Norm2X(w, d0)  <=  thres_w )
+        // 8. c ← LinearSolve(c*A = d − Coeffs(u)),   c ∈ Z^(2d)
+        c.SetLength(2*d0);
+
+        // Compute (d − Coeffs(u))
+        d_u.SetLength(d0);
+
+        for(i=0; i<d0; i++)
         {
-            valid = 1;
-        }        
-    }
-
-    // 7. A ← [  I_d   ]
-    //        [ rot(h) ] ∈ Z^(2d×d)
-    // NOTE: next steps do not use matrix A
-
-    
-    // 8. c ← LinearSolve(c*A = d − Coeffs(u)),   c ∈ Z^(2d)
-    c.SetLength(2*d0);
-
-    // Compute (d − Coeffs(u))
-    d_u.SetLength(d0);
-
-    for(i=0; i<d0; i++)
-    {
-        d_u[i] = conv<ZZ>( coeff(d, i) ) - coeff(u, i); 
-    }
-
-    // NOTE: LinearSolve is not strictly needed, set the straightforward solution 
-    //       c = [(d_u), 0 ... 0] ∈ Z^(2d)
-    for(i=0; i<d0; i++)
-    {
-        c[i]    = d_u[i]; 
-        c[i+d0] = 0;
-    }
-
-
-    // 9. v ← preGSampler(B, σ, c),   v ∈ Z^(2d)
-    // 10. s ← c − v,   s ∈ Z^(2d)
-    // NOTE: computed using Falcon implementation
-
-    // Convert to uint8_t format
-    conv_f = convertToUint8(isk.f);
-    conv_g = convertToUint8(isk.g);
-    conv_F = convertToUint8(isk.F);
-    conv_G = convertToUint8(isk.G);
-    memcpy(f8, conv_f.data(), min<size_t>(conv_f.size(), d0));
-    memcpy(g8, conv_g.data(), min<size_t>(conv_g.size(), d0));
-    memcpy(F8, conv_F.data(), min<size_t>(conv_F.size(), d0));
-    memcpy(G8, conv_G.data(), min<size_t>(conv_G.size(), d0));
-
-    unsigned char seed[20];
-    Zf(get_seed)(seed,20);
-
-    inner_shake256_init(&rng);
-    inner_shake256_inject(&rng, seed, 20);
-    inner_shake256_flip(&rng);
-
-    // hm is unsigned, in Falcon a polynomial hm mod q0 is passed, but in BLNS c is not mod q0
-    for (long i = 0; i < c.length(); i++) {
-        c[i] = c[i] % q0;  // Apply modulus q0 to each element
-    }
-
-    conv_hm = vecZZtoUint16(c); // hm is the c in BLNS
-    memcpy(hm, conv_hm.data(), min<size_t>(conv_hm.size(), 2*d0) * sizeof(uint16_t));
-
-    // The threshold present inside sign_dyn of Falcon is different from the one in BLNS, so it is necessary a while cycle
-    const ZZ thres_s = ZZ(sigma2) * ZZ(2*d0);
-
-    valid = 0;
-
-    while(valid == 0) 
-    {
-        // Check the sigma value of the sampling, in Falcon (the sigma is computed from the secret key) it is different from BLNS (passed from above)
-        Zf(sign_dyn)(s2, &rng, f8, g8, F8, G8, hm, log2(d0), tmp);
-
-        memcpy(s1, tmp, d0 * sizeof(int16_t)); // retrieve s1 from the first part of tmp        
-        memcpy(s_int16, s1, d0 * sizeof(int16_t));  // Copy the contents of s1 into s
-        memcpy(s_int16 + d0, s2, d0 * sizeof(int16_t));  // Copy the contents of s2 into the second part of s
-        s = int16ToVecZZ(s_int16, 2*d0); // Convert into ZZ type
-
-        if ( Norm2(s) <=  thres_s ) // BLNS threshold
-        {   
-            valid = 1;
+            d_u[i] = conv<ZZ>( coeff(d, i) ) - coeff(u, i); 
         }
-    }
 
-    // return (s, w)
-}
+        // NOTE: LinearSolve is not strictly needed, set the straightforward solution 
+        //       c = [(d_u), 0 ... 0] ∈ Z^(2d)
+        for(i=0; i<d0; i++)
+        {
+            c[i]    = d_u[i]; 
+            c[i+d0] = 0;
+        }
+
+
+        // 9. v ← preGSampler(B, σ, c),   v ∈ Z^(2d)
+        // 10. s ← c − v,   s ∈ Z^(2d)
+        // NOTE: computed using Falcon implementation
+
+        // Convert to uint8_t format
+        conv_f = convertToUint8(isk.f);
+        conv_g = convertToUint8(isk.g);
+        conv_F = convertToUint8(isk.F);
+        conv_G = convertToUint8(isk.G);
+        memcpy(f8, conv_f.data(), min<size_t>(conv_f.size(), d0));
+        memcpy(g8, conv_g.data(), min<size_t>(conv_g.size(), d0));
+        memcpy(F8, conv_F.data(), min<size_t>(conv_F.size(), d0));
+        memcpy(G8, conv_G.data(), min<size_t>(conv_G.size(), d0));
+
+        unsigned char seed[20];
+        Zf(get_seed)(seed,20);
+
+        inner_shake256_init(&rng);
+        inner_shake256_inject(&rng, seed, 20);
+        inner_shake256_flip(&rng);
+
+        // hm is unsigned, in Falcon a polynomial hm mod q0 is passed, but in BLNS c is not mod q0
+        for (long i = 0; i < c.length(); i++) {
+            c[i] = c[i] % q0;  // Apply modulus q0 to each element
+        }
+
+        conv_hm = vecZZtoUint16(c); // hm is the c in BLNS
+        memcpy(hm, conv_hm.data(), min<size_t>(conv_hm.size(), 2*d0) * sizeof(uint16_t));
+
+        // The threshold present inside sign_dyn of Falcon is different from the one in BLNS, so it is necessary a while cycle
+        const ZZ thres_s = ZZ(sigma2) * ZZ(2*d0);
+
+        valid = 0;
+
+        while(valid == 0) 
+        {
+            // Check the sigma value of the sampling, in Falcon (the sigma is computed from the secret key) it is different from BLNS (passed from above)
+            Zf(sign_dyn)(s2, &rng, f8, g8, F8, G8, hm, log2(d0), tmp);
+
+            memcpy(s1, tmp, d0 * sizeof(int16_t)); // retrieve s1 from the first part of tmp        
+            memcpy(s_int16, s1, d0 * sizeof(int16_t));  // Copy the contents of s1 into s
+            memcpy(s_int16 + d0, s2, d0 * sizeof(int16_t));  // Copy the contents of s2 into the second part of s
+            s = int16ToVecZZ(s_int16, 2*d0); // Convert into ZZ type
+
+            if ( Norm2(s) <=  thres_s ) // BLNS threshold
+            {   
+                valid = 1;
+            }
+        }
+
+        // return (s, w)
+    }
 
 #endif
 

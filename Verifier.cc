@@ -34,7 +34,7 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
     ulong           i, j, k;
     IPK_t           ipk;
     long            out, mul;
-    vec_zz_pX       a; //mex;
+    vec_zz_pX       a;
     vec_ZZ          m_i, coeffs_m;
     mat_zz_p        P, C, C0, C1; 
     vec_zz_p        coeffs_m_idx;
@@ -46,6 +46,16 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
     const ulong     m2d     = (m0 + 2)*d0;    // (m+2)·d
     const ulong     lmlrd   = (lm0 + lr0)*d0; // (ℓm+ℓr)·d
 
+
+    #ifdef USE_REVOCATION
+        // Check if the attribute with the timestamp contains the current date/time
+        if ( VP.attrs_prime[IDX_TIMESTAMP] != Get_timestamp(1) )
+        {
+            cout << "\n  Credential EXPIRED!" << endl;
+            return 0;
+        }
+    #endif
+
     
     // 1. (a′_1, ··· , a′_ℓ) ← attrs′,   a′_i ∈ {0, 1}∗
     // NOTE: l0 = |idx_hid| + |idx_pub| = len(attrs),  d0 must divide l0*h0
@@ -53,24 +63,21 @@ long V_Verify(VP_t& VP, const uint8_t* seed_crs, const CRS2_t& crs, const mat_zz
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^(ℓm)_q × R^(ℓr)_q
     CompleteIPK(ipk, VP.ipk_bytes);
     
-    // 3. m′ ← Coeffs^−1(H_M(a′_1), ... , H_M(a′_ℓ)) ∈ R^ℓm_q      
-    // mex.SetLength(lm0);    
+    // 3. m′ ← Coeffs^−1(H_M(a′_1), ... , H_M(a′_ℓ)) ∈ R^ℓm_q
     coeffs_m.SetLength(l0 * h0);
     k = 0;
 
     for(i=0; i<l0; i++)
-    {                  
-        // a_i = VP.attrs_prime[i];        
-        HM(m_i, VP.attrs_prime[i] );
-
+    {
+        // a_i = VP.attrs_prime[i];
+        HM(m_i, VP.attrs_prime[i]);
+        
         for(j=0; j<h0; j++)     
         {
             coeffs_m[k] = m_i[j];
             k++;
         }
-    }    
-
-    // mex = CoeffsInv(coeffs_m, lm0);
+    }
     // NOTE: coeffs_m is directly used instead of mex
 
 
