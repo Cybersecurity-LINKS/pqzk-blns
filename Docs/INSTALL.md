@@ -7,9 +7,9 @@ The following dependencies must be installed:
 
 NOTE: it may work with greater (or lesser) versions.
 
-Tested with Ubuntu 22.04, where GMP, NTL, and Clang can be simply installed as:
+Tested with Ubuntu 22.04, where the dependencies can be simply installed as:
 ```sh
-sudo apt install libgmp10 libgmp-dev libntl44 libntl-dev clang
+sudo apt install wget unzip make g++ libgmp10 libgmp-dev libntl44 libntl-dev clang
 ```
 To build and install them manually, please follow the instructions below.
 
