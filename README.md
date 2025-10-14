@@ -26,6 +26,11 @@ make -j$(nproc)
 ./BLNS
 ```
 
+As an alternative, it is possible to build and run the code with Docker, using [dockerfile_blns](./dockerfile_blns).
+For more details, see [/Docs/INSTALL.md](./Docs/INSTALL.md).
+
+
+
 ## Acknowledgements
 Work done in collaboration with the Cryptography and Number Theory research group ([CrypTO](https://crypto.polito.it/)) at the Politecnico di Torino,
 in the framework of the [QUBIP](https://qubip.eu/) project.
