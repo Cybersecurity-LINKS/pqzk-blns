@@ -3,15 +3,15 @@ The following dependencies must be installed:
 - [GMP](https://gmplib.org/) 6.3.0
 - [NTL](https://libntl.org/) 11.5.1
 - [Falcon](https://falcon-sign.info/) 2021-11-01 (Optional)
-- [Clang](https://clang.llvm.org/) 14.0.0 (Optional - necessary if Falcon is used)
+- [Clang](https://clang.llvm.org/) 18.1.3 (Optional - necessary if Falcon is used)
 
 NOTE: it may work with greater (or lesser) versions.
 
-Tested with Ubuntu 22.04, where GMP, NTL, and Clang can be simply installed as:
+Tested with Ubuntu 22.04 and 24.04, where the dependencies can be simply installed as:
 ```sh
-sudo apt install libgmp10 libgmp-dev libntl44 libntl-dev clang
+sudo apt install wget tar xz-utils unzip make m4 g++ libgmp10 libgmp-dev libntl44 libntl-dev clang
 ```
-To build and install them manually, please follow the instructions below.
+Otherwise, please follow the instructions below to build and install them manually.
 
 ## GMP
 ```sh
@@ -41,10 +41,10 @@ cd ../..
 ```
 
 ## Falcon (Optional)
-If ```USE_FALCON``` flag is set to ```1``` in the [Makefile](../Makefile) (default), 
-Falcon reference implementation is automatically downloaded and used by ```make```.
+The [Makefile](../Makefile) is configured with ```USE_FALCON = 1``` (default), 
+to automatically download and use the [Falcon](https://falcon-sign.info/) reference implementation, for better performance.
 
-Otherwise, it can be manually downloaded and built as a library as follows.
+It can also be manually downloaded and built as a library with the following commands:
 ```sh
 wget https://falcon-sign.info/Falcon-impl-20211101.zip
 unzip Falcon-impl-20211101.zip
@@ -55,15 +55,37 @@ cd ..
 ```
 
 # Download & Build
+After installing the dependencies, you can download this repository, build and run the ```BLNS``` executable as follows:
+
 ```sh
 wget https://github.com/Cybersecurity-LINKS/pqzk-blns/archive/refs/heads/main.zip -O ./BLNS.zip
 unzip ./BLNS.zip
 cd  pqzk-blns-main
 
-clear && make clean
-
 make -j$(nproc) && ./BLNS
 ```
+
+# Build & Run with Docker
+As an alternative, it is possible to build and run the code with [Docker](https://docs.docker.com/), 
+using [dockerfile_blns](../dockerfile_blns) that is located in the top-level directory of the repository.
+
+First, build the Docker image from [dockerfile_blns](../dockerfile_blns) (it may take some time):
+```sh
+docker build -t blns_test -f .\dockerfile_blns .
+```
+
+Then, run the Docker container and the ```BLNS``` executable:
+```sh
+docker run -t blns_test ./BLNS
+```
+
+or open an interactive terminal to run the ```BLNS``` executable:
+```sh
+docker run -it blns_test /bin/bash
+
+./BLNS
+```
+
 
 ## Additional information
 GMP
@@ -77,3 +99,6 @@ Falcon
 - https://falcon-sign.info/
 - https://falcon-sign.info/falcon.pdf
 - https://falcon-sign.info/impl/falcon.h.html
+
+Docker 
+- https://docs.docker.com/

@@ -9,14 +9,14 @@ This repository contains an implementation of the framework for Post-Quantum (PQ
 - [GMP](https://gmplib.org/) 6.3.0
 - [NTL](https://libntl.org/) 11.5.1
 - [Falcon](https://falcon-sign.info/) 2021-11-01 (Optional)
-- [Clang](https://clang.llvm.org/) 14.0.0 (Optional - necessary if Falcon is used)
+- [Clang](https://clang.llvm.org/) 18.1.3 (Optional - necessary if Falcon is used)
 
-NOTE: it is possible to set ```USE_FALCON = 1``` (default) in the [Makefile](./Makefile), 
+NOTE: the [Makefile](./Makefile) is configured with ```USE_FALCON = 1``` (default), 
 to automatically download and use the ```Falcon_keygen``` and ```Falcon_GSampler``` from the [Falcon](https://falcon-sign.info/) reference implementation, for better performance.
 
-Otherwise, with ```USE_FALCON = 0``` the ```NTRU_TrapGen``` and ```GSampler``` function defined in [Lattice.cc](./Lattice.cc) are used.
+Otherwise, it is possible to set ```USE_FALCON = 0``` to use the ```NTRU_TrapGen``` and ```GSampler``` functions defined in [Lattice.cc](./Lattice.cc).
 
-For installation instructions and additional information, see [/Docs/INSTALL.md](./Docs/INSTALL.md)
+For installation instructions and additional information, see [/Docs/INSTALL.md](./Docs/INSTALL.md).
 
 ## Usage
 After cloning this repository, build and run the ```BLNS``` executable as follows:
@@ -25,6 +25,11 @@ make -j$(nproc)
 
 ./BLNS
 ```
+
+As an alternative, it is possible to build and run the code with Docker, using [dockerfile_blns](./dockerfile_blns).
+For more details, see [/Docs/INSTALL.md](./Docs/INSTALL.md).
+
+
 
 ## Acknowledgements
 Work done in collaboration with the Cryptography and Number Theory research group ([CrypTO](https://crypto.polito.it/)) at the Politecnico di Torino,

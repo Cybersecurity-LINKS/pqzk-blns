@@ -1,0 +1,20 @@
+# FROM ubuntu:22.04
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt update -y && apt install -y sudo wget tar xz-utils unzip make m4 g++ libgmp10 libgmp-dev libntl44 libntl-dev clang
+
+RUN useradd -ms /bin/bash user && echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+USER user
+WORKDIR /home/user
+
+# Download & Build
+RUN wget https://github.com/Cybersecurity-LINKS/pqzk-blns/archive/refs/heads/main.zip -O ./BLNS.zip
+RUN unzip ./BLNS.zip
+WORKDIR /home/user/pqzk-blns-main
+
+#RUN make -j$(nproc) && ./BLNS
+RUN make -j1
+RUN ./BLNS
