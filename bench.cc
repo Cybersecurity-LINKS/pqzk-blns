@@ -97,73 +97,93 @@ int main()
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    N = 100; //1100;  // Number of iterations, for benchmarking purposes
+    N = 100; //1100; // Number of iterations, for benchmarking purposes
 
     Perfo.SetDims(10, N);
     
     for(iter=0; iter<N; iter++)
     {
+        #ifdef VERBOSE
         cout << "\n#####################################################################" << endl;
         cout << "  ITERATION: " << iter+1 << " of " << N << endl;
         cout << "#####################################################################" << endl;
         
         cout << "\n- Issuer.KeyGen         (key generation)" << endl;
+        #endif
         t1 = GetWallTime();
         I_KeyGen(&ipk, isk);
         t2 = GetWallTime();
+        #ifdef VERBOSE
         cout << "  CPU time: " << (t2 - t1) << " s" << endl;
+        #endif
         Perfo[0][iter] = t2 - t1;
 
+        #ifdef VERBOSE
         cout << "\n- Holder.Init           (init common random string and matrices)" << endl;
+        #endif
         ta = GetWallTime();
         H_Init(crs, B_f, seed_crs, attrs, idx_hid.length());
         tb = GetWallTime();
+        #ifdef VERBOSE
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
+        #endif
         Perfo[1][iter] = tb - ta;
 
         #ifdef USE_ISSUER_SIGNATURE // Issuer Signature on Plaintext VC
+
+            uint8_t        *Rho;
         
+            #ifdef VERBOSE
             cout << "\n=====================================================================" << endl;
             cout << "  ISSUING PROTOCOL  --  Issuer Signature" << endl;
             cout << "=====================================================================" << endl;
 
-            uint8_t        *Rho;
-            
-            ta = GetWallTime();
             cout << "\n- Issuer.VerCred_Plain  (sign plaintext attributes)" << endl;
+            #endif
+            ta = GetWallTime();            
             I_VerCred_Plain(&Rho, B_f, ipk, isk, attrs);
             tb = GetWallTime();
+            #ifdef VERBOSE
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            #endif
             // cout << "  attrs  = " << attrs << endl;
             Perfo[3][iter] = tb - ta;
 
+            #ifdef VERBOSE
             cout << "\n- Holder.VerCred_Plain  (verify signature and store VC)" << endl;
+            #endif
             ta = GetWallTime();        
             H_VerCred_Plain(cred, ipk, B_f, &Rho, attrs);
-            tb = GetWallTime();        
+            tb = GetWallTime();
+            #ifdef VERBOSE       
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            #endif
             Perfo[4][iter] = tb - ta;
             assert(cred.valid);
             
         #endif
         // #else
         #ifdef USE_ISSUER_BLIND_SIGNATURE
-            
-            cout << "\n=====================================================================" << endl;
-            cout << "  ISSUING PROTOCOL  --  Blind Signature" << endl;
-            cout << "=====================================================================" << endl;
 
             Vec<string>     attrs_prime;
             RHO1_t          Rho1;
             uint8_t        *Rho2;
             STATE_t         state;
+            
+            #ifdef VERBOSE
+            cout << "\n=====================================================================" << endl;
+            cout << "  ISSUING PROTOCOL  --  Blind Signature" << endl;
+            cout << "=====================================================================" << endl;
 
-            ta = GetWallTime();
             cout << "\n- Holder.VerCred1       (prove knowledge of undisclosed attributes)" << endl;
+            #endif
+            ta = GetWallTime();
             H_VerCred1(Rho1, state, seed_crs, crs, ipk, attrs, idx_pub);
             tb = GetWallTime();        
+            #ifdef VERBOSE
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
             cout << "  Prove_Com  trials: " << idx_Com << endl;
+            #endif
             Perfo[8][iter] = idx_Com;
             Perfo[2][iter] = tb - ta;
 
@@ -177,142 +197,89 @@ int main()
             // cout << "  attrs  = " << attrs << endl;
             // cout << "  attrs' = " << attrs_prime << endl;
 
-            ta = GetWallTime();
+            #ifdef VERBOSE
             cout << "\n- Issuer.VerCred        (verify proof and compute blind signature)" << endl;
+            #endif
+            ta = GetWallTime();
             I_VerCred(&Rho2, seed_crs, crs, B_f, ipk, isk, attrs_prime, idx_pub, Rho1);
-            tb = GetWallTime();        
+            tb = GetWallTime();
+            #ifdef VERBOSE
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            #endif
             Perfo[3][iter] = tb - ta;
 
+            #ifdef VERBOSE
             cout << "\n- Holder.VerCred2       (unblind signature and store credential)" << endl;
+            #endif
             ta = GetWallTime();        
             H_VerCred2(cred, ipk, B_f, &Rho2, state);
-            tb = GetWallTime();        
+            tb = GetWallTime();
+            #ifdef VERBOSE       
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
+            #endif
             Perfo[4][iter] = tb - ta;
             assert(cred.valid);
 
         #endif
         
+        #ifdef VERBOSE
         cout << "\n=====================================================================" << endl;
         cout << "  PRESENTATION PROTOCOL" << endl;
         cout << "=====================================================================" << endl;
-        ta = GetWallTime();
+        
         cout << "\n- Holder.VerPres        (prove knowledge of signature and attributes)" << endl;
+        #endif
+        ta = GetWallTime();        
         H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs, idx_pub);
-        tb = GetWallTime();        
+        tb = GetWallTime();
+        #ifdef VERBOSE    
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
         cout << "  Prove_ISIS  trials: " << idx_ISIS << endl;
+        #endif
         Perfo[9][iter] = idx_ISIS;
         Perfo[5][iter] = tb - ta;
-
-        ta = GetWallTime();
+        
+        #ifdef VERBOSE
         cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
+        #endif
+        ta = GetWallTime();
         valid = V_Verify(VP, seed_crs, crs, B_f, idx_pub);
-        tb = GetWallTime();        
-        cout << "  CPU time: " << (tb - ta) << " s" << endl;
+        tb = GetWallTime();
         Perfo[6][iter] = tb - ta;
-
+        #ifdef VERBOSE    
+        cout << "  CPU time: " << (tb - ta) << " s" << endl;
+        
         if (valid)
         {
             cout << "  OK!" << endl;
-        }   
+        }
+        #endif
         assert(valid == 1);
 
-        
-        #ifdef USE_REVOCATION
+        double t3 = GetWallTime();
+        Perfo[7][iter] = t3 - t1;
 
+        #ifdef VERBOSE            
             cout << "\n=====================================================================\n";
-            // WAIT until the next integer minute for demonstration purposes            
-            // NOTE: 1 minute is the selected granularity for the revocation mechanism
-            Wait_till_next_min(0, 61);
-            cout << "=====================================================================\n";
-
-            cout << "\n- Holder.VerPres        (prove knowledge of signature and attributes)" << endl;
-            H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs, idx_pub);
-            
-            cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
-            valid = V_Verify(VP, seed_crs, crs, B_f, idx_pub);
-            
-            // cout << "\n  Credential EXPIRED!" << endl;
-            assert(valid == 0);
-
-            // WAIT 5 seconds for demonstration purposes
-            cout << "  Sleep for 5 s" << endl;
-            sleep(5);
-
-
-            cout << "\n=====================================================================\n";
-            cout << "  UPDATE CREDENTIAL" << endl;
-            cout << "=====================================================================\n";
-
-            uint8_t *u;
-            string  old_timestamp, new_timestamp;
-
-            #ifdef USE_ISSUER_SIGNATURE
-
-                uint8_t        *Rho2;
-                STATE_t         state;
-
-                cout << "\n- Holder.ReqUpd_Plain   (request an updated signature)" << endl;
-                H_ReqUpd_Plain(&u, old_timestamp, new_timestamp, state, attrs, ipk, cred);
-                
-            #endif
-            // #else
-            #ifdef USE_ISSUER_BLIND_SIGNATURE
-
-                cout << "\n- Holder.ReqUpdate      (request an updated signature)" << endl;
-                H_ReqUpdate(&u, old_timestamp, new_timestamp, state, attrs, ipk);
-
-            #endif
-                
-            cout << "\n- Issuer.UpdateSign     (update signature)" << endl;
-            I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
-            
-            cout << "\n- Holder.VerCred2       (check signature and store credential)" << endl;
-            H_VerCred2(cred, ipk, B_f, &Rho2, state);
-            assert(cred.valid);
-            
-
-            cout << "\n=====================================================================" << endl;
-            cout << "  PRESENTATION PROTOCOL" << endl;
-            cout << "=====================================================================" << endl;
-
-            cout << "\n- Holder.VerPres        (prove knowledge of signature and attributes)" << endl;
-            H_VerPres(VP, cred, seed_crs, crs, ipk, B_f, attrs, idx_pub);
-            
-            cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
-            valid = V_Verify(VP, seed_crs, crs, B_f, idx_pub);
-
-            if (valid)
-            {
-                cout << "  OK!" << endl;
-            }   
-            assert(valid == 1);
-
-            if ((iter+1)<N)
-            {
-                // WAIT 5 seconds for demonstration purposes
-                cout << "\n  Sleep for 5 s" << endl;
-                sleep(5);
-            }
-
+            cout << "  TOT time: " << (t3 - t1) << " s  (" << (t3 - t2) << " s)" << endl;    
         #else
-       
-            double t3 = GetWallTime();
-            cout << "\n=====================================================================\n";
-            cout << "  TOT time: " << (t3 - t1) << " s  (" << (t3 - t2) << " s)" << endl;
-            Perfo[7][iter] = t3 - t1;
-
+            cout << "  ITERATION: " << iter+1 << " of " << N << " - TOT time: " << (t3 - t1) << " s" << endl;
         #endif
         
         // Free up memory
         delete[] ipk;
     }
 
+    
+    // Store raw measurements in a text file        
+    ofstream file;
+    file.open("Perfo.txt");    
+    file << Perfo;
+    file.close();
+
     // Display the benchmark results
-    cout << "\n#####################################################################" << endl;
-    cout << "  BENCHMARK RESULTS (N = " << N << ")" << endl << endl;
+    cout << "\n######################################################################################" << endl;
+    cout << "  BENCHMARK RESULTS in seconds (N = " << N << ")" << endl << endl;
         
     cout << "- Issuer.KeyGen:     " << stats(Perfo[0]) << endl;
     cout << "- Holder.Init:       " << stats(Perfo[1]) << endl << endl;
@@ -333,14 +300,10 @@ int main()
     
     cout << "- TOTAL time:        " << stats(Perfo[7]) << endl << endl;    
         
-    // cout << "- Prove_Com  trials: " << stats(Perfo[8]) << endl;
-    // cout << "- Prove_ISIS trials: " << stats(Perfo[9]) << endl << endl;
-
-    // Store raw measurements in a text file        
-    ofstream file;
-    file.open("Perfo.txt");    
-    file << Perfo;
-    file.close();
+    #ifdef VERBOSE
+    cout << "- Prove_Com  trials: " << stats(Perfo[8]) << endl;
+    cout << "- Prove_ISIS trials: " << stats(Perfo[9]) << endl << endl;
+    #endif
 
     return 0;
 }
