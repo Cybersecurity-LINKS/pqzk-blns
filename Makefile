@@ -32,13 +32,16 @@ CFLAGS  	+= -Drestrict=__restrict__ -DENABLE_FALCON -I$(FALCON_PATH)
 LNFLAGS 	+= -L$(FALCON_PATH) -lfalcon
 endif
 
-SRCS		= $(wildcard *.cc)
-OBJS		= $(SRCS:.cc=.o)
+SRCS		:= $(wildcard *.cc)
+SRCS_BLNS	:= $(filter-out bench.cc, $(SRCS))
+SRCS_BENCH	:= $(filter-out BLNS.cc,  $(SRCS))
+OBJS_BLNS	:= $(SRCS_BLNS:.cc=.o)
+OBJS_BENCH	:= $(SRCS_BENCH:.cc=.o)
 
 
 .PHONY: 	all falcon clean cleanall
 
-all: 		falcon BLNS
+all: 		falcon BLNS bench
 
 falcon:	
 ifeq ($(USE_FALCON),1)	
@@ -53,15 +56,18 @@ ifeq ($(FILE_EXISTS),0) # Falcon files do not already exists in $(FALCON_PATH)
 endif
 endif
 
-BLNS:		$(OBJS)
-			$(CC) $(CFLAGS) -o BLNS $(OBJS) $(LNFLAGS)
+BLNS:		$(OBJS_BLNS)
+			$(CC) $(CFLAGS) -o BLNS $(OBJS_BLNS) $(LNFLAGS)
+
+bench:		$(OBJS_BENCH)
+			$(CC) $(CFLAGS) -o bench $(OBJS_BENCH) $(LNFLAGS)
 
 %.o: 		%.cc params.h
 			$(CC) $(CFLAGS) -c $< 
 
 clean:
 			rm -f *.o
-			rm -f BLNS
+			rm -f BLNS bench
 
 cleanall:   clean
 ifeq ($(USE_FALCON),1)	

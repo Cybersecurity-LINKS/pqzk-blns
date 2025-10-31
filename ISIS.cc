@@ -14,6 +14,8 @@
 
 #include "ISIS.h"
 
+long  idx_ISIS; // Global variable, for benchmarking purposes
+
 
 //==============================================================================
 // Preprocessing_ISIS - Preprocessing function (PreprocessingProve^HISIS_ISIS). 
@@ -1056,6 +1058,9 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, con
         // NOTE: additional flag, to identify a valid proof Pi
         Pi.valid = 1;
         (*Pi_ptr)[0] = 1;
+
+        idx_ISIS = idx;
+        // cout << "idx_ISIS = " << idx_ISIS << endl;
     }
 
     // 52. else return ⊥

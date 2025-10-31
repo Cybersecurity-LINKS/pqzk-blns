@@ -14,6 +14,8 @@
 
 #include "Com.h"
 
+long  idx_Com; // Global variable, for benchmarking purposes
+
 
 //==============================================================================
 // Preprocessing_Com -  Preprocessing function (PreprocessingProve^HCom_Com). 
@@ -881,6 +883,9 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
         // NOTE: additional flag, to identify a valid proof Pi
         Pi.valid = 1;
         (*Pi_ptr)[0] = 1;
+
+        idx_Com = idx;
+        // cout << "idx_Com = " << idx_Com << endl;
     }
     // 50. else return ⊥    
     // NOTE: invalid proof, with Pi.valid = 0
