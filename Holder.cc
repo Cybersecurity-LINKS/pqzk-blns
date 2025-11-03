@@ -968,7 +968,9 @@ void H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, 
     // Allocate a vector of bytes to store u
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
     *u_ptr = new uint8_t[len_u];
+    #ifdef VERBOSE
     cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    #endif
     
     // Serialize u
     serialize_minbyte_poly_zz_pX(*u_ptr, len_u, d0, nbits, u);
@@ -1075,7 +1077,9 @@ void H_ReqUpd_Plain(uint8_t** u_ptr, string& old_timestamp, string& new_timestam
     // Allocate a vector of bytes to store u
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
     *u_ptr = new uint8_t[len_u];
+    #ifdef VERBOSE
     cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    #endif
     
     // Serialize u
     serialize_minbyte_poly_zz_pX(*u_ptr, len_u, d0, nbits, u);

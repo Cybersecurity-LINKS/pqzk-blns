@@ -54,15 +54,19 @@ ar rcs libfalcon.a codec.o common.o falcon.o fft.o fpr.o keygen.o rng.o shake.o 
 cd ..
 ```
 
-# Download & Build
-After installing the dependencies, you can download this repository, build and run the ```BLNS``` executable as follows:
-
+# Download, Build & Run
+After installing the dependencies, you can download this repository and build the ```BLNS``` and ```bench``` executables as follows:
 ```sh
 wget https://github.com/Cybersecurity-LINKS/pqzk-blns/archive/refs/heads/main.zip -O ./BLNS.zip
 unzip ./BLNS.zip
 cd  pqzk-blns-main
 
-make -j$(nproc) && ./BLNS
+make -j$(nproc)
+```
+then, run a demo of the ```BLNS``` framework and/or run the benchmarks ```bench```:
+```sh
+./BLNS
+./bench
 ```
 
 # Build & Run with Docker
@@ -74,16 +78,18 @@ First, build the Docker image from [dockerfile_blns](../dockerfile_blns) (it may
 docker build -t blns_test -f .\dockerfile_blns .
 ```
 
-Then, run the Docker container and the ```BLNS``` executable:
+Then, run the Docker container and a demo of the ```BLNS``` framework and/or the benchmarks ```bench```:
 ```sh
 docker run -t blns_test ./BLNS
+docker run -t blns_test ./bench
 ```
 
-or open an interactive terminal to run the ```BLNS``` executable:
+or open an interactive terminal to run the ```BLNS``` and/or ```bench``` executables:
 ```sh
 docker run -it blns_test /bin/bash
 
 ./BLNS
+./bench
 ```
 
 

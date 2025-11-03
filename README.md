@@ -19,11 +19,17 @@ Otherwise, it is possible to set ```USE_FALCON = 0``` to use the ```NTRU_TrapGen
 For installation instructions and additional information, see [/Docs/INSTALL.md](./Docs/INSTALL.md).
 
 ## Usage
-After cloning this repository, build and run the ```BLNS``` executable as follows:
+After cloning this repository, build the ```BLNS``` and ```bench``` executables as follows:
 ```sh
 make -j$(nproc)
-
+```
+then, run a demo of the ```BLNS``` framework:
+```sh
 ./BLNS
+```
+and/or run the benchmarks ```bench```:
+```sh
+./bench
 ```
 
 As an alternative, it is possible to build and run the code with Docker, using [dockerfile_blns](./dockerfile_blns).

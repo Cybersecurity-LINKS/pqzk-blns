@@ -54,7 +54,9 @@ void I_KeyGen(uint8_t** ipk_prt, ISK_t& isk)
     len_ipk   = len_a1 + SEED_LEN;
     *ipk_prt  = new uint8_t[len_ipk];
     ipk_bytes = *ipk_prt;
+    #ifdef VERBOSE
     cout << "  Size ipk: " << (len_ipk/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    #endif
     
     // Serialize a1 (first bytes in ipk_bytes)
     serialize_minbyte_poly_zz_pX(ipk_bytes, len_a1, d0, nbits, a1);   
@@ -408,7 +410,9 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
     len_w  = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
     len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes    
     len_Rho2 = len_s0 + len_w + len_x;      //                          20544 bytes
+    #ifdef VERBOSE
     cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    #endif
   
     // Allocate a vector of bytes to store the structure ρ_2
     *Rho2_ptr = new uint8_t[len_Rho2];
@@ -599,7 +603,9 @@ void I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_
     len_x   = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes 
     len_r   = calc_ser_size_vec_ZZX(lr0, d0);// vec_ZZX (lr0*d0*long)  -  8192 bytes
     len_Rho = len_s0 + len_w + len_x + len_r;//                          28736 bytes
+    #ifdef VERBOSE
     cout << "  Size Rho: " << (len_Rho/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    #endif
 
     // Allocate a vector of bytes to store the structure ρ
     *Rho_ptr = new uint8_t[len_Rho];
@@ -809,7 +815,9 @@ void I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_by
     len_w  = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
     len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes    
     len_Rho2 = len_s0 + len_w + len_x;      //                          20544 bytes
+    #ifdef VERBOSE
     cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    #endif
   
     // Allocate a vector of bytes to store the structure ρ_2
     *Rho2_ptr = new uint8_t[len_Rho2];

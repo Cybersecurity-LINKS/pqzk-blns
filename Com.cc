@@ -14,6 +14,8 @@
 
 #include "Com.h"
 
+long  idx_Com; // Global variable, for benchmarking purposes
+
 
 //==============================================================================
 // Preprocessing_Com -  Preprocessing function (PreprocessingProve^HCom_Com). 
@@ -124,7 +126,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     size_t              len_com2_t1, len_com2_t2, len_com2_w1, len_com2_w2;
     size_t              len_op1_z1, len_op1_z2, len_op1_z3, len_op1_valid;
     size_t              len_op2_z1, len_op2_z2, len_op2_z3, len_op2_valid;
-    size_t              len_t, len_f0, len_z_1, len_z_2, len_valid, len_Pi, len_u;
+    size_t              len_t, len_f0, len_z_1, len_z_2, len_valid, len_Pi;
     uint8_t            *buffer, *Pi_bytes;
     vector<size_t>      lengths;
     PROOF_C_t           Pi;
@@ -138,7 +140,9 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     const ulong         d_d_hat     = (d0/d_hat);
     const ulong         n256        = (256/d_hat);
     const ulong         m1_n256_tau = 2*m1 + 2*(n256 + tau_Com);
+    #ifdef VERBOSE
     const int           nbits0      = ceil(log2(conv<double>(q0-1)));
+    #endif
     const int           nbits       = ceil(log2(conv<double>(q1_hat-1)));
 
     // Initialise the "goth" constants
@@ -326,8 +330,10 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
                 len_op2_z1 + len_op2_z2 + len_op2_z3 + len_op2_valid;
     // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
     
-    len_u = calc_ser_size_poly_minbyte(d0, nbits0);
+    #ifdef VERBOSE
+    size_t len_u = calc_ser_size_poly_minbyte(d0, nbits0);    
     cout << "  Size Rho1: " << (len_u + len_Pi)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    #endif
         
     // Allocate a vector of bytes to store the proof Pi
     *Pi_ptr = new uint8_t[len_Pi]; 
@@ -881,6 +887,9 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
         // NOTE: additional flag, to identify a valid proof Pi
         Pi.valid = 1;
         (*Pi_ptr)[0] = 1;
+
+        idx_Com = idx;
+        // cout << "idx_Com = " << idx_Com << endl;
     }
     // 50. else return ⊥    
     // NOTE: invalid proof, with Pi.valid = 0
