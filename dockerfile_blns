@@ -18,3 +18,4 @@ WORKDIR /home/user/pqzk-blns-main
 #RUN make -j$(nproc) && ./BLNS
 RUN make -j1
 RUN ./BLNS
+# RUN ./bench
