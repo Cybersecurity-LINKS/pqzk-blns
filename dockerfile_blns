@@ -10,12 +10,7 @@ RUN useradd -ms /bin/bash user && echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sud
 USER user
 WORKDIR /home/user
 
-# Download & Build
-RUN wget https://github.com/Cybersecurity-LINKS/pqzk-blns/archive/refs/heads/main.zip -O ./BLNS.zip
-RUN unzip ./BLNS.zip
-WORKDIR /home/user/pqzk-blns-main
+# Copy source code from local folder 
+COPY . .
 
-#RUN make -j$(nproc) && ./BLNS
 RUN make -j1
-RUN ./BLNS
-# RUN ./bench
