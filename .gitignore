@@ -2,6 +2,7 @@
 *.o
 *.py
 *.zip
-BLNS
+*.txt
 Falcon-impl-*
+BLNS
 bench
