@@ -1,1 +1,9 @@
 .git
+.vscode
+*.o
+*.py
+*.zip
+*.txt
+Falcon-impl-*
+BLNS
+bench
