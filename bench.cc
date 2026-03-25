@@ -151,8 +151,8 @@ int main()
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    W = 10;  //100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
-    N = 100; //1000; // Number of iterations, for benchmarking purposes
+    W = 100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
+    N = 1000; // Number of iterations, for benchmarking purposes
 
     Perfo.SetDims(13, N);
 
