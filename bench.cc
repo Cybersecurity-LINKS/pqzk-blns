@@ -146,7 +146,7 @@ int main()
     double          t1, t2, ta, tb;
     string          old_timestamp, new_timestamp;
 
-    idx_pub = conv<vec_UL>("[4 5 6 7]");    // Indexes of disclosed attributes (revealed, i.e. idx)
+    idx_pub = conv<vec_UL>("[0 5 6 13 14 15]");    // Indexes of disclosed attributes (revealed, i.e. idx)
     idx_hid = Compute_idx_hid(idx_pub);     // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
