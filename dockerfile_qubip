@@ -1,8 +1,9 @@
 # QUBIP PQ-Container - Fedora 42
-FROM quay.io/qubip/pq-container:latest
+# FROM quay.io/qubip/pq-container:latest
+FROM docker.io/nisectuni/pq-container:f42-aurora-nt
 
 # Install dependencies
-RUN dnf install -y wget1 wget1-wget unzip make m4 g++ gmp gmp-devel ntl ntl-devel clang
+RUN dnf install -y wget1 wget1-wget unzip make m4 g++ gmp gmp-devel ntl ntl-devel clang --allowerasing
 
 # Copy source code from local folder 
 WORKDIR /home/test
