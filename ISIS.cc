@@ -1115,12 +1115,13 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // NOTE: assuming that current modulus is q2_hat (not q0) 
    
     ulong           i, j, k;
-    Mat<zz_pX>      B, D2_2_1;
-    vec_zz_pX       t_B, z, d_1, acc_vec, coeffs_ones, sigma_ones;
+    Mat<zz_pX>      B, A_hat, B_hat, C_hat, L_hat;
+    vec_zz_pX       t_B, z, acc_vec, coeffs_ones, sigma_ones;
     vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, tmp_vec, tmp_vec2, sigma_z_1;
-    zz_pX           acc, delta_1, delta_2, delta_3, c, d_0;
+    vec_zz_pX       delta_1_vec, delta_2_vec, delta_3_vec;
+    zz_pX           acc, c, d_0, sum, z3z0, z4z1, z5z2;
     Mat<zz_pX>      e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
-    Mat<zz_pX>      sigma_r_, sigma_r_s_ , sigma_r_r_, sigma_r_u_;
+    Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;
     mat_zz_p        R_goth, gamma, C_m, C_r;
     vec_zz_p        ones, e_tmp, m_C;
     ZZ              B_goth_s2, B_goth_r2, B_goth2;
@@ -1373,44 +1374,21 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     }
 
 
-    // 18. δ_1 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+1) },   δ_1 ∈ R^^_(q_hat)
-    // 19. δ_2 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+2) },   δ_2 ∈ R^^_(q_hat)
-    // 20. δ_3 ← Sum_(i=1,τ){ μ_i · γ_(i,256+d+3) },   δ_3 ∈ R^^_(q_hat)
-    clear(delta_1);
-    clear(delta_2);
-    clear(delta_3);
+    // 18. δ^_1 ← { γ_(i,256+d+1) ∈ Z_(q_hat), i ∈ [τ]},   δ^_1 ∈ Z^τ_(q_hat)
+    // 19. δ^_2 ← { γ_(i,256+d+2) ∈ Z_(q_hat), i ∈ [τ]},   δ^_2 ∈ Z^τ_(q_hat)
+    // 20. δ^_3 ← { γ_(i,256+d+3) ∈ Z_(q_hat), i ∈ [τ]},   δ^_3 ∈ Z^τ_(q_hat)
+    delta_1_vec.SetLength(tau_ISIS);
+    delta_2_vec.SetLength(tau_ISIS);
+    delta_3_vec.SetLength(tau_ISIS); 
 
     for(i=0; i<tau_ISIS; i++)        
     {
-        delta_1 += mu[i]*gamma[i][256+d0];
-        delta_2 += mu[i]*gamma[i][256+d0+1];
-        delta_3 += mu[i]*gamma[i][256+d0+2];
-    }
+        delta_1_vec[i] = gamma[i][256+d0];
+        delta_2_vec[i] = gamma[i][256+d0+1];
+        delta_3_vec[i] = gamma[i][256+d0+2]; 
+    }    
 
-    // 21. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat)
-    D2_2_1.SetDims(m1, m1);
-        
-    for(i=0; i<(m2ddd); i++)
-    {
-        D2_2_1[i][i] = delta_1;
-    }
-    
-    k = m2ddd;
-
-    for(i=(m2ddd); i<(m2ddd + idxhlrddd); i++)
-    {
-        D2_2_1[k][i] = delta_2;
-        k++;
-    }
-
-    for(i=(m2ddd + idxhlrddd); i<m1; i++)
-    {
-        D2_2_1[k][i] = delta_3;
-        k++;
-    }
-
-
-    // 22.  (r_s,j , r_r,j , r_u,j ) ← r_j,
+    // 21.  (r_s,j , r_r,j , r_u,j ) ← r_j,
     //       r_s,j ∈ R^^(((m+2)d+d_hat)/d_hat)_(q_hat)
     //       r_r,j ∈ R^^((|idx_hid|·h+ℓr·d+d_hat)/d_hat)_(q_hat)
     //       r_u,j ∈ R^^(t/d_hat)_(q_hat)
@@ -1535,26 +1513,16 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     sigma_map(sigma_ones , coeffs_ones, d_hat);
 
 
-    // 23. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
-    d_1.SetLength(m1_n256_tau);
-
-    // 1st entry of d_1: ((m+2)d+d_hat)/d_hat polynomials
-    acc_vec.SetLength(m2ddd);
-    
+    // 22. Construction of A^ ∈ R^^(τ × ((m+2)d+d_hat)/d_hat)_(q_hat)
+    A_hat.SetDims(tau_ISIS, m2ddd);
+   
     for(i=0; i<tau_ISIS; i++)
     {
-        // Reset acc_vec
-        for(j=0; j<(m2ddd); j++)
-        {        
-            // acc_vec[j] = 0;
-            clear(acc_vec[j]);
-        }               
-        
         for(j=0; j<256; j++)        
         {
-            for(k=0; k<(m2ddd); k++)        
+            for(k=0; k<(m2ddd); k++) 
             {
-                acc_vec[k] += gamma[i][j] * sigma_r_s_[j][k];  
+                A_hat[i][k] += gamma[i][j] * sigma_r_s_[j][k];  
             }
         }
 
@@ -1562,34 +1530,22 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         {
             for(k=0; k<(m2ddd); k++)        
             {                
-                acc_vec[k] += gamma[i][256+j] * sigma_p_[j][k];  
+                A_hat[i][k] += gamma[i][256+j] * sigma_p_[j][k];  
             }     
-        }  
-                    
-        for(k=0; k<(m2ddd); k++)        
-        {
-            // Fill d_1 by accumulating mu[i]*(...sums...) 
-            d_1[k] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
-        }               
+        }
     }
 
-    // 2nd entry of d_1: ((|idx_hid|·h + ℓr·d + d_hat)/d_hat) polynomials
-    acc_vec.SetLength(idxhlrddd);
+
+    // 23. Construction of B^ ∈ R^^(τ × (|idx_hid|·h + ℓr·d + d_hat)/d_hat)_(q_hat)
+    B_hat.SetDims(tau_ISIS, idxhlrddd);
     
     for(i=0; i<tau_ISIS; i++)
     {
-        // Reset acc_vec
-        for(j=0; j<(idxhlrddd); j++)
-        {        
-            // acc_vec[j] = 0;
-            clear(acc_vec[j]);
-        }               
-                
         for(j=0; j<256; j++)        
         {
             for(k=0; k<(idxhlrddd); k++)        
             {
-                acc_vec[k] += gamma[i][j] * sigma_r_r_[j][k];  
+                B_hat[i][k] += gamma[i][j] * sigma_r_r_[j][k];  
             }
         }
 
@@ -1597,34 +1553,22 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         {
             for(k=0; k<(idxhlrddd); k++)        
             {                
-                acc_vec[k] -= gamma[i][256+j] * sigma_c_r_[j][k];
+                B_hat[i][k] -= gamma[i][256+j] * sigma_c_r_[j][k];
             }     
-        }  
-                    
-        for(k=0; k<(idxhlrddd); k++)        
-        {
-            // Fill d_1 by accumulating mu[i]*(...sums...) 
-            d_1[k + (m2ddd)] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
-        }               
+        }
     }
 
-    // 3rd entry of d_1: (t/d_hat) polynomials
-    acc_vec.SetLength(t_d);        
+
+    // 24. Construction of C^ ∈ R^^(τ × (t/d_hat))_(q_hat)
+    C_hat.SetDims(tau_ISIS, t_d);
     
     for(i=0; i<tau_ISIS; i++)
     {
-        // Reset acc_vec
-        for(j=0; j<(t_d); j++)
-        {        
-            // acc_vec[j] = 0;
-            clear(acc_vec[j]);
-        }               
-                
         for(j=0; j<256; j++)        
         {
             for(k=0; k<(t_d); k++)        
             {
-                acc_vec[k] += gamma[i][j] * sigma_r_u_[j][k];  
+                C_hat[i][k] += gamma[i][j] * sigma_r_u_[j][k];  
             }
         }
 
@@ -1632,61 +1576,33 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         {
             for(k=0; k<(t_d); k++)        
             {                
-                acc_vec[k] -= gamma[i][256+j] * sigma_Beta_[j][k]; 
+                C_hat[i][k] -= gamma[i][256+j] * sigma_Beta_[j][k]; 
             }     
         }
         
         for(k=0; k<(t_d); k++)        
         {                
-            acc_vec[k] -= gamma[i][256+d0+2] * sigma_ones[k];
-        }     
-                    
-        for(k=0; k<(t_d); k++)        
-        {
-            // Fill d_1 by accumulating mu[i]*(...sums...) 
-            d_1[k + (m2ddd + idxhlrddd)] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
-        }               
+            C_hat[i][k] -= gamma[i][256+d0+2] * sigma_ones[k];
+        }
     }
 
-    // NOTE: skip 4th entry of d_1 (m1 zeros)
 
-    // 5th entry of d_1 (256/d_hat polynomials)    
-    acc_vec.SetLength(n256);
-    
+    // 25. Construction of L^ ∈ R^^(τ × (256/d_hat))_(q_hat)
+    L_hat.SetDims(tau_ISIS, n256);
+
     for(i=0; i<tau_ISIS; i++)
     {
-        // Reset acc_vec
-        for(j=0; j<n256; j++)
-        {        
-            // acc_vec[j] = 0;
-            clear(acc_vec[j]);
-        }                     
-                
         for(j=0; j<256; j++)        
         {
             for(k=0; k<n256; k++)        
             {
-                acc_vec[k] += gamma[i][j] * sigma_e_[j][k];
+                L_hat[i][k] += gamma[i][j] * sigma_e_[j][k];
             }          
-        }        
-            
-        for(k=0; k<n256; k++)        
-        {
-            // Fill d_1 by accumulating mu[i]*(...sums...) 
-            d_1[k + (2*m1)] += ModPhi_hat_q( mu[i] * acc_vec[k]);             
         }
-    } 
-    
-    // 6th entry of d_1 (tau_ISIS polynomials)
-    for(k=0; k<tau_ISIS; k++)
-    {
-        d_1[k + (2*m1 + n256)] = mu[k];
     }
 
-    // NOTE: skip 7th entry of d_1 (tau_ISIS + 256/d_hat zeros)
 
-
-    // 24. Definition of d_0 ∈ R^_(q_hat)    
+    // 26. Definition of d_0 ∈ R^_(q_hat)    
     clear(d_0);
     // NOTE: d_0 (not d0 parameter) 
         
@@ -1710,7 +1626,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     }
 
 
-    // 25.  if one of the 4 conditions below does not hold, then return 0
+    // 27.  if one of the 4 conditions below does not hold, then return 0
        
     // Compute ||z_i||^2, squared Euclidean norm of each z_i
     norm2_z1 = Norm2Xm(Pi.z_1, d_hat, q2_hat);
@@ -1719,7 +1635,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // NOTE: norms computed using values in {-(q-1)/2, ..., (q-1)/2}
 
     
-    // 25.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
+    // 27.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
     // NOTE: equations in ZZ, with squared norms and thresholds
     if ( norm2_z1 > B_goth2_1)
     { 
@@ -1740,7 +1656,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     }
 
 
-    // 25.2 Second condition: h˜_i == 0 for i ∈ [τ] 
+    // 27.2 Second condition: h˜_i == 0 for i ∈ [τ] 
     // NOTE: equations in R^^_(q_hat)
     for(i=0; i<tau_ISIS; i++)
     {
@@ -1753,7 +1669,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     }
 
 
-    // 25.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
+    // 27.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
     // NOTE: equations in R^^(n)_(q_hat)    
     tmp_vec.SetLength(n);
     tmp_vec2.SetLength(n);
@@ -1774,47 +1690,90 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     }
 
 
-    // 25.4 Fourth condition: σ(z_1)^T*D2_2_1*z_1 + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
+    // 27.4 Fourth condition: (Sum1) + (Sum2) + c^2*d_0 − (c*t − b^T*z_2) == f0 
     // NOTE: equations in R^^_(q_hat)
-    
-    // 1st addend σ(z_1)^T * (D2_2_1 * z_1)
-    // Compute  (D2_2_1 * z_1),  m1 polynomials
-    acc_vec.SetLength(m1);
-    
-    for(i=0; i<m1; i++)    
+
+    // 1st addend Sum1 = Sum_(i=1,τ){ μ_i · ( δ1*z[3]z[0] + δ2*z[4]z[1] + δ3*z[5]z[2] )}
+    // NOTE: precompute z[3]z[0], z[4]z[1], z[5]z[2], considering the following sizes:
+    // 
+    //  z[0]    z[1]     z[2]  z[3]     z[4]    z[5] z[6]    z[7]    z[8]    z[9]   
+    // m2ddd, idxhlrddd, t_d, m2ddd, idxhlrddd, t_d, n256, tau_ISIS, n256, tau_ISIS
+    //           m1          |           m1        | n256, tau_ISIS, n256, tau_ISIS
+    z3z0.SetLength(d_hat);
+    z4z1.SetLength(d_hat);
+    z5z2.SetLength(d_hat);
+    sum.SetLength(d_hat);
+
+    for(i=0; i<(m2ddd); i++)
     {
-        acc_vec[i] = poly_mult_hat(D2_2_1[i], Pi.z_1);
+        z3z0 += ModPhi_hat_q( z[m1 + i] * z[i] );
     }
 
-    // Accumulate  σ(z_1)^T * (D2_2_1 * z_1)    
-    acc = poly_mult_hat(sigma_z_1, acc_vec);
-    
-    // 2nd addend (c * d_1^T * z)
-    acc_vec.SetLength(m1_n256_tau);
-    // Compute  (c * d_1^T),  (2*m1 + 2*(256/d_hat + tau_ISIS)) polynomials
-    for(i=0; i<m1_n256_tau; i++)    
+    for(i=(m2ddd); i<(m2ddd+idxhlrddd); i++) //idxhlrddd
     {
-        acc_vec[i] = ModPhi_hat_q( c * d_1[i] );
+        z4z1 += ModPhi_hat_q( z[m1 + i] * z[i] );
     }
 
-    // Accumulate  (c * d_1^T) * z 
-    acc += poly_mult_hat(acc_vec, z);   
+    for(i=(m2ddd+idxhlrddd); i<(m1); i++) //t_d
+    {
+        z5z2 += ModPhi_hat_q( z[m1 + i] * z[i] );
+    }
+
+    for(i=0; i<tau_ISIS; i++)
+    {
+        sum += ModPhi_hat_q( mu[i] * (delta_1_vec[i]*z3z0 + delta_2_vec[i]*z4z1 + delta_3_vec[i]*z5z2) ); 
+    } 
+
+    // 2nd addend Sum2 = Sum_(i=1,τ){ μ_i · c · ( a_i*z[0] + b_i*z[1] + c_i*z[2] + l_i*z[6] + z[7]_i )}
+    acc.SetLength(d_hat);
+
+    for(i=0; i<tau_ISIS; i++)
+    {
+        clear(acc); // acc = 0
+
+        for(k=0; k<(m2ddd); k++)
+        {
+            acc += ModPhi_hat_q( A_hat[i][k] * z[k] ); // a_i*z[0]
+        }
+
+        for(k=0; k<(idxhlrddd); k++)
+        {
+            acc += ModPhi_hat_q( B_hat[i][k] * z[m2ddd + k] ); // + b_i*z[1]
+        }
+
+        for(k=0; k<(t_d); k++)
+        {
+            acc += ModPhi_hat_q( C_hat[i][k] * z[m2ddd+idxhlrddd + k] ); // + c_i*z[2]
+        }
+
+        for(k=0; k<(n256); k++)
+        {
+            acc += ModPhi_hat_q( L_hat[i][k] * z[2*m1 + k] ); // + l_i*z[6]
+        }
+
+        acc += z[2*m1 + n256 + i]; // + z[7]_i
+
+        // acc  = ( a_i*z[0] + b_i*z[1] + c_i*z[2] + l_i*z[6] + z[7]_i )
+        // Sum2 = Sum_(i=1,τ){ μ_i · (c · acc) }
+        sum += ModPhi_hat_q( mu[i] * ModPhi_hat_q( c * acc ) );
+        
+    }     
     
     // 3rd addend (c^2 * d_0)
-    acc += ModPhi_hat_q( ModPhi_hat_q( sqr(c) ) * d_0 );
+    sum += ModPhi_hat_q( ModPhi_hat_q( sqr(c) ) * d_0 );
       
     // 4rd addend −(c*t − b^T * z_2)
-    acc -= ( ModPhi_hat_q( c * Pi.t ) - poly_mult_hat(crs[4][0], Pi.z_2) );
+    sum -= ( ModPhi_hat_q( c * Pi.t ) - poly_mult_hat(crs[4][0], Pi.z_2) );
     
-    if (acc != Pi.f0)
+    if (sum != Pi.f0)
     {
         cout << "Fourth condition failed!" << endl; 
-        // cout << acc << " != " << Pi.f0 << endl; 
+        // cout << sum << " != " << Pi.f0 << endl; 
         return 0;
     }
     
     // cout << "# Verify_ISIS: OK!" << endl;
 
-    // 26. else, return 1
+    // 28. else, return 1
     return 1;
 }
