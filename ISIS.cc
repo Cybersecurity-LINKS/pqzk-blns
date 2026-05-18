@@ -1119,10 +1119,10 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     vec_zz_pX       t_B, z, acc_vec, coeffs_ones, sigma_ones;
     vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, tmp_vec;
     zz_pX           acc, acc2, c, d_0, sum, z3z0, z4z1, z5z2;
-    Mat<zz_pX>      e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
+    Mat<zz_pX>      sigma_p_, sigma_Beta_, sigma_c_r_;
     Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;
     mat_zz_p        R_goth, gamma, C_m, C_r;
-    vec_zz_p        ones, e_tmp, m_C;
+    vec_zz_p        ones, m_C;
     ZZ              B_goth_s2, B_goth_r2, B_goth2;
     zz_p            B_goth_s2_p, B_goth_r2_p, sums;
     ZZ              norm2_z1, norm2_z2, norm2_z3;
@@ -1404,38 +1404,8 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         }
     }
     
-    // Initialize e ∈ R^^(256 x 256/d_hat)_(q_hat)
-    e_.SetDims(256, n256);    
-    // NOTE: defined as e_ to distinguish it from the Euler constant e 
-
-    e_tmp.SetLength(256);
-
-    for(k=0; k<256; k++)
-    {
-        e_tmp[k] = 0;
-    }
-
-    for(j=0; j<256; j++)
-    {
-        // Temporary coefficient vector to create e_j: it is a unit vector with its j-th coefficient being 1
-        e_tmp[j] = 1;        
-
-        // e_[j].SetLength(n256);
-        CoeffsInvHat(e_[j], e_tmp, n256);
-
-        // Reset the e_tmp coefficient vector
-        e_tmp[j] = 0;
-    }
-    
-    // Precompute σ(e_j), σ(p_j), σ(β_j)
-    sigma_e_.SetDims(256, n256);
     sigma_p_.SetDims(d0, m2ddd);
-    sigma_Beta_.SetDims(d0, t_d);
-        
-    for(j=0; j<256; j++)        
-    {
-        sigma_map(sigma_e_[j], e_[j], d_hat);  
-    }       
+    sigma_Beta_.SetDims(d0, t_d); 
 
     for(j=0; j<d0; j++)        
     {
@@ -1572,12 +1542,16 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
 
     for(i=0; i<tau_ISIS; i++)
     {
-        for(j=0; j<256; j++)        
-        {
-            for(k=0; k<n256; k++)        
-            {
-                L_hat[i][k] += gamma[i][j] * sigma_e_[j][k];
-            }          
+        for (k=0; k<n256; k++){
+            // TODO: Check how to free acc
+            ulong line = k << 6;
+            zz_pX acc;
+            acc.SetLength(64);
+            SetCoeff(acc, 0, gamma[i][line]);
+            for(j=1; j<64; j++){
+                SetCoeff(acc, d_hat-j, -gamma[i][line+j]);
+            }
+            L_hat[i][k] += acc;
         }
     }
 
