@@ -1116,13 +1116,13 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
    
     ulong           i, j, k;
     Mat<zz_pX>      B, A_hat, B_hat, C_hat, L_hat;
-    vec_zz_pX       t_B, z, acc_vec, coeffs_ones, sigma_ones;
+    vec_zz_pX       t_B, z, acc_vec;
     vec_zz_pX       r_j, p_j, Beta_j, c_r_j, mu, tmp_vec;
     zz_pX           acc, acc2, c, d_0, sum, z3z0, z4z1, z5z2;
     Mat<zz_pX>      sigma_p_, sigma_Beta_, sigma_c_r_;
     Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;
     mat_zz_p        R_goth, gamma, C_m, C_r;
-    vec_zz_p        ones, m_C;
+    vec_zz_p        m_C;
     ZZ              B_goth_s2, B_goth_r2, B_goth2;
     zz_p            B_goth_s2_p, B_goth_r2_p, sums;
     ZZ              norm2_z1, norm2_z2, norm2_z3;
@@ -1448,19 +1448,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         sigma_map(sigma_c_r_[j] , c_r_j, d_hat);                  
     }
 
-    C_r.kill(); 
-
-    // Precompute Coeffs^−1(1^t)
-    ones.SetLength(t0);         // ∈ Z^^(t)_(q_hat)
-    coeffs_ones.SetLength(t_d); // ∈ R^^(t/d_hat)_(q_hat)
-    
-    for(i=0; i<t0; i++) 
-    {
-        ones[i] = 1;
-    }
-
-    CoeffsInvHat(coeffs_ones, ones, t_d);
-    sigma_map(sigma_ones , coeffs_ones, d_hat);
+    C_r.kill();
 
 
     // 22. Construction of A^ ∈ R^^(τ × ((m+2)d+d_hat)/d_hat)_(q_hat)
@@ -1530,9 +1518,18 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
             }     
         }
         
+        // Compute m = t_d*gamma[i][256+d0+2] 
+        zz_p m = gamma[i][256+d0+2];
+        zz_pX acc;
+        acc.SetLength(64);
+        SetCoeff(acc, 0, m);
+        for (j=1; j<64; j++){
+            SetCoeff(acc, j, -m);
+        }
+
         for(k=0; k<(t_d); k++)        
         {                
-            C_hat[i][k] -= gamma[i][256+d0+2] * sigma_ones[k];
+            C_hat[i][k] -= acc;
         }
     }
 
