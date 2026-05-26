@@ -14,6 +14,7 @@
 
 # Enable or disable Falcon keygen and GSampler
 USE_FALCON 	= 1
+TIMING ?= 0
 #USE_FALCON = 0
 
 # Set compiler and linker flags
@@ -31,6 +32,12 @@ FILE_EXISTS = $(or $(and $(wildcard $(FALCON_LIB)),1),0)
 CFLAGS  	+= -Drestrict=__restrict__ -DENABLE_FALCON -I$(FALCON_PATH)
 LNFLAGS 	+= -L$(FALCON_PATH) -lfalcon
 endif
+
+
+ifeq ($(TIMING),1)
+CFLAGS += -DTIMING
+endif
+
 
 SRCS		:= $(wildcard *.cc)
 SRCS_BLNS	:= $(filter-out bench.cc, $(SRCS))
