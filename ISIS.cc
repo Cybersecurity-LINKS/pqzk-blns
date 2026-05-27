@@ -1112,12 +1112,17 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
 //==============================================================================
 long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* ipk_bytes, const mat_zz_p& P, const mat_zz_p& C, const vec_zz_p& mex, const mat_zz_p& B_f, const vec_ZZ& Bounds, const long& aux, uint8_t** Pi_ptr, const vec_UL &idx_hid)
 {
-    // NOTE: assuming that current modulus is q2_hat (not q0) 
-   
+    // NOTE: assuming that current modulus is q2_hat (not q0)
+
     ulong           i, j, k;
     Mat<zz_pX>      B, A_hat, B_hat, C_hat, L_hat;
     vec_zz_pX       t_B, z;
     vec_zz_pX       mu, tmp_vec;
+    // vec_zz_pX       r_j, p_j, Beta_j, acc_vec, coeffs_ones, sigma_ones;
+    // vec_zz_p        ones, e_tmp;
+    // Mat<zz_pX>      e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
+    // Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;
+    // mat_zz_p        C_r;
     zz_pX           acc, acc2, c, d_0, sum, z3z0, z4z1, z5z2;
     mat_zz_p        R_goth, gamma, C_m;
     vec_zz_p        m_C;
@@ -1131,7 +1136,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     uint8_t        *buffer, *Pi_bytes;
     vector<size_t>  lengths;
     PROOF_I_t       Pi;
-    
+
     // Initialise constants
     const ulong     num_idx_hid = idx_hid.length(); // number of undisclosed attributes (hidden)
     const ulong     num_idx_pub = l0 - num_idx_hid; // number of disclosed attributes (revealed)
@@ -1152,7 +1157,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // (B_goth_s^2, B_goth_r^2) ← Bounds,   (B_goth_s^2, B_goth_r^2) ∈ Z^2
     B_goth_s2 = Bounds[0];
     B_goth_r2 = Bounds[1];
-    
+
     // Square of B_goth = sqrt(B_goth_s^2 + B_goth_r^2 + t0)
     B_goth2 = B_goth_s2 + B_goth_r2 + t0;
 
@@ -1188,13 +1193,13 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     len_idx_hid  = calc_ser_size_vec_UL(num_idx_hid);                   // uint8*    - |idx_hid| bytes
     len_mex      = calc_ser_size_vec_zz_p_minbyte(num_idx_pub*h0, nbits0); // vec_zz_p
     len_Bounds   = calc_ser_size_vec_ZZ(2);                             // vec_ZZ (2*long) - 16 bytes
-    len_aux      = 1;                                                   // uint8     - 1 byte  
-    // cout << "  Size Hash_Init: " << (NONCE_LEN + SEED_LEN + len_a1 + SEED_LEN + len_idx_hid + len_mex + len_Bounds + len_aux)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes 
+    len_aux      = 1;                                                   // uint8     - 1 byte
+    // cout << "  Size Hash_Init: " << (NONCE_LEN + SEED_LEN + len_a1 + SEED_LEN + len_idx_hid + len_mex + len_Bounds + len_aux)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
 
     lengths = {len_idx_hid, len_mex, len_Bounds, len_aux};
-    max_len = *max_element(begin(lengths), end(lengths)); 
+    max_len = *max_element(begin(lengths), end(lengths));
     buffer = new uint8_t[max_len];
-           
+
     state = Hash_Init(nonce, NONCE_LEN);
     Hash_Update(state, seed_crs, SEED_LEN);
     Hash_Update(state, ipk_bytes, (len_a1 + SEED_LEN));
@@ -1206,19 +1211,19 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     Hash_Update(state, buffer, len_Bounds);
     buffer[0] = (uint8_t)(aux);
     Hash_Update(state, buffer, len_aux);
-          
+
     delete[] buffer;
 
-    
-    // 3. P ← [P0,  0_(d × d_hat)],   P ∈ Z^[d × (m+2)·d + d_hat]_(q_hat)     
+
+    // 3. P ← [P0,  0_(d × d_hat)],   P ∈ Z^[d × (m+2)·d + d_hat]_(q_hat)
     // NOTE: zero padding of P already done in V_Verify
- 
+
     // 4. C ← [C0,  0_(d × d_hat)],   C ∈ Z^[d × ((ℓm+ℓr)·d + d_hat)]_(q_hat)
     // NOTE: zero padding of C already done in V_Verify
 
 
     // 5. (t_A, t_y, z_3, t_g, h, t, w, f0, z_1, z_2) ← π
-    
+
     // Compute the number of bytes for each component of the proof Pi
     len_valid = 1;                                                 // uint8     - 1 byte
     len_t_A = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);     // vec_zz_pX
@@ -1234,13 +1239,13 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
 
     // len_Pi = len_valid + len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2;
     // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
-   
+
     // Deserialize the proof Pi
     Pi_bytes = *Pi_ptr;
     Pi.valid = (long)(Pi_bytes[0]);
     Pi_bytes += len_valid;
 
-    // Check if Pi contains a valid proof   
+    // Check if Pi contains a valid proof
     if (Pi.valid != 1)
     {
         cout << "ERROR! Pi does not contain a valid proof" << endl;
@@ -1258,28 +1263,28 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     deserialize_minbyte_vec_poly_zz_pX(Pi.h, tau_ISIS, d_hat, nbits, Pi_bytes, len_h);
     Pi_bytes += len_h;
     deserialize_minbyte_poly_zz_pX(Pi.t, d_hat, nbits, Pi_bytes, len_t);
-    Pi_bytes += len_t;    
+    Pi_bytes += len_t;
     deserialize_minbyte_vec_poly_zz_pX(Pi.w, n, d_hat, nbits, Pi_bytes, len_w);
-    Pi_bytes += len_w;  
+    Pi_bytes += len_w;
     deserialize_minbyte_poly_zz_pX(Pi.f0, d_hat, nbits, Pi_bytes, len_f0);
-    Pi_bytes += len_f0;    
+    Pi_bytes += len_f0;
     deserialize_minbyte_vec_poly_zz_pX(Pi.z_1, m1, d_hat, nbits, Pi_bytes, len_z_1);
     Pi_bytes += len_z_1;
     deserialize_minbyte_vec_poly_zz_pX(Pi.z_2, m2, d_hat, nbits, Pi_bytes, len_z_2);
     // Pi_bytes += len_z_2;
 
-    
+
     // 6. a_1 ← (t_A, t_y)
     Pi_bytes = *Pi_ptr + len_valid;
     len_in = len_t_A + len_t_y;
     Hash_Update(state, Pi_bytes, len_in);
     Pi_bytes += len_in;
 
-    
-    // 7. a2 ← (z_3, t_g)    
-    // 8. a3 ← h    
+
+    // 7. a2 ← (z_3, t_g)
+    // 8. a3 ← h
     // 9. a4 ← (t, w, f0)
-    
+
     // 10. (R_goth_0, R_goth_1) = H(nonce, crs, x, a_1, 1)
     // 11. R_goth = R_goth_0 - R_goth_1
     HISIS1(R_goth, state, m1);
@@ -1290,7 +1295,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     len_in = len_z_3 + len_t_g;
     Hash_Update(state, Pi_bytes, len_in);
     Pi_bytes += len_in;
-    HISIS2(gamma, state);   
+    HISIS2(gamma, state);
     // NOTE: gamma has 256+d0+3 columns in ISIS, while 256+d0+1 in Com
 
     // 13. μ ← H(nonce, crs, x, a1, a2, a3, 3),   μ ∈ R^^(τ)_(q_hat)
@@ -1301,7 +1306,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // 14. c ← H(nonce, crs, x, a1, a2, a3, a4, 4),   c ∈ C ⊂ R^_(q_hat)
     len_in = len_t + len_w + len_f0;
     Hash_Update(state, Pi_bytes, len_in);
-    // Pi_bytes += len_in;    
+    // Pi_bytes += len_in;
     HISIS4(c, state);
 
     // Free the Hash state and the vector with serialized proof Pi
@@ -1315,51 +1320,63 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // 16. t_B ← [t_y; t_g],   t_B ∈ R^^(256/d_hat + tau)_(q_hat)
     t_B.SetLength(n256 + tau_ISIS);
 
-    for(i=0; i<n256; i++) 
+    for(i=0; i<n256; i++)
     {
         B[i]   = crs[2][i];
         t_B[i] = Pi.t_y[i];
     }
 
-    for(i=n256; i<(n256 + tau_ISIS); i++) 
+    for(i=n256; i<(n256 + tau_ISIS); i++)
     {
         B[i]   = crs[3][i-n256];
         t_B[i] = Pi.t_g[i-n256];
     }
 
     // 17. z ← (z_1; σ(z_1); (c*t_B − B*z_2)),     z ∈ R^^(2*m1 + (256/d_hat + tau))_(q_hat)
-    z.SetLength( m1_n256_tau ); 
+    z.SetLength( m1_n256_tau );
 
-    for(i=0; i<m1; i++) 
+    for(i=0; i<m1; i++)
     {
         z[i] = Pi.z_1[i]; // z_1
     }
-
+    // double t1 = GetWallTime();
     sigma_map(tmp_vec, Pi.z_1, d_hat);
+    
     k = 0;
 
-    for(i=m1; i<(2*m1); i++) 
+    for(i=m1; i<(2*m1); i++)
     {
         z[i] = tmp_vec[k]; // σ(z_1)
-        k++;      
+        k++;
+        // z[i].SetLength(d_hat);
+        // z[i][0] = Pi.z_1[i][0];
+        // for (k=1; k<d_hat; k++){
+        //     z[i][d_hat-k] = -Pi.z_1[i][k];
+        // }
+
     }
 
+    // double t2 = GetWallTime();
+    // cout << t2-t1 << endl;
+
     // Compute (c*t_B − B*z_2) in a temporary vector
-    tmp_vec.SetLength(n256 + tau_ISIS);
     
+    tmp_vec.SetLength(n256 + tau_ISIS);
+
     for(i=0; i<(n256 + tau_ISIS); i++)
     {
         tmp_vec[i] = ModPhi_hat_q( c * t_B[i] ) - poly_mult_hat(B[i], Pi.z_2);
     }
-    
+
     k = 0;
 
-    for(i=(2*m1); i<(2*m1 + n256 + tau_ISIS); i++) 
+    for(i=(2*m1); i<(2*m1 + n256 + tau_ISIS); i++)
     {
-        z[i] = tmp_vec[k]; // (c*t_B − B*z_2)
-        k++; 
+        z[i] = tmp_vec[k];
+        //z[i] = ModPhi_hat_q( c * t_B[k] ) - poly_mult_hat(B[k], Pi.z_2); // (c*t_B − B*z_2)
+        k++;
     }
-
+    
 
     // 18. δ^_1 ← { γ_(i,256+d+1) ∈ Z_(q_hat), i ∈ [τ]},   δ^_1 ∈ Z^τ_(q_hat)
     // 19. δ^_2 ← { γ_(i,256+d+2) ∈ Z_(q_hat), i ∈ [τ]},   δ^_2 ∈ Z^τ_(q_hat)
@@ -1371,252 +1388,331 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     //       r_r,j ∈ R^^((|idx_hid|·h+ℓr·d+d_hat)/d_hat)_(q_hat)
     //       r_u,j ∈ R^^(t/d_hat)_(q_hat)
     //       c_r,j is the poly. vector with coeff. the j-th row of C_r
-    
-    // Precompute r_j, σ(r_j), σ(r_s,j), σ(r_r,j), σ(r_u,j)      
 
-    // Create C_m and C_r
-    #ifdef TIMING
-    double t1 = GetWallTime();
-    #endif
-    C_m.SetDims(d0, (num_idx_pub*h0)); 
-    // NOTE: C = [C_m C_r] ∈ Z^[d × ((ℓm+ℓr)·d+d_hat)]_(q_hat), C_m has |idx_pub|·h columns
-    
-    for(i=0; i<d0; i++)
-    {
-        for(j=0; j<(num_idx_pub*h0); j++)        
-        {
-            C_m[i][j] = C[i][j];
-        }
-    }
-    #ifdef TIMING
-    double t2 = GetWallTime();
-    #endif
-    // Compute m_C := C_m * m
-    m_C.SetLength(d0);
-    m_C = ( C_m * mex );
+    // Precompute r_j, σ(r_j), σ(r_s,j), σ(r_r,j), σ(r_u,j)
+    // r_j.SetLength(m1);
+    // sigma_r_.SetDims(256, m1);
+    // sigma_r_s_.SetDims(256, m2ddd);
+    // sigma_r_r_.SetDims(256, idxhlrddd);
+    // sigma_r_u_.SetDims(256, t_d);
 
-    C_m.kill(); 
-    #ifdef TIMING
-    double t3 = GetWallTime();
-    #endif
-    // 22. Construction of A^ ∈ R^^(τ × ((m+2)d+d_hat)/d_hat)_(q_hat)
-    
-    A_hat.SetDims(tau_ISIS, m2ddd);
-    B_hat.SetDims(tau_ISIS, idxhlrddd);
-    C_hat.SetDims(tau_ISIS, t_d);
-
-    for (long ii = 0; ii < tau_ISIS; ii++)
-    {
-        for (long kk = 0; kk < m2ddd; kk++){
-            A_hat[ii][kk].SetLength(d_hat);
-        }
-        for (long kk = 0; kk < idxhlrddd; kk++){
-            B_hat[ii][kk].SetLength(d_hat);
-        }
-        for (long kk = 0; kk < t_d; kk++){
-            C_hat[ii][kk].SetLength(d_hat);
-        }
-            
-    }
-    #ifdef TIMING
-    double t4 = GetWallTime();
-    #endif
-    vec_zz_pX r_j; 
-    
-    r_j.SetLength(m2ddd);
-    #ifdef TIMING
-    double t111 = GetWallTime();
-    #endif
-    // for(i=0; i<tau_ISIS; i++)
+    // double t1 = GetWallTime();
+    // for(j=0; j<256; j++)
     // {
-        
-    //     for(j=0; j<256; j++)        
+    //     CoeffsInvHat(r_j, R_goth[j], m1);
+    //     sigma_map(sigma_r_[j], r_j, d_hat);
+
+    //     // NOTE: m1 = m1_ISIS = (((m+2)*d+d_hat)/d_hat) + (|idx_hid|·h + ℓr·d + d_hat)/d_hat + t/d_hat
+
+    //     for(k=0; k<(m2ddd); k++)
     //     {
-    //         cout << R_goth[j].length() << endl;
-    //         zz_p g = gamma[i][j];
-    //         if (g == 0) continue;
-    //         vec_zz_p &R_j = R_goth[j];
-    //         for(k=0; k<m2ddd; k++)
-    //         {
-    //             ulong base = d_hat*k;
-    //             zz_pX &poly = A_hat[i][k];
-    //             poly.rep[0] += g*R_j[base];
-                
-    //             for(size_t t = 1; t < d_hat; t++)
-    //             {     
-    //                 poly.rep[d_hat-t] -= g*R_j[base+t];                
-    //             } 
-                  
-    //         }            
+    //         sigma_r_s_[j][k] = sigma_r_[j][k];
+    //     }
+
+    //     for(k=0; k<(idxhlrddd); k++)
+    //     {
+    //         sigma_r_r_[j][k] = sigma_r_[j][k + m2ddd];
+    //     }
+
+    //     for(k=0; k<(t_d); k++)
+    //     {
+    //         sigma_r_u_[j][k] = sigma_r_[j][k + m2ddd + idxhlrddd];
     //     }
     // }
+    // double t11 = GetWallTime();
 
+    // Initialize e ∈ R^^(256 x 256/d_hat)_(q_hat)
+    // e_.SetDims(256, n256);
+    // // NOTE: defined as e_ to distinguish it from the Euler constant e
+
+    // e_tmp.SetLength(256);
+
+    // for(k=0; k<256; k++)
+    // {
+    //     e_tmp[k] = 0;
+    // }
+
+    // for(j=0; j<256; j++)
+    // {
+    //     // Temporary coefficient vector to create e_j: it is a unit vector with its j-th coefficient being 1
+    //     e_tmp[j] = 1;
+
+    //     // e_[j].SetLength(n256);
+    //     CoeffsInvHat(e_[j], e_tmp, n256);
+
+    //     // Reset the e_tmp coefficient vector
+    //     e_tmp[j] = 0;
+    // }
+
+    // Precompute σ(e_j), σ(p_j), σ(β_j)
+    // sigma_e_.SetDims(256, n256);
+    
+    // sigma_Beta_.SetDims(d0, t_d);
+
+    // for(j=0; j<256; j++)
+    // {
+    //     sigma_map(sigma_e_[j], e_[j], d_hat);
+    // }
+    // double tpinit = GetWallTime();
+    // sigma_p_.SetDims(d0, m2ddd);
+    // sigma_Beta_.SetDims(d0, t_d);
+    // for(j=0; j<d0; j++)
+    // {
+    //     CoeffsInvHat(p_j, P[j], m2ddd);
+    //     CoeffsInvHat(Beta_j, B_f[j], t_d);
+    //     sigma_map(sigma_p_[j], p_j, d_hat);
+    //     sigma_map(sigma_Beta_[j], Beta_j, d_hat);
+    // }
+    
+    // double tpifinish = GetWallTime();
+    // cout << "p, beta and sigma_p, sigma_beta init: " << tpifinish-tpinit << endl;
+
+    // Create C_m and C_r
+    C_m.SetDims(d0, (num_idx_pub*h0));
+    // C_r.SetDims(d0, idxhlrdd);
+    // NOTE: C = [C_m C_r] ∈ Z^[d × ((ℓm+ℓr)·d+d_hat)]_(q_hat), C_m has |idx_pub|·h columns
+    // double t1 = GetWallTime();
+    for(i=0; i<d0; i++)
+    {
+        for(j=0; j<(num_idx_pub*h0); j++)
+        {
+            C_m[i][j] = C[i][j];
+            //m_C[i] += C[i][j] * mex[j];
+        }
+
+        // for(j=0; j<idxhlrdd; j++)
+        // {
+        //     C_r[i][j] = C[i][(num_idx_pub*h0)+j];
+        // }
+    }
+
+    // Compute m_C := C_m * m
+    m_C = ( C_m * mex );
+
+    C_m.kill();
+    // double t2 = GetWallTime();
+    // cout << t2-t1 << endl;
+    // Precompute σ(C_r,j)
+    // sigma_c_r_.SetDims(d0, idxhlrddd);
+
+    // for(j=0; j<d0; j++)
+    // {
+    //     CoeffsInvHat(c_r_j  , C_r[j], idxhlrddd);
+    //     sigma_map(sigma_c_r_[j] , c_r_j, d_hat);
+    // }
+
+    // C_r.kill();
+
+    // Precompute Coeffs^−1(1^t)
+    // ones.SetLength(t0);         // ∈ Z^^(t)_(q_hat)
+    // coeffs_ones.SetLength(t_d); // ∈ R^^(t/d_hat)_(q_hat)
+
+    // for(i=0; i<t0; i++)
+    // {
+    //     ones[i] = 1;
+    // }
+
+    // CoeffsInvHat(coeffs_ones, ones, t_d);
+    // sigma_map(sigma_ones , coeffs_ones, d_hat);
+
+
+    // 22. Construction of A^ ∈ R^^(τ × ((m+2)d+d_hat)/d_hat)_(q_hat)
+    // double tA_1 = GetWallTime();
+    A_hat.SetDims(tau_ISIS, m2ddd);
     for(i=0; i<tau_ISIS; i++)
     {
-        for(j=0; j<256; j++)        
+        // for(j=0; j<256; j++)
+        // {
+        //     for(k=0; k<(m2ddd); k++)
+        //     {
+        //         A_hat[i][k] += gamma[i][j] * sigma_r_s_[j][k];
+        //     }
+        // }
+
+        for(j=0; j<256; j++)
         {
+            vec_zz_p &R_j = R_goth[j];
             zz_p g = gamma[i][j];
             if (g == 0) continue;
             for(k=0; k<m2ddd; k++)
             {
-                zz_pX &r_j_k =  r_j[k];
-                r_j_k.SetLength(d_hat);
+
                 ulong base = d_hat*k;
-                for(size_t t=0; t<d_hat; t++)     
+                A_hat[i][k].SetLength(d_hat);
+                zz_pX &poly = A_hat[i][k];
+                poly.rep[0] += g*R_j[base];
+                for(size_t t = 1; t < d_hat; t++)
                 {
-                    r_j_k[t] = R_goth[j][base+t];
+                    poly.rep[d_hat-t] -= g*R_j[base+t];
                 }
 
-                zz_pX &poly = A_hat[i][k];
-    
-                poly.rep[0] += g*r_j_k[0];
-                
-                
-                for(size_t t = 1; t < d_hat; t++)
-                {    
-                    poly.rep[d_hat-t] -= g*r_j_k[t];              
-                } 
-                  
-            }            
-        }
-    }
-    #ifdef TIMING
-    double t22 = GetWallTime();
-    cout << "loop with mult: " << t22 - t111 << "s" << endl;
-    #endif  
-    #ifdef TIMING
-    double t5 = GetWallTime();
-    #endif
-
-    for(i=0; i<tau_ISIS; i++)
-    {
-        
-        for(j=0; j<d0; j++)        
-        {
-            zz_p g = gamma[i][256+j];
-            if(g==0) continue;
-            vec_zz_p p_j = P[j];
-            for(k=0; k<(m2ddd); k++)        
-            {   
-                ulong base = (k * d_hat);
-                zz_pX &poly = A_hat[i][k];
-                poly.rep[0] += g * p_j[base];
-                for (size_t t=1; t<d_hat; t++){
-                    poly.rep[t] -= g * p_j[base+d_hat-t];
-                }        
-            }  
-        }
-
-    }
-    #ifdef TIMING
-    double t6 = GetWallTime();
-    #endif
-
-    // 23. Construction of B^ ∈ R^^(τ × (|idx_hid|·h + ℓr·d + d_hat)/d_hat)_(q_hat)
-    r_j.SetLength(idxhlrddd);
-    for(i=0; i<tau_ISIS; i++)
-    {
-        for(j=0; j<256; j++)        
-        {
-            zz_p g = gamma[i][j];
-            if (g == 0) continue;
-            for(k=0; k<(idxhlrddd); k++) 
-            {
-                zz_pX &r_j_k =  r_j[k];
-                ulong base = d_hat*(k+m2ddd);
-                for(size_t t=0; t<d_hat; t++)     
-                {
-                    r_j_k[t] = R_goth[j][base+t];
-                }
-            
-                zz_pX &poly = B_hat[i][k];
-                poly.rep[0] += g*r_j_k[0];
-                //SetCoeff(poly,0,g*r_j_k[0]);
-                
-                for(size_t t = 1; t < d_hat; t++)
-                {    
-                    poly.rep[d_hat-t] -= g*r_j_k[t];                  
-                } 
             }
         }
     }
-    #ifdef TIMING
-    double t7 = GetWallTime();
-    #endif
+    // double tA_2 = GetWallTime();
+    for(i=0; i<tau_ISIS; i++)
+    {
+        // for(j=0; j<d0; j++)
+        // {
+        //     for(k=0; k<(m2ddd); k++)
+        //     {
+        //         A_hat[i][k] += gamma[i][256+j] * sigma_p_[j][k];
+        //     }
+        // }
+
+        for(j=0; j<d0; j++)
+        {
+            zz_p g = gamma[i][256+j];
+            if(g==0) continue;
+            for(k=0; k<(m2ddd); k++)
+            {
+                ulong base = (k * d_hat);
+                zz_pX &poly = A_hat[i][k];
+                poly.rep[0] += g * P[j][base];
+                for (size_t t=1; t<d_hat; t++){
+                    poly.rep[t] -= g * P[j][base+d_hat-t];
+                }
+            }
+        }
+    }
+
+    // double tA_3 = GetWallTime();
+    // cout << "first part A_hat: " << tA_2-tA_1 << endl;
+    // cout << "second part A_hat: " << tA_3-tA_2 << endl;
+
+    // double tB_1 = GetWallTime();
+    // 23. Construction of B^ ∈ R^^(τ × (|idx_hid|·h + ℓr·d + d_hat)/d_hat)_(q_hat)
+    B_hat.SetDims(tau_ISIS, idxhlrddd);
 
     for(i=0; i<tau_ISIS; i++)
     {
+        // for(j=0; j<256; j++)
+        // {
+        //     for(k=0; k<(idxhlrddd); k++)
+        //     {
+        //         B_hat[i][k] += gamma[i][j] * sigma_r_r_[j][k];
+        //     }
+        // }
+
+        for(j=0; j<256; j++){
+
+            vec_zz_p &R_j = R_goth[j];
+            zz_p g = gamma[i][j];
+            if (g == 0) continue;
+
+            for(k=0; k<(idxhlrddd); k++){
+
+                ulong base = d_hat*(k+m2ddd);
+                B_hat[i][k].SetLength(d_hat);
+                zz_pX &poly = B_hat[i][k];
+                poly.rep[0] += g*R_j[base];
+                for(size_t t = 1; t < d_hat; t++)
+                {
+                    poly.rep[d_hat-t] -= g*R_j[base+t];
+                }
+            }
+        }
+    }
+    // double tB_2 = GetWallTime();
+    for(i=0; i<tau_ISIS; i++)
+    {
+
+        // for(j=0; j<d0; j++)
+        // {
+        //     for(k=0; k<(idxhlrddd); k++)
+        //     {
+        //         B_hat[i][k] -= gamma[i][256+j] * sigma_c_r_[j][k];
+        //     }
+        // }
+
         for(j=0; j<d0; j++)        
         {
             zz_p g = gamma[i][256+j];
             if(g==0) continue;
-            vec_zz_p C_j = C[j];
+            // vec_zz_p C_j = C[j];
             for(k=0; k<(idxhlrddd); k++)      
             { 
                 ulong base = (k * d_hat) + (num_idx_pub*h0);
                 zz_pX &poly = B_hat[i][k];
-                poly.rep[0] -= g * C_j[base];
+                poly.rep[0] -= g * C[j][base];
                 for (size_t t=1; t<d_hat; t++){
-                    poly.rep[t] += g * C_j[base+d_hat-t];
+                    poly.rep[t] += g * C[j][base+d_hat-t];
                 }        
             }     
         }
     }
-    #ifdef TIMING
-    double t8 = GetWallTime();
-    #endif
 
-    //24. Construction of C^ ∈ R^^(τ × (t/d_hat))_(q_hat)
+    // double tB_3 = GetWallTime();
+    // cout << "first part B_hat: " << tB_2-tB_1 << endl;
+    // cout << "second part B_hat: " << tB_3-tB_2 << endl;
+    // double tC_1 = GetWallTime();
+    // 24. Construction of C^ ∈ R^^(τ × (t/d_hat))_(q_hat)
+    C_hat.SetDims(tau_ISIS, t_d);
     ulong offset_c = m2ddd+idxhlrddd;
-    r_j.SetLength(idxhlrddd);
     for(i=0; i<tau_ISIS; i++)
     {
-        for(j=0; j<256; j++)        
-        {
+        // for(j=0; j<256; j++)
+        // {
+        //     for(k=0; k<(t_d); k++)
+        //     {
+        //         C_hat[i][k] += gamma[i][j] * sigma_r_u_[j][k];
+        //     }
+        // }
+
+        for(j=0; j<256; j++){
+
+            vec_zz_p &R_j = R_goth[j];
             zz_p g = gamma[i][j];
             if (g == 0) continue;
-            for(k=0; k<(t_d); k++) 
-            { 
-                zz_pX &r_j_k =  r_j[k];
-                ulong base = d_hat*(k+offset_c);
-                for(size_t t=0; t<d_hat; t++)     
-                {
-                    r_j_k[t] = R_goth[j][base+t];
-                }
 
+            for(k=0; k<(t_d); k++){
+
+                ulong base = d_hat*(k+offset_c);
+                C_hat[i][k].SetLength(d_hat);
                 zz_pX &poly = C_hat[i][k];
-                poly.rep[0] += g*r_j_k[0];
-                //SetCoeff(poly,0,g*r_j_k[0]);
+                poly.rep[0] += g*R_j[base];
                 for(size_t t = 1; t < d_hat; t++)
-                {    
-                    poly.rep[d_hat-t] -= g*r_j_k[t];                
-                } 
+                {
+                    poly.rep[d_hat-t] -= g*R_j[base+t];
+                }
             }
         }
     }
-    #ifdef TIMING
-    double t9 = GetWallTime();
-    #endif
-
+    // double tC_2 = GetWallTime();
     for(i=0; i<tau_ISIS; i++)
     {
+        // for(j=0; j<d0; j++)
+        // {
+        //     for(k=0; k<(t_d); k++)
+        //     {
+        //         C_hat[i][k] -= gamma[i][256+j] * sigma_Beta_[j][k];
+        //     }
+        // }
+
         for(j=0; j<d0; j++)        
         { 
             zz_p g = gamma[i][256+j];
             if(g==0) continue;
-            vec_zz_p B_j = B_f[j];
             for(k=0; k<(t_d); k++)     
             {   
                 ulong base = (k * d_hat);
                 zz_pX &poly = C_hat[i][k];
-                poly.rep[0] -= g * B_j[base];
+                poly.rep[0] -= g * B_f[j][base];
                 for (size_t t=1; t<d_hat; t++){
-                    poly.rep[t] += g * B_j[base+d_hat-t];
+                    poly.rep[t] += g * B_f[j][base+d_hat-t];
                 }        
             }  
   
         }
-        // Compute m = t_d*gamma[i][256+d0+2] 
+    }
+    // double tC_3 = GetWallTime();
+    for(i=0; i<tau_ISIS; i++)
+    {
+        // for(k=0; k<(t_d); k++)
+        // {
+        //     C_hat[i][k] -= gamma[i][256+d0+2] * sigma_ones[k];
+        // }
+    
         zz_p &m = gamma[i][256+d0+2];
         if (!iszero(m))
         {
@@ -1634,10 +1730,13 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
                 }
             }
         }
+        
     }
-    #ifdef TIMING
-    double t10 = GetWallTime();
-    #endif
+    // double tC_4 = GetWallTime();
+    // cout << "first part C_hat: " << tC_2-tC_1 << endl;
+    // cout << "second part C_hat: " << tC_3-tC_2 << endl;
+    // cout << "third part C_hat: " << tC_4-tC_3 << endl;
+
     // 25. Construction of L^ ∈ R^^(τ × (256/d_hat))_(q_hat)
     L_hat.SetDims(tau_ISIS, n256);
     for(i=0; i<tau_ISIS; i++)
@@ -1645,117 +1744,111 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         vec_zz_p &g_i = gamma[i];
         for (k=0; k<n256; k++){
             zz_pX &poly = L_hat[i][k];
-            poly.SetLength(64);
+            poly.SetLength(d_hat);
             ulong line = k << 6;
             poly.rep[0] += g_i[line];
-            for(j=1; j<64; j++){
+            for(j=1; j<d_hat; j++){
                 size_t idx = d_hat - j;
                 poly.rep[idx] -= g_i[line + j];
             }
         }
     }
-    #ifdef TIMING
-    double t11 = GetWallTime();
-    cout << "C m setDims + computation: " << t2 - t1 << "s" << endl;
-    cout << "m_C computation " << t3 - t2 << "s" << endl;
-    cout << "A,B,C initialization " << t4 - t3 << "s" << endl;
-    cout << "A_hat += gamma*sigma_r_s " << t5 - t4 << "s" << endl;
-    cout << "A_hat += gamma*sigma_p " << t6 - t5 << "s" << endl;
-    cout << "B_hat += gamma*sigma_r_r " << t7 - t6 << "s" << endl; 
-    cout << "B_hat += gamma*sigma_c_r " << t8 - t7 << "s" << endl; 
-    cout << "C_hat += gamma*sigma_r_u " << t9 - t8 << "s" << endl;
-    cout << "C_hat += gamma*sigma_beta and C_hat += gamma*sigma_ones " << t10 - t9 << "s" << endl;
-    cout << "L_hat " << t11 - t10 << "s" << endl;
-    #endif
 
-    // 26. Definition of d_0 ∈ R^_(q_hat)    
+
+    // 26. Definition of d_0 ∈ R^_(q_hat)
     clear(d_0);
-    // NOTE: d_0 (not d0 parameter) 
-        
+    // NOTE: d_0 (not d0 parameter)
+    
     for(i=0; i<tau_ISIS; i++)
-    {            
+    {
         sums = 0;
-        
+
         for(j=0; j<256; j++)
         {
             sums += gamma[i][j] * Pi.z_3[j];
         }
-                    
+
         for(j=0; j<d0; j++)
         {
-            sums += gamma[i][256+j] * m_C[j];  
+            sums += gamma[i][256+j] * m_C[j];
         }
 
         sums += gamma[i][256+d0] * B_goth_s2_p + gamma[i][256+d0+1] * B_goth_r2_p;
-    
+
         d_0 = d_0 - ModPhi_hat_q( mu[i] * ( sums + Pi.h[i] ));
     }
-
+    
 
     // 27.  if one of the 4 conditions below does not hold, then return 0
-       
+    
     // Compute ||z_i||^2, squared Euclidean norm of each z_i
     norm2_z1 = Norm2Xm(Pi.z_1, d_hat, q2_hat);
     norm2_z2 = Norm2Xm(Pi.z_2, d_hat, q2_hat);
     norm2_z3 = Norm2m( Pi.z_3, q2_hat );
     // NOTE: norms computed using values in {-(q-1)/2, ..., (q-1)/2}
-
+    
     
     // 27.1 First condition: ||z_1|| ≤ B_goth_1, ||z_2|| ≤ B_goth_2, ||z_3|| ≤ B_goth_3
     // NOTE: equations in ZZ, with squared norms and thresholds
     if ( norm2_z1 > B_goth2_1)
-    { 
-        cout << "First condition failed - Invalid z_1 norm!" << endl; 
+    {
+        cout << "First condition failed - Invalid z_1 norm!" << endl;
         return 0;
     }
 
     if ( norm2_z2 > B_goth2_2)
-    { 
-        cout << "First condition failed - Invalid z_2 norm!" << endl; 
+    {
+        cout << "First condition failed - Invalid z_2 norm!" << endl;
         return 0;
     }
 
     if ( norm2_z3 > B_goth2_3)
-    { 
-        cout << "First condition failed - Invalid z_3 norm!" << endl; 
+    {
+        cout << "First condition failed - Invalid z_3 norm!" << endl;
         return 0;
     }
-
-
-    // 27.2 Second condition: h˜_i == 0 for i ∈ [τ] 
+    
+    
+    // 27.2 Second condition: h˜_i == 0 for i ∈ [τ]
     // NOTE: equations in R^^_(q_hat)
     for(i=0; i<tau_ISIS; i++)
     {
         if ( coeff(Pi.h[i], 0) != 0 )
         {
-            cout << "Second condition failed!" << endl; 
+            cout << "Second condition failed!" << endl;
             // cout <<  "h = " << Pi.h << endl;
             return 0;
         }
     }
+    
 
-    // 27.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A 
+    // 27.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A
     // NOTE: equations in R^^(n)_(q_hat)
     for(i=0; i<n; i++)
     {
+        // A_1*z_1 + A_2*z_2
         acc = poly_mult_hat(crs[0][i], Pi.z_1) + poly_mult_hat(crs[1][i], Pi.z_2);
 
-        // w + c*t_A 
+        // w + c*t_A
         acc2 = Pi.w[i] + ModPhi_hat_q( c * Pi.t_A[i] );
 
         if (acc != acc2)
         {
-            cout << "Third condition failed!" << endl; 
+            cout << "Third condition failed!" << endl;
             return 0;
         }
     }
-    // 27.4 Fourth condition: (Sum1) + (Sum2) + c^2*d_0 − (c*t − b^T*z_2) == f0 
+
+
+
+
+    // 27.4 Fourth condition: (Sum1) + (Sum2) + c^2*d_0 − (c*t − b^T*z_2) == f0
     // NOTE: equations in R^^_(q_hat)
 
     // 1st addend Sum1 = Sum_(i=1,τ){ μ_i · ( δ1*z[3]z[0] + δ2*z[4]z[1] + δ3*z[5]z[2] )}
     // NOTE: precompute z[3]z[0], z[4]z[1], z[5]z[2], considering the following sizes:
-    // 
-    //  z[0]    z[1]     z[2]  z[3]     z[4]    z[5] z[6]    z[7]      
+    //
+    //  z[0]    z[1]     z[2]  z[3]     z[4]    z[5] z[6]    z[7]
     // m2ddd, idxhlrddd, t_d, m2ddd, idxhlrddd, t_d, n256, tau_ISIS
     //           m1          |           m1        | n256, tau_ISIS
     z3z0.SetLength(d_hat);
@@ -1780,9 +1873,8 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
 
     for(i=0; i<tau_ISIS; i++)
     {
-        sum += ModPhi_hat_q( mu[i] * (gamma[i][256+d0]*z3z0 + gamma[i][256+d0+1]*z4z1 + gamma[i][256+d0+2]*z5z2) ); 
+        sum += ModPhi_hat_q( mu[i] * (gamma[i][256+d0]*z3z0 + gamma[i][256+d0+1]*z4z1 + gamma[i][256+d0+2]*z5z2) );
     }
-
     // 2nd addend Sum2 = Sum_(i=1,τ){ μ_i · c · ( a_i*z[0] + b_i*z[1] + c_i*z[2] + l_i*z[6] + z[7]_i )}
     acc.SetLength(d_hat);
 
@@ -1815,22 +1907,22 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         // acc  = ( a_i*z[0] + b_i*z[1] + c_i*z[2] + l_i*z[6] + z[7]_i )
         // Sum2 = Sum_(i=1,τ){ μ_i · (c · acc) }
         sum += ModPhi_hat_q( mu[i] * ModPhi_hat_q( c * acc ) );
-        
-    }     
-    
+
+    }
+
     // 3rd addend (c^2 * d_0)
     sum += ModPhi_hat_q( ModPhi_hat_q( sqr(c) ) * d_0 );
-      
+
     // 4rd addend −(c*t − b^T * z_2)
     sum -= ( ModPhi_hat_q( c * Pi.t ) - poly_mult_hat(crs[4][0], Pi.z_2) );
-    
+
     if (sum != Pi.f0)
     {
-        cout << "Fourth condition failed!" << endl; 
-        // cout << sum << " != " << Pi.f0 << endl; 
+        cout << "Fourth condition failed!" << endl;
+        // cout << sum << " != " << Pi.f0 << endl;
         return 0;
     }
-    
+
     // cout << "# Verify_ISIS: OK!" << endl;
 
     // 28. else, return 1
