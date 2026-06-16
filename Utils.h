@@ -14,8 +14,30 @@
 
 #ifndef BLNS_UTILS_H
 #define BLNS_UTILS_H
+#include <vector>
+#include <cstdint>
 
 #include "params.h"
+
+// Sparse representation of one row of R_goth.
+//
+// entries:
+//   flat array containing all non-zero coefficients of the row.
+//   Each byte packs:
+//     - bit 7     : sign   (1 => +1, 0 => -1)
+//     - bits 0..6 : coefficient position inside the polynomial block
+//
+// offsets:
+//   offsets[k] .. offsets[k+1]-1 is the range of entries belonging to
+//   polynomial block k.
+//
+// Assumption:
+//   d_hat < 128, so the coefficient position fits into 7 bits.
+struct R_goth_row_struct_packed
+{
+    std::vector<uint8_t> entries;   // [sign | pos]
+    std::vector<uint16_t> offsets;
+};
 
 #ifdef ENABLE_FALCON
     ZZX         int8ArrayToZZX(const vector<int8_t>& vec);
@@ -33,6 +55,7 @@ ZZX         ModPhi(const ZZX& p);
 zz_pX       ModPhi_q(const zz_pX& p);
 ZZX         ModPhi_hat(const ZZX& p);
 zz_pX       ModPhi_hat_q(const zz_pX& p);
+void        MulModPhi_hat(ZZX& out, const ZZX& a, const ZZX& b);
 
 void        OGS_Ortho( mat_D&  Bt, vec_D&  Norms2, const mat_L& B ); 
 

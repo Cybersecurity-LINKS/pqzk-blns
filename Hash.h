@@ -44,10 +44,10 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0);
 void HCom4(zz_pX& c, const HASH_STATE_t *state0);
 
 void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1);
+void HISIS1_optimized(std::vector<R_goth_row_struct_packed>& R_goth, const HASH_STATE_t *state0, const ulong &m1);
 void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0);
 void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0);
 void HISIS4(zz_pX& c, const HASH_STATE_t *state0);
-
 void HM(vec_ZZ& m_i, const string& a_i);
 
 #endif

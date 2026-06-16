@@ -16,6 +16,8 @@
 #include "Issuer.h"
 #include "Holder.h"
 #include "Verifier.h"
+#include <NTL/BasicThreadPool.h>
+
 
 
 //=========================================================================================
@@ -26,6 +28,7 @@
 int main()
 {
     zz_p::init(q0); // Initialize modulus q
+    SetNumThreads(6); 
     
     vec_UL          idx_pub, idx_hid;
     ISK_t           isk;

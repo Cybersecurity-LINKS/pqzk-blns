@@ -19,6 +19,8 @@ TIMING ?= 0
 
 # Set compiler and linker flags
 CC			= g++
+# CFLAGS      = -Wall -pthread -std=gnu++0x -Ofast
+# LNFLAGS      = -lntl -lgmp 
 CFLAGS  	= -Wall -pthread -std=gnu++0x -Ofast
 LNFLAGS  	= -lntl -lgmp 
 
@@ -33,9 +35,8 @@ CFLAGS  	+= -Drestrict=__restrict__ -DENABLE_FALCON -I$(FALCON_PATH)
 LNFLAGS 	+= -L$(FALCON_PATH) -lfalcon
 endif
 
-
-ifeq ($(TIMING),1)
-CFLAGS += -DTIMING
+ifeq ($(ENABLE_TIMING),1)
+CFLAGS += -DENABLE_TIMING
 endif
 
 

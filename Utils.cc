@@ -108,7 +108,6 @@
 
 #endif
 
-
 //==============================================================================
 // GenRandBytes - Generate n random bytes using the cryptographically strong 
 //                pseudo-random number generator from NTL
@@ -169,6 +168,53 @@ zz_pX ModPhi_hat_q(const zz_pX& p)
     return (trunc(p, d_hat) - RightShift(p, d_hat));
 }
 
+
+//==============================================================================
+// MulModPhi_hat - Compute (a * b) mod (x^d_hat + 1) directly,
+//                 without forming the full product first.
+//
+// Assumptions:
+// - deg(a) < d_hat
+// - deg(b) < d_hat
+//
+// Output:
+// - out = a*b mod (x^d_hat + 1)
+//==============================================================================
+void MulModPhi_hat(ZZX& out, const ZZX& a, const ZZX& b)
+{
+    const long da = deg(a);
+    const long db = deg(b);
+
+    out.rep.SetLength(d_hat);
+    clear(out);
+
+    for (long i = 0; i <= da; ++i)
+    {
+        const ZZ& ai = coeff(a, i);
+
+        if (IsZero(ai)) continue;
+
+        for (long j = 0; j <= db; ++j)
+        {
+            const ZZ& bj = coeff(b, j);
+            if (IsZero(bj)) continue;
+
+            const long k = i + j;
+            const ZZ prod = ai * bj;
+
+            if (k < d_hat)
+            {
+                out[k] += prod;
+            }
+            else
+            {
+                out[k - d_hat] -= prod;
+            }
+        }
+    }
+
+    out.normalize();
+}
 
 //==============================================================================
 // OGS_Ortho - Optimized Gram-Schmidt Orthogonalization function.
@@ -600,13 +646,13 @@ zz_pX  poly_mult_hat(const vec_zz_pX& f, const vec_zz_pX& g)
     }
 
     h.SetLength(d_hat);
-
+   
     for(i=0; i<len; i++)
     {
-        h += ModPhi_hat_q( f[i] * g[i] );
+        h +=  f[i] * g[i];
     }
-
-    return h;   
+    
+    return ModPhi_hat_q(h);   
 }
 
 

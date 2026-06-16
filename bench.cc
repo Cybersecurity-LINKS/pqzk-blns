@@ -16,6 +16,7 @@
 #include "Issuer.h"
 #include "Holder.h"
 #include "Verifier.h"
+#include <NTL/BasicThreadPool.h>
 
 #include <fstream>
 #include <numeric> 
@@ -131,6 +132,7 @@ string stats(const vec_D v)
 //=========================================================================================
 int main()
 {
+    SetNumThreads(6);
     zz_p::init(q0); // Initialize modulus q
     
     vec_UL          idx_pub, idx_hid;

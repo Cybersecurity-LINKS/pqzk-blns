@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "Hash.h"
+#include <algorithm>
 
 
 //==============================================================================
@@ -75,6 +76,13 @@ HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state0)
     state->final    = state0->final;
      
     return state;
+}
+
+static inline void Hash_Copy_To(HASH_STATE_t& dst, const HASH_STATE_t& src)
+{
+    std::copy(src.s, src.s + 25, dst.s);
+    dst.pos   = src.pos;
+    dst.final = src.final;
 }
 
 
@@ -165,7 +173,9 @@ void Hash_R_goth(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems)
     unsigned char*  y_arr;
     
     // Compute the minimum number of bytes needed to fill the vector  
-    const long n_bytes = ceil(2*n_elems / 8.0);
+    
+    //const long n_bytes = ceil(2*n_elems / 8.0);
+    const long n_bytes = (n_elems + 3) >> 2;
 
     y_arr = new unsigned char[n_bytes];
 
@@ -422,7 +432,143 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
     // return crs, B_f;    
 }
 
+//==============================================================================
+// Hash_R_goth_sparse_packed
+//
+// Expand pseudorandom bytes from SHAKE128 into one sparse row of R_goth,
+// stored in packed form.
+//
+// Conceptually, the row is a concatenation of m1 polynomial blocks, each of
+// length d_hat. Every coefficient belongs to {-1, 0, +1} and is derived from
+// 2 bits according to the following mapping:
+//
+//   00 ->  0
+//   01 -> +1
+//   10 -> -1
+//   11 ->  0
+//
+// Instead of storing the full dense row, we store only the non-zero
+// coefficients. Each non-zero coefficient is encoded in a single byte:
+//
+//   bit 7     : sign   (1 => +1, 0 => -1)
+//   bits 0..6 : coefficient position inside the current polynomial block
+//
+// The vector out.offsets partitions out.entries into m1 contiguous segments,
+// one for each polynomial block.
+//
+// Inputs:
+// - out   : output sparse packed row
+// - state : SHAKE128 state, updated in place
+// - m1    : number of polynomial blocks in the row
+// - y_arr : temporary buffer that receives the squeezed random bytes
+//
+// Output format:
+// - out.entries : flat array of packed non-zero entries
+// - out.offsets : block boundaries in out.entries
+//
+// Assumption:
+// - d_hat < 128, so the coefficient position fits into 7 bits.
+//==============================================================================
 
+static inline void Hash_R_goth_encoded(
+    R_goth_row_struct_packed& out,
+    HASH_STATE_t* state,
+    const ulong m1,
+    unsigned char* y_arr)
+{
+    // Total number of coefficients in the row:
+    // m1 polynomial blocks, each with d_hat coefficients.
+    const ulong n_elems = m1 * d_hat;
+
+    // Four coefficients are encoded per byte (2 bits each).
+    const ulong n_bytes = (n_elems + 3) >> 2;
+
+    // Fill y_arr with pseudorandom bytes extracted from SHAKE128.
+    _shake128_squeeze(state, y_arr, n_bytes);
+
+    // Reset output containers.
+    out.entries.clear();
+    out.offsets.resize(m1 + 1);
+
+    // Since each coefficient is non-zero with probability about 1/2,
+    // reserve approximately half of n_elems to reduce reallocations.
+    out.entries.reserve(n_elems / 2 + 128);
+
+    // blk = current polynomial block being built
+    // c   = current coefficient index within that block
+    ulong blk = 0;
+    ulong c   = 0;
+
+    // The first polynomial block starts at index 0 in the entries array.
+    out.offsets[0] = 0;
+
+#define STEP_PACKED()                                                           \
+    {                                                                           \
+        /* Decode one coefficient from the 2 least significant bits of curr. */ \
+        /* Mapping: 00 -> 0, 01 -> +1, 10 -> -1, 11 -> 0                     */ \
+        const int val = (curr & 1) - ((curr >> 1) & 1);                         \
+        curr >>= 2;                                                              \
+                                                                                \
+        /* Apply the sigma index mapping*/                                       \
+        /* The first coefficient stays at position 0, while all other         */ \
+        /* positions are reflected to (d_hat - c).                            */ \
+        const uint8_t pos = (c == 0) ? 0 : static_cast<uint8_t>(d_hat - c);     \
+        const bool flip   = (c != 0);                                           \
+                                                                                \
+        /* Store only non-zero coefficients.                                   */ \
+        if (val != 0)                                                           \
+        {                                                                       \
+            /* After the position reflection, the sign may flip depending on   */ \
+            /* whether c != 0.                                                 */ \
+            const bool is_plus = ((val > 0) ^ flip);                            \
+                                                                                \
+            /* Pack sign and position into one byte:                           */ \
+            /*   bit 7     = sign (1 => +1, 0 => -1)                           */ \
+            /*   bits 0..6 = coefficient position                              */ \
+            const uint8_t code = static_cast<uint8_t>(                          \
+                pos | (is_plus ? 0x80u : 0u));                                  \
+                                                                                \
+            out.entries.push_back(code);                                        \
+        }                                                                       \
+                                                                                \
+        /* Advance to the next coefficient inside the current block.           */ \
+        ++c;                                                                    \
+                                                                                \
+        /* Once d_hat coefficients have been processed, move to the next       */ \
+        /* polynomial block and store its starting offset in the flat entries  */ \
+        /* array.                                                              */ \
+        if (c == d_hat)                                                         \
+        {                                                                       \
+            c = 0;                                                              \
+            ++blk;                                                              \
+                                                                                \
+            if (blk <= m1)                                                      \
+                out.offsets[blk] = static_cast<uint16_t>(out.entries.size());   \
+        }                                                                       \
+    }
+
+    // Main decoding loop:
+    // each byte yields 4 coefficients, so the processing is manually unrolled
+    // for lower overhead.
+    for (ulong i = 0; i < n_bytes; ++i)
+    {
+        unsigned char curr = y_arr[i];
+
+        if (blk >= m1) break;
+        STEP_PACKED();
+
+        if (blk >= m1) break;
+        STEP_PACKED();
+
+        if (blk >= m1) break;
+        STEP_PACKED();
+
+        if (blk >= m1) break;
+        STEP_PACKED();
+    }
+
+#undef STEP_PACKED
+}  
 //==============================================================================
 // HCom1   -    H_Com, custom Hash function needed in BLNS for commitment. 
 //              It generates the 1st challenge used in the NIZK proof system.
@@ -448,7 +594,7 @@ void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
     
-    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q1_hat
+    //Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q1_hat
     for(i=0; i<256; i++)
     { 
         Hash_R_goth(R_goth[i], state, m1*d_hat);
@@ -555,6 +701,7 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
     HASH_STATE_t *state;    
     ZZ           norm1_c, c_i;    
     ZZX          c0, c_2k;
+    ZZX          tmp;
         
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(xi0) / 8.0);
@@ -611,7 +758,10 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
         {
             // c_2k *= c0;
             // c_2k = (c_2k * c0) % phi_hat; 
-            c_2k = ModPhi_hat(c_2k * c0);
+            //c_2k = ModPhi_hat(c_2k * c0);
+            MulModPhi_hat(tmp, c_2k, c0);
+            c_2k = tmp;
+
         }
 
         // Compute ||c^(2k)||_1
@@ -666,6 +816,52 @@ void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
 
     // return R_goth;
 }
+
+//==============================================================================
+// HISIS1   -   H_ISIS, custom Hash function needed in BLNS for ISIS. 
+//              It generates the 1st challenge used in the NIZK proof system.
+//
+// Build the 256 sparse packed rows of R_goth used by the ISIS hash layer.
+//
+// Inputs:
+// - state0 : initial hash state
+// - m1     : number of polynomial blocks in each row of R_goth
+//
+// Output:
+// - R_goth : vector of 256 sparse packed rows
+//==============================================================================
+
+void HISIS1_optimized(std::vector<R_goth_row_struct_packed>& R_goth,
+                  const HASH_STATE_t* state0,
+                  const ulong& m1)
+{
+    HASH_STATE_t state;
+    Hash_Copy_To(state, *state0);
+
+    // Domain-separation byte for the HISIS1 expansion.
+    const uint8_t v[1] = {1};
+    Hash_Update(&state, v, 1);
+
+    // Total number of coefficients in one row of R_goth.
+    const ulong n_elems = m1 * d_hat;
+
+    // Each byte encodes 4 coefficients, since each coefficient uses 2 bits.
+    const ulong n_bytes = (n_elems + 3) >> 2;
+
+    // Temporary buffer used to receive squeezed bytes from SHAKE128.
+    std::vector<unsigned char> buf(n_bytes);
+
+    // Ensure the output vector contains exactly 256 rows.
+    //R_goth.resize(256);
+
+    // Build each row independently.
+    for (ulong r = 0; r < 256; ++r)
+    {
+        Hash_R_goth_encoded(R_goth[r], &state, m1, buf.data());
+    }
+}
+
+
 
 
 //==============================================================================
@@ -764,7 +960,9 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
     long         i;
     HASH_STATE_t *state;    
     ZZ           norm1_c, c_i;
-    ZZX          c0, c_2k;
+    ZZX          c0, c_2k, tmp;
+
+    //c_2k.SetMaxLength(d_hat);
         
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(xi0) / 8.0);
@@ -786,6 +984,7 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
     // i.e.  ||c^(2k)||_1 ≤ (nu0)^(2k)
     while(norm1_c > nu0_2k)
     {
+        
         // Random generation of c ∈ R^_(xi0+1)
         Hash_ZZ_xi0(c_i, state, b_coeffs);
         // NOTE: generate each coefficient c[i] ∈ [0, xi0], to ensure ||c||∞ ≤ ξ
@@ -807,21 +1006,22 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
         c0.normalize();
 
         c = conv<zz_pX>(c0);
-        
-        // NOTE: avoid (rare) cases with c == 0
-        if (IsZero(c))
+
+        if (IsZero(c0))
         {
             continue;
         }
         
         // c_2k = power(c, (2*k0));
         c_2k = c0;
-
+        // double t = GetWallTime();
         for(i=0; i<(2*k0 - 1); i++)
         {
             // c_2k *= c0;
             // c_2k = (c_2k * c0) % phi_hat; 
-            c_2k = ModPhi_hat(c_2k * c0);
+            //c_2k = ModPhi_hat(c_2k * c0);
+            MulModPhi_hat(tmp, c_2k, c0);
+            c_2k = tmp;
         }
 
         // Compute ||c^(2k)||_1
