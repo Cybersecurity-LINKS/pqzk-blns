@@ -21,7 +21,7 @@ TIMING ?= 0
 CC			= g++
 # CFLAGS      = -Wall -pthread -std=gnu++0x -Ofast
 # LNFLAGS      = -lntl -lgmp 
-CFLAGS  	= -Wall -pthread -std=gnu++0x -Ofast
+CFLAGS  	= -Wall -pthread -std=gnu++0x -Ofast -O3 -march=native -fno-rtti -funroll-loops
 LNFLAGS  	= -lntl -lgmp 
 
 # If necessary, set Falcon library location and flags
@@ -35,8 +35,12 @@ CFLAGS  	+= -Drestrict=__restrict__ -DENABLE_FALCON -I$(FALCON_PATH)
 LNFLAGS 	+= -L$(FALCON_PATH) -lfalcon
 endif
 
-ifeq ($(ENABLE_TIMING),1)
-CFLAGS += -DENABLE_TIMING
+ifeq ($(ENABLE_TIMING_VERIFY),1)
+CFLAGS += -DENABLE_TIMING_VERIFY
+endif
+
+ifeq ($(ENABLE_TIMING_PROVE),1)
+CFLAGS += -DENABLE_TIMING_PROVE
 endif
 
 

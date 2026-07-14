@@ -13,8 +13,6 @@
 // limitations under the License.
 
 #include "Hash.h"
-#include <algorithm>
-
 
 //==============================================================================
 // Hash_Init  - Initialize the Custom Hash function, implemented using SHAKE128
@@ -469,8 +467,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
 // Assumption:
 // - d_hat < 128, so the coefficient position fits into 7 bits.
 //==============================================================================
-
-static inline void Hash_R_goth_encoded(
+void Hash_Sigma_R_goth_encoded(
     R_goth_row_struct_packed& out,
     HASH_STATE_t* state,
     const ulong m1,
@@ -569,6 +566,8 @@ static inline void Hash_R_goth_encoded(
 
 #undef STEP_PACKED
 }  
+
+
 //==============================================================================
 // HCom1   -    H_Com, custom Hash function needed in BLNS for commitment. 
 //              It generates the 1st challenge used in the NIZK proof system.
@@ -857,7 +856,7 @@ void HISIS1_optimized(std::vector<R_goth_row_struct_packed>& R_goth,
     // Build each row independently.
     for (ulong r = 0; r < 256; ++r)
     {
-        Hash_R_goth_encoded(R_goth[r], &state, m1, buf.data());
+        Hash_Sigma_R_goth_encoded(R_goth[r], &state, m1, buf.data());
     }
 }
 
