@@ -85,19 +85,6 @@ double      Norm2D(        const vec_D&   v );
 
 double      InnerProdD(    const vec_D& a, const vec_D& b );
 
-typedef void (*BenchFn)(void*);
-
-void benchmark_two(
-    const char* old_name,
-    BenchFn old_fn,
-    void* old_ctx,
-    const char* new_name,
-    BenchFn new_fn,
-    void* new_ctx,
-    int runs,
-    int warmup
-);
-
 vec_UL      Compute_idx_hid(const vec_UL& idx_pub);
 
 string      Get_timestamp(const bool print_timestamp);
