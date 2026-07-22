@@ -55,7 +55,9 @@ ZZX         ModPhi(const ZZX& p);
 zz_pX       ModPhi_q(const zz_pX& p);
 ZZX         ModPhi_hat(const ZZX& p);
 zz_pX       ModPhi_hat_q(const zz_pX& p);
-void        MulModPhi_hat(ZZX& out, const ZZX& a, const ZZX& b);
+void        ModPhi_hat_q_inplace(zz_pX& x);
+
+void        PowerOfTwo_ModPhi_hat(ZZX& out, const ZZX& base, long exponent);
 
 void        OGS_Ortho( mat_D&  Bt, vec_D&  Norms2, const mat_L& B ); 
 
@@ -71,10 +73,12 @@ void        CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const ulong& l);
 
 void        sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_map_opt(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
+void        sigma_map_opt_no_alloc(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
+void        sigma_poly(zz_pX& N, const zz_pX& M, const ulong& d);
 
 zz_pX       poly_mult(     const vec_zz_pX& f, const vec_zz_pX& g );
 zz_pX       poly_mult_hat( const vec_zz_pX& f, const vec_zz_pX& g );
-
+void        poly_mult_hat_opt_to(zz_pX& out,const vec_zz_pX& f,const vec_zz_pX& g, zz_pX& scratch);
 zz_pX       Compute_f(     const mat_zz_p& B_f, const ZZ& x );
 
 ZZ          Norm2(         const vec_ZZ&  v );

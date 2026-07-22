@@ -168,52 +168,50 @@ zz_pX ModPhi_hat_q(const zz_pX& p)
     return (trunc(p, d_hat) - RightShift(p, d_hat));
 }
 
-//==============================================================================
-// MulModPhi_hat - Compute (a * b) mod (x^d_hat + 1) directly,
-//                 without forming the full product first.
-//
-// Assumptions:
-// - deg(a) < d_hat
-// - deg(b) < d_hat
-//
-// Output:
-// - out = a*b mod (x^d_hat + 1)
-//==============================================================================
-void MulModPhi_hat(ZZX& out, const ZZX& a, const ZZX& b)
+void ModPhi_hat_q_inplace(zz_pX& x)
 {
-    const long da = deg(a);
-    const long db = deg(b);
+    ulong j;
+    const ulong len = x.rep.length();
 
-    out.rep.SetLength(d_hat);
-    clear(out);
-
-    for (long i = 0; i <= da; ++i)
+    if (len <= d_hat)
     {
-        const ZZ& ai = coeff(a, i);
-
-        if (IsZero(ai)) continue;
-
-        for (long j = 0; j <= db; ++j)
-        {
-            const ZZ& bj = coeff(b, j);
-            if (IsZero(bj)) continue;
-
-            const long k = i + j;
-            const ZZ prod = ai * bj;
-
-            if (k < d_hat)
-            {
-                out[k] += prod;
-            }
-            else
-            {
-                out[k - d_hat] -= prod;
-            }
-        }
+        x.normalize();
+        return;
     }
 
-    out.normalize();
+    // Assumption: len <= 2*d_hat in the hot path.
+    // Reduction modulo X^d_hat + 1:
+    // x[j - d_hat] -= x[j] for j >= d_hat.
+    for (j = d_hat; j < len; ++j)
+    {
+        x.rep[j - d_hat] -= x.rep[j];
+    }
+
+    x.rep.SetLength(d_hat);
+    x.normalize();
 }
+
+void PowerOfTwo_ModPhi_hat(
+    ZZX& out,
+    const ZZX& base,
+    long exponent)
+{
+    assert(exponent > 0);
+    assert((exponent & (exponent - 1)) == 0);
+
+    out = base;
+
+    ZZX squared;
+
+    while (exponent > 1)
+    {
+        sqr(squared, out);
+        out = ModPhi_hat(squared);
+
+        exponent >>= 1;
+    }
+}
+
 
 //==============================================================================
 // OGS_Ortho - Optimized Gram-Schmidt Orthogonalization function.
@@ -622,6 +620,56 @@ void sigma_map_opt(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d)
     // return N;
 }
 
+void sigma_map_opt_no_alloc(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d)
+{    
+    ulong i, j, len;
+  
+    len = M.length();  
+
+    for(i=0; i<len; i++)
+    {
+        N[i][0] = M[i][0];
+
+        for(j=1; j<d; j++) // NOTE: j starts from 1 (not 0)
+        {            
+            N[i][d - j] = -M[i][j];
+        }        
+    }
+
+    // return N;
+}
+
+void sigma_poly(zz_pX& N, const zz_pX& M, const ulong& d)
+{    
+    ulong j;
+
+    N.SetLength(d);
+
+    N[0] = M[0];
+
+    for(j=1; j<d; j++) // NOTE: j starts from 1 (not 0)
+    {            
+        N[d - j] = -M[j];
+    }   
+
+    N.normalize();    
+    // return N;
+}
+
+void sigma_poly_no_alloc(zz_pX& N, const zz_pX& M, const ulong& d)
+{    
+    ulong j;
+
+    N[0] = M[0];
+
+    for(j=1; j<d; j++) // NOTE: j starts from 1 (not 0)
+    {            
+        N[d - j] = -M[j];
+    }   
+
+    N.normalize();    
+    // return N;
+}
 
 //=====================================================================================
 // poly_mult  -  scalar product between two vectors of polynomials of length d0.
@@ -643,10 +691,11 @@ zz_pX  poly_mult(const vec_zz_pX& f, const vec_zz_pX& g)
 
     for(i=0; i<len; i++)
     {
-        h += ModPhi_q( f[i] * g[i]);
+        h +=  f[i] * g[i];
     }
 
-    return h;   
+    return ModPhi_q(h);  
+    
 }
 
 
@@ -667,13 +716,76 @@ zz_pX  poly_mult_hat(const vec_zz_pX& f, const vec_zz_pX& g)
     }
 
     h.SetLength(d_hat);
-   
+
     for(i=0; i<len; i++)
     {
         h +=  f[i] * g[i];
     }
     
     return ModPhi_hat_q(h);   
+}
+
+
+void poly_mult_hat_opt_to(zz_pX& out,
+                          const vec_zz_pX& f,
+                          const vec_zz_pX& g,
+                          zz_pX& scratch)
+{
+    assert(&out != &scratch);
+    const long len = f.length();
+
+    assert(len == g.length());
+    assert(len > 0);
+
+    mul(out, f[0], g[0]);
+
+    for (long i = 1; i < len; i++)
+    {
+        mul(scratch, f[i], g[i]);
+        add(out, out, scratch);
+    }
+
+    ModPhi_hat_q_inplace(out);
+}
+
+static inline void add_negacyclic_shift(
+    zz_pX& out,
+    const zz_pX& a,
+    const long shift,
+    const bool plus)
+{
+    const long da = deg(a);
+
+    if (da < 0)
+        return;
+
+    for (long t = 0; t <= da; ++t)
+    {
+        const zz_p ai = coeff(a, t);
+
+        if (IsZero(ai))
+            continue;
+
+        long pos = t + shift;
+
+        if (pos < d_hat)
+        {
+            if (plus)
+                out[pos] += ai;
+            else
+                out[pos] -= ai;
+        }
+        else
+        {
+            pos -= d_hat;
+
+            // x^d_hat = -1
+            if (plus)
+                out[pos] -= ai;
+            else
+                out[pos] += ai;
+        }
+    }
 }
 
 

@@ -28,8 +28,10 @@ typedef  shake128_state_t      HASH_STATE_t;
 
 
 HASH_STATE_t* Hash_Init(const uint8_t* v, const size_t len);
+void Hash_Init_To(HASH_STATE_t& state, const uint8_t* v, const size_t len);
 void Hash_Update(HASH_STATE_t *state, const uint8_t* v, const size_t len);
 HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state0);
+void Hash_Copy_To(HASH_STATE_t& dst, const HASH_STATE_t& src);
 
 void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, const size_t& b_coeffs);
 void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, const size_t& b_num);
