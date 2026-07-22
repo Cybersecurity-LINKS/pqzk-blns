@@ -31,7 +31,8 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, uint8_t* seed_crs, Vec<string>& attrs, c
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     ulong       i;
-    string      randomStr;
+    // string   randomStr;
+    Vec<string> templ;
 
     // Initialize a 32 byte (256 bit) public seed for common random string (crs) structure,
     // using the cryptographically strong pseudo-random number generator from NTL
@@ -42,15 +43,39 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, uint8_t* seed_crs, Vec<string>& attrs, c
     // NOTE: crs contains 3D uniformly random matrices mod q_hat,
     //       B_f is also generated from seed_crs
 
-    // Initialize dummy attributes
-    attrs.SetLength(l0);
-    randomStr = to_string( RandomBnd(12345678) );
+    
+    // Initialize attributes from a template, for testing purposes
+    templ.SetLength(18);
+    templ[0]  = "did:web:docker%3a49000:.well-known:did_zk.json";
+    templ[1]  = "did:jwk:eyJrdHkiOiJPS1AiLCJhbGciOiJFZERTQSIsImNydiI6IkVkMjU1MTkiLCJ4IjoiZEZpbXVrZUo5LTAwS19xaTQ5eDhZeGdKcmZJWXRsMUtkaFJZcjNhdXRMdyJ9";
+    templ[2]  = "1804772082";
+    templ[3]  = "1773149682";
+    templ[4]  = "did:web:docker%3a49000:.well-known:did_zk.json/vc/4186";
+    templ[5]  = "https://www.w3.org/2018/credentials/v1";
+    templ[6]  = "VerifiableCredential";
+    templ[7]  = "1990-09-22";
+    templ[8]  = "Master";
+    templ[9]  = "Male";
+    templ[10] = "John";
+    templ[11] = "Engineer";
+    templ[12] = "Doe";
+    templ[13] = "did:web:docker%3a49000:.well-known:did_zk.json#my-revocation-service";
+    templ[14] = "RevocationTimeframe2024";
+    templ[15] = "2026-03-11T13:35:42Z";
+    templ[16] = "4186";
+    templ[17] = "2026-03-11T13:34:42Z";
 
+    attrs.SetLength(l0);
+    
     for(i=0; i<l0; i++)
     {
-        attrs[i] = to_string(i+1) + "-" + randomStr;
-        // NOTE: dummy attributes (l0 = 8)
+        attrs[i] = templ[i];
     }
+
+    attrs[2]  = to_string( RandomBnd(1999999999) );
+    attrs[3]  = to_string( RandomBnd(1999999999) );
+    attrs[IDX_TIMESTAMP] = Get_timestamp(0);
+    // cout << attrs << endl;
 
     // return(crs, B_f, seed_crs, attrs)        
 }

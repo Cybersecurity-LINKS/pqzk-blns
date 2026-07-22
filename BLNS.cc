@@ -18,7 +18,6 @@
 #include "Verifier.h"
 
 
-
 //=========================================================================================
 // Main - Implementation of the framework for Post-Quantum Anonymous Verifiable Credentials 
 //        defined by Bootle, Lyubashevsky, Nguyen, and Sorniotti (BLNS) in:
@@ -40,12 +39,12 @@ int main()
     long            iter, N, valid;
     double          t1, t2, ta, tb;  
 
-    idx_pub = conv<vec_UL>("[4 5 6 7]");    // Indexes of disclosed attributes (revealed, i.e. idx)
+    idx_pub = conv<vec_UL>("[0 5 6 13 14 15]");    // Indexes of disclosed attributes (revealed, i.e. idx)
     idx_hid = Compute_idx_hid(idx_pub);     // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    N = 1; //1000;  // Number of iterations, for demonstration purposes
+    N = 100; //1000;  // Number of iterations, for demonstration purposes
     
     for(iter=1; iter<=N; iter++)
     {
@@ -183,6 +182,8 @@ int main()
             // WAIT 5 seconds for demonstration purposes
             cout << "  Sleep for 5 s" << endl;
             sleep(5);
+        
+        #endif
 
 
             cout << "\n=====================================================================\n";
@@ -236,20 +237,22 @@ int main()
             }   
             assert(valid == 1);
 
-            if (iter<N)
-            {
-                // WAIT 5 seconds for demonstration purposes
-                cout << "\n  Sleep for 5 s" << endl;
-                sleep(5);
-            }
+            #ifdef USE_REVOCATION
+                if (iter<N)
+                {
+                    // WAIT 5 seconds for demonstration purposes
+                    cout << "\n  Sleep for 5 s" << endl;
+                    sleep(5);
+                }
+            #endif
 
-        #else
+        // #else
        
             double t3 = GetWallTime();
             cout << "\n=====================================================================\n";
             cout << "  TOT time: " << (t3 - t1) << " s  (" << (t3 - t2) << " s)" << endl;
 
-        #endif
+        // #endif
         
         // Free up memory
         delete[] ipk;
