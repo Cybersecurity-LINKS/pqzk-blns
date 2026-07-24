@@ -359,7 +359,8 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
     // Rho2_bytes+= len_x;
 
     // Free the vector with serialized structure ρ_2
-    delete[] (*Rho2_ptr);
+    delete[] *Rho2_ptr;
+    *Rho2_ptr = nullptr;
 
 
     // 4. s ← [Coeffs^(−1)(s_0) | w],   s ∈ R^(m+2)
@@ -783,7 +784,8 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
     // Rho_bytes+= len_r;
 
     // Free the vector with serialized structure ρ
-    delete[] (*Rho_ptr);
+    delete[] *Rho_ptr;
+    *Rho_ptr = nullptr;
 
     
     // 3. (a_1, ... , a_l) ← attrs,  a_i ∈ {0, 1}∗

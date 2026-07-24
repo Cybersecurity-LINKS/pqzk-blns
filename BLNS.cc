@@ -30,13 +30,13 @@ int main()
     
     vec_UL          idx_pub, idx_hid;
     ISK_t           isk;
-    uint8_t        *ipk;
+    uint8_t        *ipk = nullptr;
     uint8_t         seed_crs[SEED_LEN], nonce[NONCE_LEN];
     Vec<string>     attrs;
     mat_zz_p        B_f;
     CRS2_t          crs;
     CRED_t          cred;
-    VP_t            VP;
+    VP_t            VP{};
     long            iter, N, valid;
     double          t1, t2, ta, tb;  
 
@@ -71,7 +71,7 @@ int main()
             cout << "  ISSUING PROTOCOL  --  Issuer Signature" << endl;
             cout << "=====================================================================" << endl;
 
-            uint8_t        *Rho;
+            uint8_t        *Rho = nullptr;
             
             ta = GetWallTime();
             cout << "\n- Issuer.VerCred_Plain  (sign plaintext attributes)" << endl;
@@ -83,7 +83,8 @@ int main()
             cout << "\n- Holder.VerCred_Plain  (verify signature and store VC)" << endl;
             ta = GetWallTime();        
             H_VerCred_Plain(cred, ipk, B_f, &Rho, attrs);
-            tb = GetWallTime();        
+            tb = GetWallTime();   
+      
             cout << "  CPU time: " << (tb - ta) << " s" << endl;
             assert(cred.valid);
             
@@ -97,7 +98,7 @@ int main()
 
             Vec<string>     attrs_prime;
             RHO1_t          Rho1;
-            uint8_t        *Rho2;
+            uint8_t        *Rho2 = nullptr;
             STATE_t         state;
 
             ta = GetWallTime();
@@ -150,7 +151,10 @@ int main()
         ta = GetWallTime();
         cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
         valid = V_Verify(VP, nonce, seed_crs, crs, B_f, idx_pub);
-        tb = GetWallTime();        
+        tb = GetWallTime();
+
+        delete[] VP.Pi;
+        VP.Pi = nullptr;
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
 
         if (valid)
@@ -176,7 +180,10 @@ int main()
             
             cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
             valid = V_Verify(VP, nonce, seed_crs, crs, B_f, idx_pub);
-            
+
+            delete[] VP.Pi;
+            VP.Pi = nullptr;
+
             // cout << "\n  Credential EXPIRED!" << endl;
             assert(valid == 0);
 
@@ -189,12 +196,12 @@ int main()
             cout << "  UPDATE CREDENTIAL" << endl;
             cout << "=====================================================================\n";
 
-            uint8_t *u;
+            uint8_t *u = nullptr;
             string  old_timestamp, new_timestamp;
 
             #ifdef USE_ISSUER_SIGNATURE
 
-                uint8_t        *Rho2;
+                uint8_t        *Rho2 = nullptr;
                 STATE_t         state;
 
                 cout << "\n- Holder.ReqUpd_Plain   (request an updated signature)" << endl;
@@ -211,7 +218,7 @@ int main()
                 
             cout << "\n- Issuer.UpdateSign     (update signature)" << endl;
             I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
-            
+
             cout << "\n- Holder.VerCred2       (check signature and store credential)" << endl;
             H_VerCred2(cred, ipk, B_f, &Rho2, state);
             assert(cred.valid);
@@ -229,6 +236,8 @@ int main()
             
             cout << "\n- Verifier.Verify       (verify proof and authorize)" << endl;
             valid = V_Verify(VP, nonce, seed_crs, crs, B_f, idx_pub);
+            delete[] VP.Pi;
+            VP.Pi = nullptr;
 
             if (valid)
             {
@@ -253,6 +262,7 @@ int main()
         
         // Free up memory
         delete[] ipk;
+        ipk = nullptr;
     }
 
     return 0;
