@@ -149,10 +149,10 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     vec_zz_pX       g;
     zz_p            acc_coeff, product_scalar;
     vec_zz_pX       A_hat_mu, B_hat_mu, C_hat_mu, L_hat_mu;
-    // vec_zz_pX       c_r_j, p_j, Beta_j, r_j, h_part1, h_part2, d_1, D2_y;
+    // vec_zz_pX       c_r_j, p_j, Beta_j, r_j, h_part1, h_part2, d_1, D2_y, s_2;
     vec_zz_pX       mu, tmp_vec, y;
     vec_zz_pX       sigma_s_1, acc_vec, sigma_y_1;
-    vec_zz_pX       s, r, u, s_1, s_2, y_1, y_2, y_3, c_s1, c_s2;
+    vec_zz_pX       s, r, u, s_1, y_1, y_2, y_3, c_s1, c_s2;
     zz_pX           b_s2, b_y2, mu_y_acc, product_poly, scratch_poly, c, y3y0, y4y1, y5y2, s3y0, s4y1, s5y2, y3s0, y4s1, y5s2;
     // zz_pX           h_part3, h_part4, h_part5;
     zz_pX           quad_s, quad_r, quad_u, acc, delta_1, delta_2, delta_3, f1;
@@ -247,7 +247,8 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     const double s2_goth_d = conv<double>(s2_goth);
     const double s3_goth_d = conv<double>(s3_goth);
     // const uint tau_folded = tau_ISIS / 2;
-    std::vector<R_goth_row_struct_packed> R_goth(256);
+    vector<TernaryCoeffStructure> R_goth(256);
+    TernaryCoeffStructure s2_raw;
 
     // 4. (s0, r0, u0) ← w0
     // s0 = w0[0];  // s0 ∈ Z^((m+2)·d)
@@ -367,7 +368,6 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     #endif
     A1_s1.SetLength(n);
     b3 = 0;
-    s_2.SetLength(m2);
     y_3.SetLength(n256);
     Pi.t_y.SetLength(n256);
     Pi.t_A.SetLength(n);
@@ -377,10 +377,6 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     {
         poly_mult_hat_opt_to(A1_s1[i], crs[0][i], s_1, scratch_poly);
     }
-    for (i = 0; i < m2; ++i)
-    {
-        s_2[i].SetLength(d_hat);
-    }
     // 11. while (b3 == 0 ∧ idx < N) do
     while((b3 == 0) && (idx < N1))
     {
@@ -389,19 +385,30 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         // cout << "idx = " << idx << endl;
 
         // 13. Random generation of s_2 ∈ R^^(m2)_(q_hat)
-        for(i=0; i<m2; i++)
-        {
-            for(j=0; j<d_hat; j++)
-            {
-                s_2[i][j] = conv<zz_p>( RandomBnd(3) - 1 ) ;
-                // NOTE: uniform distribution on ternary polynomials chi, that sample coeffs from {-1,0,1} mod q2_hat
-            }
-        }
+
+        
+        sample_s2_dense_and_packed(
+            s2_raw,
+            m2,
+            d_hat
+        );
 
         // 14. t_A = A_1*s_1 + A_2*s_2,  t_A ∈ R^^(n)_(q_hat)
-        for(i=0; i<n; i++)
+        // for(i=0; i<n; i++)
+        // {
+        //     poly_mult_hat_opt_to(Pi.t_A[i], crs[1][i], s_2, scratch_poly);
+        //     add(Pi.t_A[i], Pi.t_A[i], A1_s1[i]);
+        // }
+
+        for (i = 0; i < n; ++i)
         {
-            poly_mult_hat_opt_to(Pi.t_A[i], crs[1][i], s_2, scratch_poly);
+            ternary_poly_inner_product_to(
+                Pi.t_A[i],
+                crs[1][i],
+                s2_raw,
+                d_hat
+            );
+
             add(Pi.t_A[i], Pi.t_A[i], A1_s1[i]);
         }
 
@@ -412,10 +419,21 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         }
 
         // 16. t_y = B_y*s2 + y3,  t_y ∈ R^^(256/d_hat)_(q_hat)
-        for(i=0; i<n256; i++)
+        // for(i=0; i<n256; i++)
+        // {
+        //     poly_mult_hat_opt_to(Pi.t_y[i], crs[2][i], s_2, scratch_poly);
+        //     add(Pi.t_y[i], Pi.t_y[i], y_3[i] );
+        // }
+        for (i = 0; i < n256; ++i)
         {
-            poly_mult_hat_opt_to(Pi.t_y[i], crs[2][i], s_2, scratch_poly);
-            add(Pi.t_y[i], Pi.t_y[i], y_3[i] );
+            ternary_poly_inner_product_to(
+                Pi.t_y[i],
+                crs[2][i],
+                s2_raw,
+                d_hat
+            );
+
+            add(Pi.t_y[i], Pi.t_y[i], y_3[i]);
         }
 
         // 17. a_1 ← (t_A, t_y)
@@ -459,47 +477,20 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         #ifdef ENABLE_TIMING_PROVE
         double t__3 = GetWallTime();
         #endif
-        for(i = 0; i < 256; i++)
+        for (i = 0; i < 256; i++)
         {
-            clear(acc_coeff);
-
-            const R_goth_row_struct_packed& row = R_goth[i];
-
-            const uint8_t* entries = row.entries.data();
-            const uint16_t* offs   = row.offsets.data();
-
-            for(k = 0; k < m1; k++)
-            {
-                const ulong base = k * d_hat;
-
-                const uint16_t begin = offs[k];
-                const uint16_t end   = offs[k + 1];
-
-                for(uint16_t u = begin; u < end; u++)
-                {
-                    const uint8_t enc = entries[u];
-
-                    const uint8_t sigma_pos  = enc & 0x7Fu;
-                    const uint8_t sigma_sign = enc >> 7;
-
-                    const uint8_t nz = static_cast<uint8_t>(sigma_pos != 0);
-
-                    const ulong raw_pos =
-                        static_cast<ulong>(nz) * static_cast<ulong>(d_hat - sigma_pos);
-
-                    const uint8_t raw_sign = sigma_sign ^ nz;
-                    const zz_p& x = coeffs_s1[base + raw_pos];
-
-                    const zz_p neg_x = -x;
-                    const zz_p vals[2] = { neg_x, x };
-
-                    acc_coeff += vals[raw_sign];
-                }
-            }
+            ternary_sigma_dot_raw_coeffs(
+                acc_coeff,
+                R_goth[i],
+                coeffs_s1,
+                m1,
+                d_hat
+            );
 
             coeffs_R_goth_mult_s1[i] = acc_coeff;
             Pi.z_3[i] = coeffs_y3[i] + acc_coeff;
         }
+
         #ifdef ENABLE_TIMING_PROVE
         double t__4 = GetWallTime();
         cout << "Pi.z_3 loop: " << t__4-t__3 << endl;
@@ -533,10 +524,22 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     // 24. t_g = B_g*s2 + g,  t_g ∈ R^^(tau)_(q_hat)
     Pi.t_g.SetLength(tau_ISIS);
 
-    for(i=0; i<tau_ISIS; i++)
+    // for(i=0; i<tau_ISIS; i++)
+    // {
+    //     poly_mult_hat_opt_to(Pi.t_g[i], crs[3][i], s_2, scratch_poly);
+    //     add(Pi.t_g[i], Pi.t_g[i], g[i] );
+    // }
+
+    for (i = 0; i < tau_ISIS; ++i)
     {
-        poly_mult_hat_opt_to(Pi.t_g[i], crs[3][i], s_2, scratch_poly);
-        add(Pi.t_g[i], Pi.t_g[i], g[i] );
+        ternary_poly_inner_product_to(
+            Pi.t_g[i],
+            crs[3][i],
+            s2_raw,
+            d_hat
+        );
+
+        add(Pi.t_g[i], Pi.t_g[i], g[i]);
     }
 
     // 25. a_2 ← (z_3, t_g)
@@ -612,64 +615,17 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
             C_hat[i][k].SetLength(d_hat);
             abc_reps[p++] = C_hat[i][k].rep.elts();
         }
-        // -------------------------------------------------------------------------
-        // R_goth[j] is stored in this format:
-        //
-        //   - row.entries contains all non-zero coefficients of row j
-        //   - row.offsets divides entries into contiguous ranges, one per block
-        //
-        // Each packed entry is one byte:
-        //
-        //   bit 7     : sign   (1 => +1, 0 => -1)
-        //   bits 0..6 : position inside the polynomial block
-        //
-        // For each non-zero entry we decode:
-        //
-        //   pos  = code & 0x7F (number 01111111)
-        //   sign = code >> 7
-        //
-        // and apply either +g or -g to the corresponding coefficient.
-        // -------------------------------------------------------------------------
+
+        assert(p == m1);
+        
         for (j = 0; j < 256; ++j)
         {
-            const zz_p& g = gamma[i][j];
-
-            // Precompute both possible signed values once per (i, j):
-            //   coeff[0] = -g
-            //   coeff[1] = +g
-            //
-            // This allows branch-free sign handling inside the innermost loop.
-            const zz_p neg_g = -g;
-            const zz_p coeff[2] = { neg_g, g };
-
-            const R_goth_row_struct_packed& row = R_goth[j];
-            const uint8_t* entries = row.entries.data();
-            const uint16_t* offs   = row.offsets.data();
-
-            // Iterate over all polynomial blocks
-            for ( k = 0; k < m1; ++k)
-            {
-                zz_p* rep = abc_reps[k];
-
-                // entries[begin ... end-1] are the non-zero coefficients
-                // belonging to the current polynomial block blk.
-                const uint16_t begin = offs[k];
-                const uint16_t end   = offs[k + 1];
-
-                for ( uint16_t u = begin; u < end; ++u)
-                {
-                    const uint8_t encoded = entries[u];
-
-                    // Packed byte layout:
-                    //   bit 7     = sign (1 => +g, 0 => -g)
-                    //   bits 0 to 6 = coefficient position
-                    const uint8_t pos  = encoded & 0x7Fu;
-                    const uint8_t sign = encoded >> 7;
-
-                    // Add the signed gamma contribution to the target coefficient.
-                    rep[pos] += coeff[sign];
-                }
-            }
+            ternary_sigma_accumulate_gamma(
+                R_goth[j],
+                gamma[i][j],
+                abc_reps,
+                m1
+            );
         }
     }
 
@@ -1047,7 +1003,13 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         add(delta_3, delta_3, product_poly);
     }
 
-    poly_mult_hat_opt_to(b_s2, crs[4][0], s_2, product_poly);
+    ternary_poly_inner_product_to(
+        b_s2,
+        crs[4][0],
+        s2_raw,
+        d_hat
+    );
+
     y_1.SetLength(m1);
     y_2.SetLength(m2);
     y.SetLength( n256 + tau_ISIS );
@@ -1304,11 +1266,17 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
             continue;
         }
 
-        for(i=0; i<m2; i++)
+        for (i = 0; i < m2; ++i)
         {
-            mul(c_s2[i], c, s_2[i]);
-            ModPhi_hat_q_inplace(c_s2[i]);
-            add(Pi.z_2[i], c_s2[i] , y_2[i] );
+            ternary_poly_mul_to(
+                c_s2[i],
+                c,
+                s2_raw,
+                static_cast<long>(i),
+                d_hat
+            );
+
+            add(Pi.z_2[i], c_s2[i], y_2[i]);
         }
 
         b2 = Rej_v_zzpX(Pi.z_2, c_s2, q2_hat, s2_goth, M_2);
@@ -1580,7 +1548,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     #ifdef ENABLE_TIMING_VERIFY
     double tHISIS1_i = GetWallTime();
     #endif
-    std::vector<R_goth_row_struct_packed> R_goth(256);
+    std::vector<TernaryCoeffStructure> R_goth(256);
     HISIS1_optimized(R_goth, &state, m1);
     #ifdef ENABLE_TIMING_VERIFY
     double tHISIS1_e = GetWallTime();
@@ -1751,64 +1719,17 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
             C_hat[i][k].SetLength(d_hat);
             abc_reps[p++] = C_hat[i][k].rep.elts();
         }
-        // -------------------------------------------------------------------------
-        // R_goth[j] is stored in this format:
-        //
-        //   - row.entries contains all non-zero coefficients of row j
-        //   - row.offsets partitions entries into contiguous ranges, one per block
-        //
-        // Each packed entry is one byte:
-        //
-        //   bit 7     : sign   (1 => +1, 0 => -1)
-        //   bits 0..6 : position inside the polynomial block
-        //
-        // For each non-zero entry we decode:
-        //
-        //   pos  = code & 0x7F (number 01111111)
-        //   sign = code >> 7
-        //
-        // and apply either +g or -g to the corresponding coefficient.
-        // -------------------------------------------------------------------------
+
+        assert(p == m1);
+
         for (j = 0; j < 256; ++j)
         {
-            const zz_p& g = gamma[i][j];
-
-            // Precompute both possible signed values once per (i, j):
-            //   coeff[0] = -g
-            //   coeff[1] = +g
-            //
-            // This allows branch-free sign handling inside the innermost loop.
-            const zz_p neg_g = -g;
-            const zz_p coeff[2] = { neg_g, g };
-
-            const R_goth_row_struct_packed& row = R_goth[j];
-            const uint8_t* entries = row.entries.data();
-            const uint16_t* poly_offs   = row.offsets.data();
-
-            // Iterate over all polynomial blocks
-            for ( k = 0; k < m1; ++k)
-            {
-                zz_p* rep = abc_reps[k];
-
-                // entries[begin ... end-1] are the non-zero coefficients
-                // belonging to the current polynomial block blk.
-                const uint16_t begin = poly_offs[k];
-                const uint16_t end   = poly_offs[k + 1];
-
-                for ( uint16_t u = begin; u < end; ++u)
-                {
-                    const uint8_t encoded = entries[u];
-
-                    // Packed byte layout:
-                    //   bit 7     = sign (1 => +g, 0 => -g)
-                    //   bits 0 to 6 = coefficient position
-                    const uint8_t pos  = encoded & 0x7Fu;
-                    const uint8_t sign = encoded >> 7;
-
-                    // Add the signed gamma contribution to the target coefficient.
-                    rep[pos] += coeff[sign];
-                }
-            }
+            ternary_sigma_accumulate_gamma(
+                R_goth[j],
+                gamma[i][j],
+                abc_reps,
+                m1
+            );
         }
     }
 
