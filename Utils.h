@@ -14,30 +14,10 @@
 
 #ifndef BLNS_UTILS_H
 #define BLNS_UTILS_H
-#include <vector>
-#include <cstdint>
 
 #include "params.h"
+#include "Ternary.h"
 
-// Sparse representation of one row of R_goth.
-//
-// entries:
-//   flat array containing all non-zero coefficients of the row.
-//   Each byte packs:
-//     - bit 7     : sign   (1 => +1, 0 => -1)
-//     - bits 0..6 : coefficient position inside the polynomial block
-//
-// offsets:
-//   offsets[k] .. offsets[k+1]-1 is the range of entries belonging to
-//   polynomial block k.
-//
-// Assumption:
-//   d_hat < 128, so the coefficient position fits into 7 bits.
-struct R_goth_row_struct_packed
-{
-    std::vector<uint8_t> entries;   // [sign | pos]
-    std::vector<uint16_t> offsets;
-};
 
 #ifdef ENABLE_FALCON
     ZZX         int8ArrayToZZX(const vector<int8_t>& vec);
@@ -70,6 +50,17 @@ void        CoeffsInv(vec_zz_pX& x, const vec_zz_p& c, const ulong& l);
 void        CoeffsInvX(vec_ZZX& x, const vec_ZZ& c, const ulong& l);
 void        CoeffsHat(vec_zz_p& coeffs_x, const vec_zz_pX& x, const ulong& l);
 void        CoeffsInvHat(vec_zz_pX& x, const vec_zz_p& c, const ulong& l);
+void debug_check_single_shift(
+    const zz_pX& a,
+    const uint8_t shift,
+    const bool plus,
+    const long d);
+void ternary_poly_mul_to(
+    zz_pX& out,
+    const zz_pX& polynomial,
+    const TernaryCoeffStructure& ternary_vector,
+    const long block,
+    const long d);
 
 void        sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_map_opt(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
@@ -79,6 +70,7 @@ void        sigma_poly(zz_pX& N, const zz_pX& M, const ulong& d);
 zz_pX       poly_mult(     const vec_zz_pX& f, const vec_zz_pX& g );
 zz_pX       poly_mult_hat( const vec_zz_pX& f, const vec_zz_pX& g );
 void        poly_mult_hat_opt_to(zz_pX& out,const vec_zz_pX& f,const vec_zz_pX& g, zz_pX& scratch);
+void        ternary_poly_inner_product_to(zz_pX& out, const vec_zz_pX& f, const TernaryCoeffStructure& s_raw, const long d);
 zz_pX       Compute_f(     const mat_zz_p& B_f, const ZZ& x );
 
 ZZ          Norm2(         const vec_ZZ&  v );

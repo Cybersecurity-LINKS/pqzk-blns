@@ -14,6 +14,7 @@
 
 #include "Hash.h"
 
+
 //==============================================================================
 // Hash_Init  - Initialize the Custom Hash function, implemented using SHAKE128
 // 
@@ -487,144 +488,96 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
     // return crs, B_f;    
 }
 
+
 //==============================================================================
-// Hash_R_goth_sparse_packed
+// Hash_Sigma_R_goth_encoded
 //
-// Expand pseudorandom bytes from SHAKE128 into one sparse row of R_goth,
-// stored in packed form.
+// Expand pseudorandom bytes from SHAKE128 into one sparse sigma-encoded row of
+// R_goth.
 //
 // Conceptually, the row is a concatenation of m1 polynomial blocks, each of
-// length d_hat. Every coefficient belongs to {-1, 0, +1} and is derived from
-// 2 bits according to the following mapping:
+// length d_hat. Every raw coefficient belongs to {-1, 0, +1} and is derived
+// from 2 bits according to:
 //
 //   00 ->  0
 //   01 -> +1
 //   10 -> -1
 //   11 ->  0
 //
-// Instead of storing the full dense row, we store only the non-zero
-// coefficients. Each non-zero coefficient is encoded in a single byte:
+// The coefficient is then stored after applying the sigma mapping:
+//   raw position 0 -> sigma position 0
+//   raw position c -> sigma position d_hat - c, for c != 0
+//
+// For c != 0, the sign is flipped.
+//
+// Each non-zero sigma-encoded coefficient is packed into one byte:
 //
 //   bit 7     : sign   (1 => +1, 0 => -1)
 //   bits 0..6 : coefficient position inside the current polynomial block
 //
-// The vector out.offsets partitions out.entries into m1 contiguous segments,
-// one for each polynomial block.
-//
-// Inputs:
-// - out   : output sparse packed row
-// - state : SHAKE128 state, updated in place
-// - m1    : number of polynomial blocks in the row
-// - y_arr : temporary buffer that receives the squeezed random bytes
-//
-// Output format:
-// - out.entries : flat array of packed non-zero entries
-// - out.offsets : block boundaries in out.entries
+// out.offsets partitions out.entries into m1 contiguous segments, one per
+// polynomial block.
 //
 // Assumption:
-// - d_hat < 128, so the coefficient position fits into 7 bits.
+//   d_hat <= 128, so positions 0..d_hat-1 fit into 7 bits.
 //==============================================================================
 void Hash_Sigma_R_goth_encoded(
-    R_goth_row_struct_packed& out,
+    TernaryCoeffStructure& out,
     HASH_STATE_t* state,
     const ulong m1,
     unsigned char* y_arr)
 {
-    assert(d_hat < 128);
+    assert(d_hat > 0 && d_hat <= 128);
     assert((m1 * d_hat) <= 65535);
-    // Total number of coefficients in the row:
-    // m1 polynomial blocks, each with d_hat coefficients.
-    const ulong n_elems = m1 * d_hat;
 
-    // Four coefficients are encoded per byte (2 bits each).
+    const ulong n_elems = m1 * d_hat;
     const ulong n_bytes = (n_elems + 3) >> 2;
 
-    // Fill y_arr with pseudorandom bytes extracted from SHAKE128.
     _shake128_squeeze(state, y_arr, n_bytes);
 
-    // Reset output containers.
-    out.entries.clear();
-    out.offsets.resize(m1 + 1);
+    ternary_blocks_init(out, m1, n_elems / 2 + 128);
 
-    // Since each coefficient is non-zero with probability about 1/2,
-    // reserve approximately half of n_elems to reduce reallocations.
-    out.entries.reserve(n_elems / 2 + 128);
-
-    // blk = current polynomial block being built
-    // c   = current coefficient index within that block
     ulong blk = 0;
     ulong c   = 0;
 
-    // The first polynomial block starts at index 0 in the entries array.
-    out.offsets[0] = 0;
-
-#define STEP_PACKED()                                                           \
-    {                                                                           \
-        /* Decode one coefficient from the 2 least significant bits of curr. */ \
-        /* Mapping: 00 -> 0, 01 -> +1, 10 -> -1, 11 -> 0                     */ \
-        const int val = (curr & 1) - ((curr >> 1) & 1);                         \
-        curr >>= 2;                                                              \
-                                                                                \
-        /* Apply the sigma index mapping*/                                       \
-        /* The first coefficient stays at position 0, while all other         */ \
-        /* positions are reflected to (d_hat - c).                            */ \
-        const uint8_t pos = (c == 0) ? 0 : static_cast<uint8_t>(d_hat - c);     \
-        const bool flip   = (c != 0);                                           \
-                                                                                \
-        /* Store only non-zero coefficients.                                   */ \
-        if (val != 0)                                                           \
-        {                                                                       \
-            /* After the position reflection, the sign may flip depending on   */ \
-            /* whether c != 0.                                                 */ \
-            const bool is_plus = ((val > 0) ^ flip);                            \
-                                                                                \
-            /* Pack sign and position into one byte:                           */ \
-            /*   bit 7     = sign (1 => +1, 0 => -1)                           */ \
-            /*   bits 0..6 = coefficient position                              */ \
-            const uint8_t code = static_cast<uint8_t>(                          \
-                pos | (is_plus ? 0x80u : 0u));                                  \
-                                                                                \
-            out.entries.push_back(code);                                        \
-        }                                                                       \
-                                                                                \
-        /* Advance to the next coefficient inside the current block.           */ \
-        ++c;                                                                    \
-                                                                                \
-        /* Once d_hat coefficients have been processed, move to the next       */ \
-        /* polynomial block and store its starting offset in the flat entries  */ \
-        /* array.                                                              */ \
-        if (c == d_hat)                                                         \
-        {                                                                       \
-            c = 0;                                                              \
-            ++blk;                                                              \
-                                                                                \
-            if (blk <= m1)                                                      \
-                out.offsets[blk] = static_cast<uint16_t>(out.entries.size());   \
-        }                                                                       \
-    }
-
-    // Main decoding loop:
-    // each byte yields 4 coefficients, so the processing is manually unrolled
-    // for lower overhead.
-    for (ulong i = 0; i < n_bytes; i++)
+    for (ulong i = 0; i < n_bytes && blk < m1; i++)
     {
         unsigned char curr = y_arr[i];
 
-        if (blk >= m1) break;
-        STEP_PACKED();
+        for (int step = 0; step < 4 && blk < m1; step++)
+        {
+            // Decode one coefficient from the 2 least significant bits.
+            // Mapping:
+            //   00 ->  0
+            //   01 -> +1
+            //   10 -> -1
+            //   11 ->  0
+            const int val = (curr & 1) - ((curr >> 1) & 1);
+            curr >>= 2;
 
-        if (blk >= m1) break;
-        STEP_PACKED();
+            // Append this coefficient after applying sigma.
+            ternary_append_sigma(
+                out,
+                static_cast<uint8_t>(c),
+                val,
+                d_hat
+            );
 
-        if (blk >= m1) break;
-        STEP_PACKED();
+            c++;
 
-        if (blk >= m1) break;
-        STEP_PACKED();
+            if (c == d_hat)
+            {
+                c = 0;
+                blk++;
+
+                if (blk <= m1)
+                {
+                    ternary_finish_block(out, blk);
+                }
+            }
+        }
     }
-
-#undef STEP_PACKED
-}  
+}
 
 
 //==============================================================================
@@ -874,7 +827,7 @@ void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
 // - R_goth : vector of 256 sparse packed rows
 //==============================================================================
 
-void HISIS1_optimized(std::vector<R_goth_row_struct_packed>& R_goth,
+void HISIS1_optimized(std::vector<TernaryCoeffStructure>& R_goth,
                   const HASH_STATE_t* state0,
                   const ulong& m1)
 {
