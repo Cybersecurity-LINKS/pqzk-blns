@@ -44,7 +44,7 @@ int main()
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    N = 100; //1000;  // Number of iterations, for demonstration purposes
+    N = 1000; //100  // Number of iterations, for demonstration purposes
     
     for(iter=1; iter<=N; iter++)
     {
