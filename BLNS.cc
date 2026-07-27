@@ -218,7 +218,8 @@ int main()
                 
             cout << "\n- Issuer.UpdateSign     (update signature)" << endl;
             I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
-
+            delete[] u;
+            u = nullptr;
             cout << "\n- Holder.VerCred2       (check signature and store credential)" << endl;
             H_VerCred2(cred, ipk, B_f, &Rho2, state);
             assert(cred.valid);

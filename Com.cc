@@ -997,7 +997,7 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
 
     // Free the Hash state and the vector with serialized proof Pi
     delete  state;
-    delete[] (*Pi_ptr);
+    // delete[] (*Pi_ptr);
 
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)

@@ -670,8 +670,8 @@ void I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_by
     
     deserialize_minbyte_poly_zz_pX(u, d0, nbits, u_bytes, len_u);
     
-    // Free the vector with serialized u
-    delete[] u_bytes;
+    // // Free the vector with serialized u
+    // delete[] u_bytes;
    
     
     // Use the old_timestamp instead of the corresponding attribute

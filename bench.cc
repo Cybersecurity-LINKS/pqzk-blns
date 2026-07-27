@@ -397,6 +397,8 @@ int main()
         ta = GetWallTime();
         I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
         tb = GetWallTime();
+        delete[] u;
+        u = nullptr;
         #ifdef VERBOSE
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
         #endif
