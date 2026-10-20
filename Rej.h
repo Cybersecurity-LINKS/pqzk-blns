@@ -20,5 +20,6 @@
 
 long Rej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s, const RR& M);
 long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR& s, const RR& M);
+long BimodalRej_v_zzp( const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s, const RR& M);
 
 #endif

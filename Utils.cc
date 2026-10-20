@@ -747,42 +747,8 @@ void poly_mult_hat_opt_to(zz_pX& out,
 
     ModPhi_hat_q_inplace(out);
 }
-// static inline void add_negacyclic_shift(
-//     zz_pX& out,
-//     const zz_pX& a,
-//     const uint8_t shift,
-//     const bool plus,
-//     const long d)
-// {
-//     assert(d > 0 && d <= 128);
-//     assert(static_cast<long>(shift) < d);
-//     assert(deg(a) < d);
 
-//     for (long t = 0; t <= deg(a); ++t)
-//     {
-//         const zz_p& ai = a[t];
-
-//         long pos = t + static_cast<long>(shift);
-
-//         if (pos < d)
-//         {
-//             if (plus)
-//                 out[pos] += ai;
-//             else
-//                 out[pos] -= ai;
-//         }
-//         else
-//         {
-//             pos -= d;
-
-//             if (plus)
-//                 out[pos] -= ai;
-//             else
-//                 out[pos] += ai;
-//         }
-//     }
-// }
-static inline void add_negacyclic_shift(
+void add_negacyclic_shift(
     zz_pX& out,
     const zz_pX& a,
     const uint8_t shift,

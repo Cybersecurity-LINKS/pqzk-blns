@@ -62,6 +62,8 @@ void ternary_poly_mul_to(
     const long block,
     const long d);
 
+
+void add_negacyclic_shift(zz_pX& out,const zz_pX& a,const uint8_t shift,const bool plus,const long d);
 void        sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_map_opt(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_map_opt_no_alloc(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);

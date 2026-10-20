@@ -884,10 +884,10 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);    
     
-    n259 = 256 + d0 + 3;
-    // NOTE: gamma has 256+d+3 columns in ISIS, while 256+d+1 in Com 
+    n259 = 256 + d0 + 3 + d_hat;
+    // NOTE: gamma has 256+d+3+d_hat columns in ISIS, while 256+d+1 in Com 
 
-    // Random generation of gamma ∈ R^(tau_ISIS x 256+d+3)_q2_hat
+    // Random generation of gamma ∈ R^(tau_ISIS x 256+d+3+d_hat)_q2_hat
     gamma.SetDims(tau_ISIS, n259);
 
     vector<unsigned char> buf(b_coeffs);

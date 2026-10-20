@@ -172,3 +172,79 @@ long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR&
         return(1); // accept
     }   
 }
+
+long BimodalRej_v_zzp( const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s, const RR& M
+)
+{
+    if (z.length() != v.length())
+    {
+        throw std::invalid_argument(
+            "BimodalRej_v_zzp: vector length mismatch"
+        );
+    }
+
+    if (s <= 0)
+    {
+        throw std::invalid_argument(
+            "BimodalRej_v_zzp: s must be positive"
+        );
+    }
+
+    if (M < 1)
+    {
+        throw std::invalid_argument(
+            "BimodalRej_v_zzp: M must be at least one"
+        );
+    }
+
+    const ZZ threshold = ZZ(q) / 2;
+    ZZ dot_product(0);
+    ZZ squared_norm(0);
+
+    for (long i = 0; i < z.length(); ++i)
+    {
+        ZZ z_i =
+            conv<ZZ>(z[i]);
+
+        ZZ v_i =
+            conv<ZZ>(v[i]);
+
+        if (z_i > threshold)
+        {
+            z_i -= q;
+        }
+
+        if (v_i > threshold)
+        {
+            v_i -= q;
+        }
+
+        dot_product += z_i * v_i;
+
+        squared_norm += sqr(v_i);
+    }
+
+    const RR s_squared = sqr(s);
+
+    const RR x = conv<RR>(dot_product) / s_squared;
+
+    const RR y =  log(M) - conv<RR>(squared_norm) / (RR(2) * s_squared);
+
+    const RR acceptance_probability = RR(2) / (exp(y + x) + exp(y - x));
+
+    if (
+        acceptance_probability < 0 || acceptance_probability > 1
+    )
+    {
+        throw std::logic_error(
+            "BimodalRej_v_zzp: invalid acceptance probability"
+        );
+    }
+
+    const RR uniform = random_RR();
+
+    return uniform <= acceptance_probability
+        ? 1
+        : 0;
+}
+
