@@ -69,7 +69,14 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, uint8_t* seed_crs, Vec<string>& attrs, c
     
     for(i=0; i<l0; i++)
     {
-        attrs[i] = templ[i];
+        if (i < 18)
+        {
+            attrs[i] = templ[i];
+        }
+        else
+        {
+            attrs[i] = to_string( RandomBnd(1999999999) );
+        }
     }
 
     attrs[2]  = to_string( RandomBnd(1999999999) );

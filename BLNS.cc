@@ -39,8 +39,17 @@ int main()
     long            iter, N, valid;
     double          t1, t2, ta, tb;  
 
-    idx_pub = conv<vec_UL>("[0 5 6 13 14 15]");    // Indexes of disclosed attributes (revealed, i.e. idx)
-    idx_hid = Compute_idx_hid(idx_pub);     // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
+    if (l0 == 8)
+    {
+        idx_pub = conv<vec_UL>("[0 5 6 7]");        // Indexes of disclosed attributes (revealed, i.e. idx)
+    }
+    else //(l0 >= 16)
+    {
+        idx_pub = conv<vec_UL>("[0 5 6 13 14 15]"); // Indexes of disclosed attributes (revealed, i.e. idx)
+        idx_pub[5] = IDX_TIMESTAMP;                 // NOTE: Index of timestamp (last attribute), must be a disclosed attribute (revealed)
+    }
+
+    idx_hid = Compute_idx_hid(idx_pub);             // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
