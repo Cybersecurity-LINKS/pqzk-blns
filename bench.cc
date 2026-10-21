@@ -135,24 +135,25 @@ int main()
     
     vec_UL          idx_pub, idx_hid;
     ISK_t           isk;
-    uint8_t        *ipk, *u;
     uint8_t         seed_crs[SEED_LEN], nonce[NONCE_LEN];
     Vec<string>     attrs;
     mat_zz_p        B_f;
     CRS2_t          crs;
     CRED_t          cred;
-    VP_t            VP;
+    VP_t            VP{};
     long            iter, iter_warm, iter_tot, W, N, valid;
     double          t1, t2, ta, tb;
     string          old_timestamp, new_timestamp;
 
-    idx_pub = conv<vec_UL>("[4 5 6 7]");    // Indexes of disclosed attributes (revealed, i.e. idx)
+    uint8_t* ipk = nullptr;
+    uint8_t* u = nullptr;
+    idx_pub = conv<vec_UL>("[0 5 6 13 14 15]");    // Indexes of disclosed attributes (revealed, i.e. idx)
     idx_hid = Compute_idx_hid(idx_pub);     // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    W = 10;  //100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
-    N = 100; //1000; // Number of iterations, for benchmarking purposes
+    W = 100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
+    N = 1000; // Number of iterations, for benchmarking purposes
 
     Perfo.SetDims(13, N);
 
@@ -198,7 +199,7 @@ int main()
 
         #ifdef USE_ISSUER_SIGNATURE // Issuer Signature on Plaintext VC
 
-            uint8_t        *Rho;
+            uint8_t* Rho = nullptr;
         
             #ifdef VERBOSE
             cout << "\n=====================================================================" << endl;
@@ -234,7 +235,7 @@ int main()
 
             Vec<string>     attrs_prime;
             RHO1_t          Rho1;
-            uint8_t        *Rho2;
+            uint8_t*        Rho2 = nullptr;
             STATE_t         state;
             
             #ifdef VERBOSE
@@ -320,6 +321,8 @@ int main()
         ta = GetWallTime();
         valid = V_Verify(VP, nonce, seed_crs, crs, B_f, idx_pub);
         tb = GetWallTime();
+        delete[] VP.Pi;
+        VP.Pi = nullptr;
         Perfo[6][iter] = tb - ta;
         #ifdef VERBOSE    
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
@@ -357,7 +360,7 @@ int main()
 
         #ifdef USE_ISSUER_SIGNATURE
 
-            uint8_t        *Rho2;
+            uint8_t*        Rho2 = nullptr;
             STATE_t         state;
 
             #ifdef VERBOSE
@@ -423,6 +426,7 @@ int main()
 
         // Free up memory
         delete[] ipk;
+        ipk = nullptr;
 
     } // end for for loop (iter_tot)
 

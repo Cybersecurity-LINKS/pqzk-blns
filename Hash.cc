@@ -35,6 +35,12 @@ HASH_STATE_t* Hash_Init(const uint8_t* v, const size_t len)
     return state;
 }
 
+void Hash_Init_To(HASH_STATE_t& state, const uint8_t* v, const size_t len)
+{
+    _shake128_init(&state);
+    _shake128_absorb(&state, v, len);
+}
+
 
 //==============================================================================
 // Hash_Update - Update the Custom Hash function with a new input message
@@ -53,7 +59,6 @@ void Hash_Update(HASH_STATE_t *state, const uint8_t* v, const size_t len)
 
     // return state;
 }
-
 
 
 //==============================================================================
@@ -75,6 +80,14 @@ HASH_STATE_t* Hash_Copy(const HASH_STATE_t *state0)
     state->final    = state0->final;
      
     return state;
+}
+
+
+void Hash_Copy_To(HASH_STATE_t& dst, const HASH_STATE_t& src)
+{
+    copy(src.s, src.s + 25, dst.s);
+    dst.pos   = src.pos;
+    dst.final = src.final;
 }
 
 
@@ -113,6 +126,25 @@ void Hash_zz_pX(zz_pX& out_poly, HASH_STATE_t *state, const long& n_coeffs, cons
     // return out_poly;
 }
 
+void Hash_zz_pX_buf(
+    zz_pX& out_poly,
+    HASH_STATE_t* state,
+    const long n_coeffs,
+    const size_t b_coeffs,
+    unsigned char* buf)
+{
+    long i;
+    out_poly.SetLength(n_coeffs);
+
+    for (i = 0; i < n_coeffs; i++)
+    {
+        _shake128_squeeze(state, buf, b_coeffs);
+        out_poly[i] = conv<zz_p>(ZZFromBytes(buf, b_coeffs));
+    }
+
+    out_poly.normalize();
+}
+
 
 //==============================================================================
 // Hash_v_zz_p - Generate a random vector (mod q_hat) using Custom Hash function
@@ -146,6 +178,23 @@ void Hash_v_zz_p(vec_zz_p& out_vec, HASH_STATE_t *state, const long& n_elems, co
     // return out_vec;
 }
 
+void Hash_v_zz_p_buf(
+    vec_zz_p& out_vec,
+    HASH_STATE_t* state,
+    const long n_elems,
+    const size_t b_num,
+    unsigned char* buf)
+{
+    long i;
+    out_vec.SetLength(n_elems);
+
+    for (i = 0; i < n_elems; i++)
+    {
+        _shake128_squeeze(state, buf, b_num);
+        out_vec[i] = conv<zz_p>(ZZFromBytes(buf, b_num));
+    }
+}
+
 
 //==============================================================================
 // Hash_R_goth - Generate a random vector for R_goth using the Custom Hash function
@@ -165,7 +214,9 @@ void Hash_R_goth(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems)
     unsigned char*  y_arr;
     
     // Compute the minimum number of bytes needed to fill the vector  
-    const long n_bytes = ceil(2*n_elems / 8.0);
+    
+    //const long n_bytes = ceil(2*n_elems / 8.0);
+    const long n_bytes = (n_elems + 3) >> 2;
 
     y_arr = new unsigned char[n_bytes];
 
@@ -225,6 +276,17 @@ void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num)
     // return out;
 }
 
+void Hash_ZZ_xi0_buf(
+    ZZ& out,
+    HASH_STATE_t* state,
+    const size_t b_num,
+    unsigned char* buf)
+{
+    _shake128_squeeze(state, buf, b_num);
+
+    out = ZZFromBytes(buf, b_num) % (xi0 + 1);
+}
+
 
 //==============================================================================
 // Hcrs    -    H_crs, custom Hash function needed in BLNS for crs. 
@@ -242,10 +304,10 @@ void Hash_ZZ_xi0(ZZ& out, HASH_STATE_t *state, const size_t& b_num)
 void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_idx_hid)
 {
     long            i, j, n, m1, m2, n256;
-    HASH_STATE_t    *state;
+    HASH_STATE_t    state;
     size_t          b_coeffs;
        
-    state = Hash_Init(seed_crs, SEED_LEN);
+    Hash_Init_To(state, seed_crs, SEED_LEN);
 
     // Create the crs structure  
     crs.SetLength(2); 
@@ -284,15 +346,17 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
         crs[0][0].SetDims(n, m1);    
         crs[0][1].SetDims(n, m2);
 
+        vector<unsigned char> buf(b_coeffs);
+
         for(i=0; i<n; i++)
         {
             for(j=0; j<m1; j++)
             {
-                Hash_zz_pX(crs[0][0][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[0][0][i][j], &state, d_hat, b_coeffs, buf.data());
             }
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[0][1][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[0][1][i][j], &state, d_hat, b_coeffs, buf.data());
             }
         }       
 
@@ -303,7 +367,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
         {
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[0][2][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[0][2][i][j], &state, d_hat, b_coeffs, buf.data());
             }
         }
 
@@ -314,7 +378,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
         {
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[0][3][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[0][3][i][j], &state, d_hat, b_coeffs, buf.data());
             }
         }
 
@@ -324,7 +388,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
 
         for(i=0; i<m2; i++)
         {
-            Hash_zz_pX(crs[0][4][0][i], state, d_hat, b_coeffs);
+            Hash_zz_pX_buf(crs[0][4][0][i], &state, d_hat, b_coeffs, buf.data());
         }        
     }
 
@@ -355,15 +419,17 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
         crs[1][0].SetDims(n, m1);    
         crs[1][1].SetDims(n, m2); 
         
+        vector<unsigned char> buf(b_coeffs);
+
         for(i=0; i<n; i++)
         {
             for(j=0; j<m1; j++)
             {
-                Hash_zz_pX(crs[1][0][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[1][0][i][j], &state, d_hat, b_coeffs, buf.data());
             }
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[1][1][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[1][1][i][j], &state, d_hat, b_coeffs, buf.data());
             }
         }       
 
@@ -374,7 +440,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
         {
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[1][2][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[1][2][i][j], &state, d_hat, b_coeffs, buf.data());
             }
         }
 
@@ -385,7 +451,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
         {
             for(j=0; j<m2; j++)
             {
-                Hash_zz_pX(crs[1][3][i][j], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[1][3][i][j], &state, d_hat, b_coeffs, buf.data());
             }
         }
 
@@ -397,7 +463,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
         {
             // for(j=0; j<1; j++)
             {
-                Hash_zz_pX(crs[1][4][0][i], state, d_hat, b_coeffs);
+                Hash_zz_pX_buf(crs[1][4][0][i], &state, d_hat, b_coeffs, buf.data());
             }
         }
     }
@@ -412,14 +478,105 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
     // Initialize a random matrix B_f ∈ Z^(d×t)_q
     B_f.SetDims(d0, t0);
 
+    vector<unsigned char> buf(b_coeffs);
+
     for(i=0; i<d0; i++)
     {
-        Hash_v_zz_p(B_f[i], state, t0, b_coeffs);
+        Hash_v_zz_p_buf(B_f[i], &state, t0, b_coeffs, buf.data());
     }
-
-    delete state;
     
     // return crs, B_f;    
+}
+
+
+//==============================================================================
+// Hash_Sigma_R_goth_encoded
+//
+// Expand pseudorandom bytes from SHAKE128 into one sparse sigma-encoded row of
+// R_goth.
+//
+// Conceptually, the row is a concatenation of m1 polynomial blocks, each of
+// length d_hat. Every raw coefficient belongs to {-1, 0, +1} and is derived
+// from 2 bits according to:
+//
+//   00 ->  0
+//   01 -> +1
+//   10 -> -1
+//   11 ->  0
+//
+// The coefficient is then stored after applying the sigma mapping:
+//   raw position 0 -> sigma position 0
+//   raw position c -> sigma position d_hat - c, for c != 0
+//
+// For c != 0, the sign is flipped.
+//
+// Each non-zero sigma-encoded coefficient is packed into one byte:
+//
+//   bit 7     : sign   (1 => +1, 0 => -1)
+//   bits 0..6 : coefficient position inside the current polynomial block
+//
+// out.offsets partitions out.entries into m1 contiguous segments, one per
+// polynomial block.
+//
+// Assumption:
+//   d_hat <= 128, so positions 0..d_hat-1 fit into 7 bits.
+//==============================================================================
+void Hash_Sigma_R_goth_encoded(
+    TernaryCoeffStructure& out,
+    HASH_STATE_t* state,
+    const ulong m1,
+    unsigned char* y_arr)
+{
+    assert(d_hat > 0 && d_hat <= 128);
+    assert((m1 * d_hat) <= 65535);
+
+    const ulong n_elems = m1 * d_hat;
+    const ulong n_bytes = (n_elems + 3) >> 2;
+
+    _shake128_squeeze(state, y_arr, n_bytes);
+
+    ternary_blocks_init(out, m1, n_elems / 2 + 128);
+
+    ulong blk = 0;
+    ulong c   = 0;
+
+    for (ulong i = 0; i < n_bytes && blk < m1; i++)
+    {
+        unsigned char curr = y_arr[i];
+
+        for (int step = 0; step < 4 && blk < m1; step++)
+        {
+            // Decode one coefficient from the 2 least significant bits.
+            // Mapping:
+            //   00 ->  0
+            //   01 -> +1
+            //   10 -> -1
+            //   11 ->  0
+            const int val = (curr & 1) - ((curr >> 1) & 1);
+            curr >>= 2;
+
+            // Append this coefficient after applying sigma.
+            ternary_append_sigma(
+                out,
+                static_cast<uint8_t>(c),
+                val,
+                d_hat
+            );
+
+            c++;
+
+            if (c == d_hat)
+            {
+                c = 0;
+                blk++;
+
+                if (blk <= m1)
+                {
+                    ternary_finish_block(out, blk);
+                }
+            }
+        }
+    }
 }
 
 
@@ -438,23 +595,21 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
 void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
 {
     long         i;
-    HASH_STATE_t *state;
+    HASH_STATE_t state;
 
-    state = Hash_Copy(state0);
+    Hash_Copy_To(state, *state0);
 
     const uint8_t v[1] = {1};
-    Hash_Update(state, v, 1);
+    Hash_Update(&state, v, 1);
     
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
     
-    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q1_hat
+    //Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q1_hat
     for(i=0; i<256; i++)
     { 
-        Hash_R_goth(R_goth[i], state, m1*d_hat);
+        Hash_R_goth(R_goth[i], &state, m1*d_hat);
     }
-    
-    delete state;
 
     // return R_goth;
 }
@@ -474,12 +629,12 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long         i, n257;
-    HASH_STATE_t *state; 
+    HASH_STATE_t state; 
     
-    state = Hash_Copy(state0);
+    Hash_Copy_To(state, *state0);
 
     const uint8_t v[1] = {2};
-    Hash_Update(state, v, 1);
+    Hash_Update(&state, v, 1);
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);    
@@ -490,13 +645,13 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     // Random generation of gamma ∈ Z^(tau_Com x 256+d0+1)_q1_hat
     gamma.SetDims(tau_Com, n257);
 
+    vector<unsigned char> buf(b_coeffs);
+
     for(i=0; i<tau_Com; i++)
     {
-        Hash_v_zz_p(gamma[i], state, n257, b_coeffs);
+        Hash_v_zz_p_buf(gamma[i], &state, n257, b_coeffs, buf.data());
     }
 
-    delete state;
-    
     // return gamma;
 }
 
@@ -515,25 +670,25 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0)
 {
     // NOTE: assuming that current modulus is q1_hat (not q0)
     long         i;
-    HASH_STATE_t *state;
+    HASH_STATE_t state;
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);   
 
-    state = Hash_Copy(state0);
+    Hash_Copy_To(state, *state0);
 
     const uint8_t v[1] = {3};
-    Hash_Update(state, v, 1);
+    Hash_Update(&state, v, 1);
 
     // Random generation of mu ∈ R^(tau_Com)_q1_hat
     mu.SetLength(tau_Com);
 
-    for(i=0; i<tau_Com; i++)
-    {        
-        Hash_zz_pX(mu[i], state, d_hat, b_coeffs);
+    vector<unsigned char> buf(b_coeffs);
+
+    for (i = 0; i < tau_Com; i++)
+    {
+        Hash_zz_pX_buf(mu[i], &state, d_hat, b_coeffs, buf.data());
     }
-    
-    delete state;
         
     // return mu;
 }
@@ -552,9 +707,10 @@ void HCom3(vec_zz_pX& mu, const HASH_STATE_t *state0)
 void HCom4(zz_pX& c, const HASH_STATE_t *state0)
 {
     long         i;
-    HASH_STATE_t *state;    
+    HASH_STATE_t state;    
     ZZ           norm1_c, c_i;    
     ZZX          c0, c_2k;
+  
         
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(xi0) / 8.0);
@@ -565,19 +721,20 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
     // Initialize the variable norm1_c = ||c^(2k)||_1
     norm1_c = 2*nu0_2k;
     
-    state = Hash_Copy(state0);
+    Hash_Copy_To(state, *state0);
 
     const uint8_t v[1] = {4};
-    Hash_Update(state, v, 1);
+    Hash_Update(&state, v, 1);
 
     c0.SetLength(d_hat);
 
+    vector<unsigned char> buf(b_coeffs);
     // Loop to ensure that (2k)√(||c^(2k)||_1 ≤ nu0,  
     // i.e.  ||c^(2k)||_1 ≤ (nu0)^(2k)
     while(norm1_c > nu0_2k)
     {
         // Random generation of c ∈ R^_(xi0+1)
-        Hash_ZZ_xi0(c_i, state, b_coeffs);
+        Hash_ZZ_xi0_buf(c_i, &state, b_coeffs, buf.data());
         // NOTE: generate each coefficient c[i] ∈ [0, xi0], to ensure ||c||∞ ≤ ξ
         
         // c[0] = c_i;
@@ -585,7 +742,7 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
                 
         for(i=1; i<(d_hat/2); i++)
         {
-            Hash_ZZ_xi0(c_i, state, b_coeffs);
+            Hash_ZZ_xi0(c_i, &state, b_coeffs);
             
             // c[i] = c_i;
             SetCoeff(c0, i, c_i);
@@ -605,14 +762,7 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
         }
         
         // c_2k = power(c, (2*k0));
-        c_2k = c0;
-
-        for(i=0; i<(2*k0 - 1); i++)
-        {
-            // c_2k *= c0;
-            // c_2k = (c_2k * c0) % phi_hat; 
-            c_2k = ModPhi_hat(c_2k * c0);
-        }
+        PowerOfTwo_ModPhi_hat(c_2k, c0, 2*k0);
 
         // Compute ||c^(2k)||_1
         norm1_c = 0;
@@ -623,8 +773,6 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
             norm1_c += abs(coeff(c_2k, i)); 
         }
     }
-    
-    delete state;
          
     // return c;
 }
@@ -646,12 +794,12 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
 void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
 {
     long         i;
-    HASH_STATE_t *state;
+    HASH_STATE_t state;
 
-    state = Hash_Copy(state0);
+    Hash_Copy_To(state, *state0);
 
     const uint8_t v[1] = {1};
-    Hash_Update(state, v, 1);
+    Hash_Update(&state, v, 1);
     
     // Create the R_goth matrix  
     R_goth.SetDims(256, m1*d_hat);   
@@ -659,13 +807,57 @@ void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
     // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q2_hat
     for(i=0; i<256; i++)
     { 
-        Hash_R_goth(R_goth[i], state, m1*d_hat);
+        Hash_R_goth(R_goth[i], &state, m1*d_hat);
     }
-    
-    delete state;
 
     // return R_goth;
 }
+
+//==============================================================================
+// HISIS1   -   H_ISIS, custom Hash function needed in BLNS for ISIS. 
+//              It generates the 1st challenge used in the NIZK proof system.
+//
+// Build the 256 sparse packed rows of R_goth used by the ISIS hash layer.
+//
+// Inputs:
+// - state0 : initial hash state
+// - m1     : number of polynomial blocks in each row of R_goth
+//
+// Output:
+// - R_goth : vector of 256 sparse packed rows
+//==============================================================================
+
+void HISIS1_optimized(std::vector<TernaryCoeffStructure>& R_goth,
+                  const HASH_STATE_t* state0,
+                  const ulong& m1)
+{
+    HASH_STATE_t state;
+    Hash_Copy_To(state, *state0);
+
+    // Domain-separation byte for the HISIS1 expansion.
+    const uint8_t v[1] = {1};
+    Hash_Update(&state, v, 1);
+
+    // Total number of coefficients in one row of R_goth.
+    const ulong n_elems = m1 * d_hat;
+
+    // Each byte encodes 4 coefficients, since each coefficient uses 2 bits.
+    const ulong n_bytes = (n_elems + 3) >> 2;
+
+    // Temporary buffer used to receive squeezed bytes from SHAKE128.
+    std::vector<unsigned char> buf(n_bytes);
+
+    // Ensure the output vector contains exactly 256 rows.
+    //R_goth.resize(256);
+
+    // Build each row independently.
+    for (ulong r = 0; r < 256; ++r)
+    {
+        Hash_Sigma_R_goth_encoded(R_goth[r], &state, m1, buf.data());
+    }
+}
+
+
 
 
 //==============================================================================
@@ -682,12 +874,12 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
     long         i, n259;       
-    HASH_STATE_t *state; 
+    HASH_STATE_t state; 
     
-    state = Hash_Copy(state0);
+    Hash_Copy_To(state, *state0);
 
     const uint8_t v[1] = {2};
-    Hash_Update(state, v, 1);
+    Hash_Update(&state, v, 1);
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);    
@@ -698,13 +890,12 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     // Random generation of gamma ∈ R^(tau_ISIS x 256+d+3)_q2_hat
     gamma.SetDims(tau_ISIS, n259);
 
-    for(i=0; i<tau_ISIS; i++)
-    {
-        Hash_v_zz_p(gamma[i], state, n259, b_coeffs);
-    }
-    
-    delete state;
+    vector<unsigned char> buf(b_coeffs);
 
+    for (i = 0; i < tau_ISIS; i++)
+    {
+        Hash_v_zz_p_buf(gamma[i], &state, n259, b_coeffs, buf.data());
+    }
     // return gamma;
 }
 
@@ -724,25 +915,25 @@ void HISIS3(vec_zz_pX& mu, const HASH_STATE_t *state0)
 {     
     // NOTE: assuming that current modulus is q2_hat (not q0)
     long         i;
-    HASH_STATE_t *state;
+    HASH_STATE_t state;
 
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);   
 
-    state = Hash_Copy(state0);
+    Hash_Copy_To(state, *state0);
 
     const uint8_t v[1] = {3};
-    Hash_Update(state, v, 1);
+    Hash_Update(&state, v, 1);
 
     // Random generation of mu ∈ R^(tau_ISIS)_q2_hat
     mu.SetLength(tau_ISIS);
 
-    for(i=0; i<tau_ISIS; i++)
-    {        
-        Hash_zz_pX(mu[i], state, d_hat, b_coeffs);
+    vector<unsigned char> buf(b_coeffs);
+
+    for (i = 0; i < tau_ISIS; i++)
+    {
+        Hash_zz_pX_buf(mu[i], &state, d_hat, b_coeffs, buf.data());
     }
-    
-    delete state;
         
     // return mu;
 }
@@ -762,9 +953,11 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
 // NOTE: HISIS4 is identical to HCom4, apart the modulo
 {
     long         i;
-    HASH_STATE_t *state;    
+    HASH_STATE_t state;    
     ZZ           norm1_c, c_i;
     ZZX          c0, c_2k;
+
+    //c_2k.SetMaxLength(d_hat);
         
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(xi0) / 8.0);
@@ -775,19 +968,21 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
     // Initialize the variable norm1_c = ||c^(2k)||_1
     norm1_c = 2*nu0_2k;
     
-    state = Hash_Copy(state0);
+    Hash_Copy_To(state, *state0);
 
     const uint8_t v[1] = {4};
-    Hash_Update(state, v, 1);
+    Hash_Update(&state, v, 1);
 
     c0.SetLength(d_hat);
 
+    vector<unsigned char> buf(b_coeffs);
     // Loop to ensure that (2k)√(||c^(2k)||_1 ≤ nu0,  
     // i.e.  ||c^(2k)||_1 ≤ (nu0)^(2k)
     while(norm1_c > nu0_2k)
     {
+        
         // Random generation of c ∈ R^_(xi0+1)
-        Hash_ZZ_xi0(c_i, state, b_coeffs);
+        Hash_ZZ_xi0_buf(c_i, &state, b_coeffs, buf.data());
         // NOTE: generate each coefficient c[i] ∈ [0, xi0], to ensure ||c||∞ ≤ ξ
         
         // c[0] = c_i;
@@ -795,7 +990,7 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
                 
         for(i=1; i<(d_hat/2); i++)
         {
-            Hash_ZZ_xi0(c_i, state, b_coeffs);
+            Hash_ZZ_xi0(c_i, &state, b_coeffs);
             
             // c[i] = c_i;
             SetCoeff(c0, i, c_i);
@@ -807,23 +1002,14 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
         c0.normalize();
 
         c = conv<zz_pX>(c0);
-        
-        // NOTE: avoid (rare) cases with c == 0
-        if (IsZero(c))
+
+        if (IsZero(c0))
         {
             continue;
         }
         
-        // c_2k = power(c, (2*k0));
-        c_2k = c0;
-
-        for(i=0; i<(2*k0 - 1); i++)
-        {
-            // c_2k *= c0;
-            // c_2k = (c_2k * c0) % phi_hat; 
-            c_2k = ModPhi_hat(c_2k * c0);
-        }
-
+        // c_2k = power(c, (2*k0)); 
+        PowerOfTwo_ModPhi_hat(c_2k, c0, 2*k0);
         // Compute ||c^(2k)||_1
         norm1_c = 0;
 
@@ -833,8 +1019,6 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
             norm1_c += abs(coeff(c_2k, i)); 
         }
     }
-    
-    delete state;
          
     // return c;
 }
@@ -854,7 +1038,7 @@ void HISIS4(zz_pX& c, const HASH_STATE_t *state0)
 void HM(vec_ZZ& m_i, const string& a_i)
 {
     long         k, range;
-    HASH_STATE_t *state;
+    HASH_STATE_t state;
     
     // Compute the numerical range of each coefficient
     range = 2*psi0 + 1;
@@ -866,10 +1050,12 @@ void HM(vec_ZZ& m_i, const string& a_i)
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2(range-1) / 8.0);
 
-    state = Hash_Init(reinterpret_cast<const uint8_t*>(&a_i[0]), a_i.length());
+    Hash_Init_To(state, reinterpret_cast<const uint8_t*>(&a_i[0]), a_i.length());
+
+    vector<unsigned char> buf(b_coeffs);
 
     // Random generation of m_i (modulo range)
-    Hash_v_zz_p(tmp, state, h0, b_coeffs);
+    Hash_v_zz_p_buf(tmp, &state, h0, b_coeffs, buf.data());
     m_i = conv<vec_ZZ>( tmp );
 
     for(k=0; k<h0; k++)
@@ -877,8 +1063,6 @@ void HM(vec_ZZ& m_i, const string& a_i)
         m_i[k] = m_i[k] - psi0;
         // NOTE: now each coefficient is in the range [−psi0, psi0]
     }
-    
-    delete state;
 
     // return m_i;
 }

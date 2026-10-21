@@ -108,7 +108,6 @@
 
 #endif
 
-
 //==============================================================================
 // GenRandBytes - Generate n random bytes using the cryptographically strong 
 //                pseudo-random number generator from NTL
@@ -167,6 +166,50 @@ ZZX ModPhi_hat(const ZZX& p)
 zz_pX ModPhi_hat_q(const zz_pX& p)
 {
     return (trunc(p, d_hat) - RightShift(p, d_hat));
+}
+
+void ModPhi_hat_q_inplace(zz_pX& x)
+{
+    ulong j;
+    const ulong len = x.rep.length();
+
+    if (len <= d_hat)
+    {
+        x.normalize();
+        return;
+    }
+
+    // Assumption: len <= 2*d_hat in the hot path.
+    // Reduction modulo X^d_hat + 1:
+    // x[j - d_hat] -= x[j] for j >= d_hat.
+    for (j = d_hat; j < len; ++j)
+    {
+        x.rep[j - d_hat] -= x.rep[j];
+    }
+
+    x.rep.SetLength(d_hat);
+    x.normalize();
+}
+
+void PowerOfTwo_ModPhi_hat(
+    ZZX& out,
+    const ZZX& base,
+    long exponent)
+{
+    assert(exponent > 0);
+    assert((exponent & (exponent - 1)) == 0);
+
+    out = base;
+
+    ZZX squared;
+
+    while (exponent > 1)
+    {
+        sqr(squared, out);
+        out = ModPhi_hat(squared);
+
+        exponent >>= 1;
+    }
 }
 
 
@@ -555,6 +598,78 @@ void sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d)
     // return N;
 }
 
+void sigma_map_opt(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d)
+{    
+    ulong i, j, len;
+  
+    len = M.length();  
+    N.SetLength(len);
+
+    for(i=0; i<len; i++)
+    {       
+        N[i].SetLength(d);
+
+        N[i][0] = M[i][0];
+
+        for(j=1; j<d; j++) // NOTE: j starts from 1 (not 0)
+        {            
+            N[i][d - j] = -M[i][j];
+        }        
+    }
+
+    // return N;
+}
+
+void sigma_map_opt_no_alloc(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d)
+{    
+    ulong i, j, len;
+  
+    len = M.length();  
+
+    for(i=0; i<len; i++)
+    {
+        N[i][0] = M[i][0];
+
+        for(j=1; j<d; j++) // NOTE: j starts from 1 (not 0)
+        {            
+            N[i][d - j] = -M[i][j];
+        }        
+    }
+
+    // return N;
+}
+
+void sigma_poly(zz_pX& N, const zz_pX& M, const ulong& d)
+{    
+    ulong j;
+
+    N.SetLength(d);
+
+    N[0] = M[0];
+
+    for(j=1; j<d; j++) // NOTE: j starts from 1 (not 0)
+    {            
+        N[d - j] = -M[j];
+    }   
+
+    N.normalize();    
+    // return N;
+}
+
+void sigma_poly_no_alloc(zz_pX& N, const zz_pX& M, const ulong& d)
+{    
+    ulong j;
+
+    N[0] = M[0];
+
+    for(j=1; j<d; j++) // NOTE: j starts from 1 (not 0)
+    {            
+        N[d - j] = -M[j];
+    }   
+
+    N.normalize();    
+    // return N;
+}
 
 //=====================================================================================
 // poly_mult  -  scalar product between two vectors of polynomials of length d0.
@@ -576,10 +691,11 @@ zz_pX  poly_mult(const vec_zz_pX& f, const vec_zz_pX& g)
 
     for(i=0; i<len; i++)
     {
-        h += ModPhi_q( f[i] * g[i]);
+        h +=  f[i] * g[i];
     }
 
-    return h;   
+    return ModPhi_q(h);  
+    
 }
 
 
@@ -603,12 +719,234 @@ zz_pX  poly_mult_hat(const vec_zz_pX& f, const vec_zz_pX& g)
 
     for(i=0; i<len; i++)
     {
-        h += ModPhi_hat_q( f[i] * g[i] );
+        h +=  f[i] * g[i];
     }
-
-    return h;   
+    
+    return ModPhi_hat_q(h);   
 }
 
+
+void poly_mult_hat_opt_to(zz_pX& out,
+                          const vec_zz_pX& f,
+                          const vec_zz_pX& g,
+                          zz_pX& scratch)
+{
+    assert(&out != &scratch);
+    const long len = f.length();
+
+    assert(len == g.length());
+    assert(len > 0);
+
+    mul(out, f[0], g[0]);
+
+    for (long i = 1; i < len; i++)
+    {
+        mul(scratch, f[i], g[i]);
+        add(out, out, scratch);
+    }
+
+    ModPhi_hat_q_inplace(out);
+}
+// static inline void add_negacyclic_shift(
+//     zz_pX& out,
+//     const zz_pX& a,
+//     const uint8_t shift,
+//     const bool plus,
+//     const long d)
+// {
+//     assert(d > 0 && d <= 128);
+//     assert(static_cast<long>(shift) < d);
+//     assert(deg(a) < d);
+
+//     for (long t = 0; t <= deg(a); ++t)
+//     {
+//         const zz_p& ai = a[t];
+
+//         long pos = t + static_cast<long>(shift);
+
+//         if (pos < d)
+//         {
+//             if (plus)
+//                 out[pos] += ai;
+//             else
+//                 out[pos] -= ai;
+//         }
+//         else
+//         {
+//             pos -= d;
+
+//             if (plus)
+//                 out[pos] -= ai;
+//             else
+//                 out[pos] += ai;
+//         }
+//     }
+// }
+static inline void add_negacyclic_shift(
+    zz_pX& out,
+    const zz_pX& a,
+    const uint8_t shift,
+    const bool plus,
+    const long d)
+{
+    assert(d > 0 && d <= 128);
+    assert(static_cast<long>(shift) < d);
+
+    const long length = a.rep.length();
+
+    if (length == 0)
+        return;
+
+    assert(length <= d);
+    assert(out.rep.length() == d);
+
+    const zz_p* source = a.rep.elts();
+    zz_p* destination = out.rep.elts();
+
+    const long shift_long = static_cast<long>(shift);
+
+    // Coefficients that do not wrap.
+    const long split = std::min(length, d - shift_long);
+
+    if (plus)
+    {
+        for (long t = 0; t < split; ++t)
+        {
+            destination[t + shift_long] += source[t];
+        }
+
+        for (long t = split; t < length; ++t)
+        {
+            destination[t + shift_long - d] -= source[t];
+        }
+    }
+    else
+    {
+        for (long t = 0; t < split; ++t)
+        {
+            destination[t + shift_long] -= source[t];
+        }
+
+        for (long t = split; t < length; ++t)
+        {
+            destination[t + shift_long - d] += source[t];
+        }
+    }
+}
+
+static inline void add_mul_ternary_block(
+    zz_pX& out,
+    const zz_pX& polynomial,
+    const TernaryCoeffStructure& ternary,
+    const long block,
+    const long d)
+{
+    assert(d > 0 && d <= 128);
+    assert(block >= 0);
+    assert(
+        static_cast<size_t>(block + 1) <
+        ternary.offsets.size()
+    );
+
+    const size_t begin =
+        static_cast<size_t>(ternary.offsets[block]);
+
+    const size_t end =
+        static_cast<size_t>(ternary.offsets[block + 1]);
+
+    assert(begin <= end);
+    assert(end <= ternary.entries.size());
+
+    const uint8_t* entries = ternary.entries.data();
+
+    for (size_t entry = begin; entry < end; ++entry)
+    {
+        const uint8_t encoded = entries[entry];
+
+        add_negacyclic_shift(
+            out,
+            polynomial,
+            ternary_entry_pos(encoded),
+            ternary_entry_is_plus(encoded),
+            d
+        );
+    }
+}
+
+void ternary_poly_inner_product_to(
+    zz_pX& out,
+    const vec_zz_pX& f,
+    const TernaryCoeffStructure& s_raw,
+    const long d)
+{
+    assert(d > 0 && d <= 128);
+    assert(
+        s_raw.offsets.size() ==
+        static_cast<size_t>(f.length() + 1)
+    );
+
+    out.SetLength(d);
+    clear(out.rep);
+
+    const long len = f.length();
+
+    for (long k = 0; k < len; ++k)
+    {
+        add_mul_ternary_block(
+            out,
+            f[k],
+            s_raw,
+            k,
+            d
+        );
+    }
+
+    out.normalize();
+}
+
+void ternary_poly_mul_to(
+    zz_pX& out,
+    const zz_pX& polynomial,
+    const TernaryCoeffStructure& ternary_vector,
+    const long block,
+    const long d)
+{
+    assert(d > 0 && d <= 128);
+    assert(block >= 0);
+    assert(
+        static_cast<size_t>(block + 1) <
+        ternary_vector.offsets.size()
+    );
+
+    out.SetLength(d);
+    clear(out.rep);
+
+    const size_t begin =
+        static_cast<size_t>(ternary_vector.offsets[block]);
+
+    const size_t end =
+        static_cast<size_t>(ternary_vector.offsets[block + 1]);
+
+    assert(begin <= end);
+    assert(end <= ternary_vector.entries.size());
+
+    const uint8_t* entries = ternary_vector.entries.data();
+
+    for (size_t entry = begin; entry < end; ++entry)
+    {
+        const uint8_t encoded = entries[entry];
+
+        add_negacyclic_shift(
+            out,
+            polynomial,
+            ternary_entry_pos(encoded),
+            ternary_entry_is_plus(encoded),
+            d
+        );
+    }
+
+    out.normalize();
+}
 
 //=====================================================================================
 // Compute_f -  Compute the function f(x) associated with the ISIS_f problem

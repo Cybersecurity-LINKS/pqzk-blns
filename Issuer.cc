@@ -202,6 +202,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
     
     // Free the vector with serialized u
     delete[] Rho1.u;
+    Rho1.u = nullptr;
 
 
     // 4. B ← isk,   B ∈ Z^(2d×2d)
@@ -308,6 +309,9 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
         // NOTE: P, u_vect are converted from modulo q0 to q1_hat
         // NOTE: Verify_Com deserializes the proof π in Rho1.Pi
     }
+
+    delete[] Rho1.Pi;
+    Rho1.Pi = nullptr;
 
     P.kill();
         

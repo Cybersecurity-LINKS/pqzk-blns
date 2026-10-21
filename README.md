@@ -35,6 +35,11 @@ and/or run the benchmarks ```bench```:
 As an alternative, it is possible to build and run the code with Docker, using [dockerfile_blns](./dockerfile_blns).
 For more details, see [/Docs/INSTALL.md](./Docs/INSTALL.md).
 
+Note that parameters for different security levels (i.e., λ = 128, 192 or 256 bit) are available in the [params.h](./params.h) file.
+The default configuration is ```lambda0``` = 128 bit, while to test 192 or 256 bit security levels you can uncomment the appropriate ```#define lambda0``` line at the beginning of [params.h](./params.h)
+
+Moreover, the demo and benchmarks are configured to run with 16 attributes (see ```l0``` = 16 in [params.h](./params.h)),
+6 of which are disclosed/revealed (see the variable ```idx_pub``` in [BLNS.cc](./BLNS.cc) and [bench.cc](./bench.cc)).
 
 
 ## Acknowledgements
