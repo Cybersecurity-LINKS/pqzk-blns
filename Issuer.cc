@@ -310,7 +310,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
         // NOTE: Verify_Com deserializes the proof π in Rho1.Pi
     }
 
-    delete[] Rho1.Pi;
+    // delete[] Rho1.Pi;
     Rho1.Pi = nullptr;
 
     P.kill();
