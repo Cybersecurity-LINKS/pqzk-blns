@@ -299,7 +299,7 @@ void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS
     // Allocate a vector of bytes to store u
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
     Rho1.u = new uint8_t[len_u];
-    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size u: " << (len_u) << " Bytes" << endl; 
     
     // Serialize u in Rho1.u
     serialize_minbyte_poly_zz_pX(Rho1.u, len_u, d0, nbits, u);
@@ -378,7 +378,7 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
     len_w  = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
     len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes
     // size_t len_Rho2 = len_s0 + len_w + len_x; //                     20544 bytes
-    // cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Rho2: " << (len_Rho2) << " Bytes" << endl; 
   
     // Deserialize the structure ρ_2
     Rho2_bytes = *Rho2_ptr;
@@ -801,7 +801,7 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
     len_x   = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes
     len_r   = calc_ser_size_vec_ZZX(lr0, d0);// vec_ZZX (lr0*d0*long)  -  8192 bytes
     // size_t len_Rho = len_s0 + len_w + len_x + len_r;//                28736 bytes
-    // cout << "  Size Rho: " << (len_Rho/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Rho: " << (len_Rho) << " Bytes" << endl; 
   
     // Deserialize the structure ρ
     Rho_bytes = *Rho_ptr;
@@ -997,7 +997,7 @@ void H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, 
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
     *u_ptr = new uint8_t[len_u];
     #ifdef VERBOSE
-    cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size u: " << (len_u) << " Bytes" << endl; 
     #endif
     
     // Serialize u
@@ -1108,7 +1108,7 @@ void H_ReqUpd_Plain(uint8_t** u_ptr, string& old_timestamp, string& new_timestam
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
     *u_ptr = new uint8_t[len_u];
     #ifdef VERBOSE
-    cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size u: " << (len_u) << " Bytes" << endl; 
     #endif
     
     // Serialize u

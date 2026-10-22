@@ -54,7 +54,7 @@ void I_KeyGen(uint8_t** ipk_prt, ISK_t& isk)
     *ipk_prt  = new uint8_t[len_ipk];
     ipk_bytes = *ipk_prt;
     #ifdef VERBOSE
-    cout << "  Size ipk: " << (len_ipk/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size ipk: " << (len_ipk) << " Bytes" << endl; 
     #endif
     
     // Serialize a1 (first bytes in ipk_bytes)
@@ -194,7 +194,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
 
     // 3. (u, π) ← ρ1   
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
-    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size u: " << (len_u) << " Bytes" << endl; 
 
     // Deserialize u
     deserialize_minbyte_poly_zz_pX(u, d0, nbits, Rho1.u, len_u);
@@ -407,7 +407,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
     len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes    
     len_Rho2 = len_s0 + len_w + len_x;      //                          20544 bytes
     #ifdef VERBOSE
-    cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size Rho2: " << (len_Rho2) << " Bytes" << endl; 
     #endif
   
     // Allocate a vector of bytes to store the structure ρ_2
@@ -600,7 +600,7 @@ void I_VerCred_Plain(uint8_t** Rho_ptr, const mat_zz_p& B_f, const uint8_t* ipk_
     len_r   = calc_ser_size_vec_ZZX(lr0, d0);// vec_ZZX (lr0*d0*long)  -  8192 bytes
     len_Rho = len_s0 + len_w + len_x + len_r;//                          28736 bytes
     #ifdef VERBOSE
-    cout << "  Size Rho: " << (len_Rho/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size Rho: " << (len_Rho) << " Bytes" << endl; 
     #endif
 
     // Allocate a vector of bytes to store the structure ρ
@@ -666,7 +666,7 @@ void I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_by
 
     // Deserialize u  
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
-    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size u: " << (len_u) << " Bytes" << endl; 
     
     deserialize_minbyte_poly_zz_pX(u, d0, nbits, u_bytes, len_u);
     
@@ -811,7 +811,7 @@ void I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_by
     len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes    
     len_Rho2 = len_s0 + len_w + len_x;      //                          20544 bytes
     #ifdef VERBOSE
-    cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size Rho2: " << (len_Rho2) << " Bytes" << endl; 
     #endif
   
     // Allocate a vector of bytes to store the structure ρ_2

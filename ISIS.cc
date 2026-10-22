@@ -320,7 +320,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     len_mex      = calc_ser_size_vec_zz_p_minbyte(c_offset, nbits0); // vec_zz_p
     len_Bounds   = calc_ser_size_vec_ZZ(2);                             // vec_ZZ (2*long) - 16 bytes
     len_aux      = 1;                                                   // uint8     - 1 byte
-    // cout << "  Size Hash_Init: " << (NONCE_LEN + SEED_LEN + len_a1 + SEED_LEN + len_idx_hid + len_mex + len_Bounds + len_aux)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Hash_Init: " << (NONCE_LEN + SEED_LEN + len_a1 + SEED_LEN + len_idx_hid + len_mex + len_Bounds + len_aux) << " Bytes" << endl; 
 
     lengths = {len_idx_hid, len_mex, len_Bounds, len_aux};
     max_len = *max_element(begin(lengths), end(lengths));
@@ -357,7 +357,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
 
     len_Pi = len_valid + len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2;
     #ifdef VERBOSE
-    cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size Pi:  " << len_Pi << " Bytes" << endl; 
     #endif
 
     // Allocate a vector of bytes to store the proof Pi
@@ -1439,7 +1439,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     len_mex      = calc_ser_size_vec_zz_p_minbyte(c_offset, nbits0); // vec_zz_p
     len_Bounds   = calc_ser_size_vec_ZZ(2);                             // vec_ZZ (2*long) - 16 bytes
     len_aux      = 1;                                                   // uint8     - 1 byte
-    // cout << "  Size Hash_Init: " << (NONCE_LEN + SEED_LEN + len_a1 + SEED_LEN + len_idx_hid + len_mex + len_Bounds + len_aux)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Hash_Init: " << (NONCE_LEN + SEED_LEN + len_a1 + SEED_LEN + len_idx_hid + len_mex + len_Bounds + len_aux) << " Bytes" << endl; 
 
     lengths = {len_idx_hid, len_mex, len_Bounds, len_aux};
     max_len = *max_element(begin(lengths), end(lengths));
@@ -1485,7 +1485,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     len_z_2 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);    // vec_zz_pX
 
     // len_Pi = len_valid + len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2;
-    // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Pi:  " << len_Pi << " Bytes" << endl; 
 
     // Deserialize the proof Pi
     Pi_bytes = *Pi_ptr;
