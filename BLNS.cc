@@ -39,21 +39,30 @@ int main()
     long            iter, N, valid;
     double          t1, t2, ta, tb;  
 
-    if (l0 == 8)
+    // if (l0 == 8)
+    // {
+    //     idx_pub = conv<vec_UL>("[0 5 6 7]");        // Indexes of disclosed attributes (revealed, i.e. idx)
+    // }
+    // else //(l0 >= 16)
+    // {
+    //     idx_pub = conv<vec_UL>("[0 5 6 13 14 15]"); // Indexes of disclosed attributes (revealed, i.e. idx)
+    //     idx_pub[5] = IDX_TIMESTAMP;                 // NOTE: Index of timestamp (last attribute), must be a disclosed attribute (revealed)
+    // }
+       
+    long N_pub  =  6;         // Number of disclosed attributes (revealed, i.e. idx)
+
+    idx_pub.SetLength(N_pub); // Indexes of disclosed attributes (revealed, i.e. idx)
+
+    for(long i=0; i<N_pub; i++)
     {
-        idx_pub = conv<vec_UL>("[0 5 6 7]");        // Indexes of disclosed attributes (revealed, i.e. idx)
-    }
-    else //(l0 >= 16)
-    {
-        idx_pub = conv<vec_UL>("[0 5 6 13 14 15]"); // Indexes of disclosed attributes (revealed, i.e. idx)
-        idx_pub[5] = IDX_TIMESTAMP;                 // NOTE: Index of timestamp (last attribute), must be a disclosed attribute (revealed)
+        idx_pub[i] = i;
     }
 
     idx_hid = Compute_idx_hid(idx_pub);             // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    N = 100; //1000;  // Number of iterations, for demonstration purposes
+    N = 1; //100; //1000;  // Number of iterations, for demonstration purposes
     
     for(iter=1; iter<=N; iter++)
     {
@@ -269,6 +278,10 @@ int main()
             double t3 = GetWallTime();
             cout << "\n=====================================================================\n";
             cout << "  TOT time: " << (t3 - t1) << " s  (" << (t3 - t2) << " s)" << endl;
+
+            cout << "\n=====================================================================\n";
+            cout << "  lambda: " << (lambda0) << " bit - number of ATTRIBUTES: " << (l0) << " (" << (idx_pub.length()) << " disclosed, " << (idx_hid.length()) << " hidden)" << endl;
+            // cout << idx_pub << endl << idx_hid << endl;
 
         // #endif
         

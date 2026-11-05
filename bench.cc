@@ -148,22 +148,31 @@ int main()
     uint8_t* ipk = nullptr;
     uint8_t* u = nullptr;
 
-    if (l0 == 8)
+    // if (l0 == 8)
+    // {
+    //     idx_pub = conv<vec_UL>("[0 5 6 7]");        // Indexes of disclosed attributes (revealed, i.e. idx)
+    // }
+    // else //(l0 >= 16)
+    // {
+    //     idx_pub = conv<vec_UL>("[0 5 6 13 14 15]"); // Indexes of disclosed attributes (revealed, i.e. idx)
+    //     idx_pub[5] = IDX_TIMESTAMP;                 // NOTE: Index of timestamp (last attribute), must be a disclosed attribute (revealed)
+    // }
+
+    long N_pub  =  6;         // Number of disclosed attributes (revealed, i.e. idx)
+
+    idx_pub.SetLength(N_pub); // Indexes of disclosed attributes (revealed, i.e. idx)
+
+    for(long i=0; i<N_pub; i++)
     {
-        idx_pub = conv<vec_UL>("[0 5 6 7]");        // Indexes of disclosed attributes (revealed, i.e. idx)
-    }
-    else //(l0 >= 16)
-    {
-        idx_pub = conv<vec_UL>("[0 5 6 13 14 15]"); // Indexes of disclosed attributes (revealed, i.e. idx)
-        idx_pub[5] = IDX_TIMESTAMP;                 // NOTE: Index of timestamp (last attribute), must be a disclosed attribute (revealed)
+        idx_pub[i] = i;
     }
 
     idx_hid = Compute_idx_hid(idx_pub);             // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    W = 100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
-    N = 1000; // Number of iterations, for benchmarking purposes
+    W = 2; //100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
+    N = 100; //1000; // Number of iterations, for benchmarking purposes
 
     Perfo.SetDims(13, N);
 
@@ -485,6 +494,10 @@ int main()
     #endif
     cout << "- Issuer.UpdateSign:   " << stats(Perfo[11]) << endl;
     cout << "- Holder.VerCred2:     " << stats(Perfo[12]) << endl;
+
+    cout << "####################################################################################################" << endl;
+    cout << "  lambda: " << (lambda0) << " bit - number of ATTRIBUTES: " << (l0) << " (" << (idx_pub.length()) << " disclosed, " << (idx_hid.length()) << " hidden)" << endl;
+    // cout << idx_pub << endl << idx_hid << endl;
 
     return 0;
 }
