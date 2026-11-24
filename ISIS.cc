@@ -145,29 +145,19 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
 
     ulong           poly_off, idx, i, j, k, t;
     long            rst, b1, b2, b3, sign;
-    // Mat<zz_pX>      B;
     vec_zz_pX       g;
     zz_p            acc_coeff, product_scalar;
-    vec_zz_pX       A_hat_mu, B_hat_mu, C_hat_mu, L_hat_mu;
-    // vec_zz_pX       c_r_j, p_j, Beta_j, r_j, h_part1, h_part2, d_1, D2_y, s_2;
+    vec_zz_pX       A_hat_mu, B_hat_mu, C_hat_mu, L_hat_mu, R_hat_mu;
     vec_zz_pX       mu, tmp_vec, y, delta_63;
     vec_zz_pX       sigma_s_1, acc_vec, sigma_y_1;
     vec_zz_pX       s, r, u, s_1, y_1, y_2, y_3, c_s1, c_s2;
-    zz_pX           beta_linear_form, sigma_b_y2, b_y2, squared_b_y2, beta_3_poly, b_s2, mu_y_acc, product_poly, scratch_poly, c, y3y0, y4y1, y5y2, s3y0, s4y1, s5y2, y3s0, y4s1, y5s2;
-    // zz_pX           h_part3, h_part4, h_part5;
+    zz_pX           beta_h_term, P_neg, P_pos, sigma_bbeta_y2, b_y2, bbeta_y2, squared_bbeta_y2, b_s2, mu_y_acc, product_poly, scratch_poly, c, y3y0, y4y1, y5y2, s3y0, s4y1, s5y2, y3s0, y4s1, y5s2, R_mu_s1, R_mu_y1, R_hat_s1;
     zz_pX           quad_s, quad_r, quad_u, acc, delta_1, delta_2, delta_3, delta_4, f1;
-    Mat<zz_pX>      A_hat, B_hat, C_hat, L_hat;
-    // Mat<zz_pX>      sigma_p_, sigma_Beta_, sigma_c_r_, e_, sigma_e_, D2_2_1;
-    // Mat<zz_pX>      sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;
+    Mat<zz_pX>      R_hat, A_hat, B_hat, C_hat, L_hat;
     mat_zz_p        gamma;
-    // mat_zz_p        R_goth_old, C_r, C_m;
     vec_zz_p        coeffs_s, coeffs_r, coeffs_s1, coeffs_y3, coeffs_R_goth_mult_s1;
-    //vec_zz_p        ones;
-    //vec_zz_pX       coeffs_ones, u_m_ones, sigma_u_m_ones, sigma_ones;
     vec_zz_pX       A1_s1, sigma_s, sigma_r, sigma_u;
     vec_zz_p        m_C;
-    // vec_zz_p        e_tmp;
-    // zz_p            d_0;
     RR              alpha_i;
     ZZ              B_goth_s2,   B_goth_r2;
     zz_p            beta_3, sums, B_goth_s2_p, B_goth_r2_p;
@@ -216,13 +206,11 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
 
     const RR  M_2 = exp( sqrt( RR(2*(lambda0 + 1)) / log2e_Const ) * 1/alpha_2_rr + 1/(2*sqr(alpha_2_rr)));
 
-    const RR M_3 = exp( RR(1)/ ( RR(2) * sqr(RR(alpha_3_rr))));
+    // Bimodal rejection (LNP22, Lemma 2.14(3)): M_3 = exp(1/(2*alpha_3^2)),
+    // passed to BimodalRej_v_zzp as log(M_3)
+    const RR log_M_3 = RR(1) / (RR(2) * sqr(alpha_3_rr));
 
-    const zz_p two = conv<zz_p>(2);
     const zz_p inverse_two = inv(conv<zz_p>(2));
-
-    // alpha_i = RR(alpha_3);
-    // const RR  M_3 = exp( sqrt( RR(2*(lambda0 + 1)) / log2e_Const ) * 1/alpha_i + 1/(2*sqr(alpha_i)));
 
     // 1. Retrieve (A_1, A_2, B_y, B_g, b) ← crs_ISIS
     // A_1     = crs[0];    // ∈ R^^(n x m1)_(q_hat)
@@ -230,6 +218,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     // B_y     = crs[2];    // ∈ R^^(256/d^ x m2)_(q_hat)
     // B_g     = crs[3];    // ∈ R^^(tau_ISIS x m2)_(q_hat)
     // b       = crs[4][0]; // ∈ R^^(m2)_(q_hat)         NOTE: b in crs is a (1 x m_2) matrix
+    // b_β     = crs[5][0]; // ∈ R^^(m2)_(q_hat)         NOTE: b_β in crs is a (1 x m_2) matrix, used only for beta_3
 
     // 2. (P, C, mex, B_f, Bounds, aux) ← x
     // NOTE: directly provided as inputs
@@ -431,24 +420,14 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
 
         sign = 1 - 2 * conv<long>(RandomBnd(ZZ(2)));
 
-        assert(
-            sign == 1 || sign == -1
-        );
-
         beta_3 = conv<zz_p>(sign);
 
-        clear(beta_3_poly);
+        // 17. t_beta3 = b_β^T * s_2 + beta_3   (b_β = crs[5][0])
+        ternary_poly_inner_product_to( Pi.t_beta3, crs[5][0], s2_raw, d_hat );
 
-        SetCoeff(beta_3_poly, 0, beta_3);
-
-        // 17. t_beta = b_crs^T * s_2 + beta_3_poly.
-        ternary_poly_inner_product_to( Pi.t_beta3, crs[4][0], s2_raw, d_hat );
-
-        // beta_3 is embedded as the constant polynomial:
-        //
-        //     beta_3_poly(X) = beta_3 * X^0.
-
-        Pi.t_beta3 += beta_3_poly;
+        // beta_3 ∈ R^_q is the constant polynomial beta_3 * X^0:
+        // adding it only changes the constant coefficient.
+        add(Pi.t_beta3, Pi.t_beta3, beta_3);
 
         // Keep a canonical representative in R_hat_q.
         ModPhi_hat_q_inplace(Pi.t_beta3);
@@ -467,7 +446,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
             add(Pi.t_y[i], Pi.t_y[i], y_3[i]);
         }
 
-        // 17. a_1 ← (t_A, t_y, t_beta_3)
+        // 17. a_1 ← (t_A, t_y, t_beta3)
         Pi_bytes = *Pi_ptr;
         // NOTE: copy the initial status structure, already initialized with (crs, x) before row 11
 
@@ -499,7 +478,6 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         double t__1 = GetWallTime();
         #endif
         HISIS1_optimized(R_goth, &state, m1);
-        // HISIS1(R_goth_old, state, m1);
         #ifdef ENABLE_TIMING_PROVE
         double t__2 = GetWallTime();
         cout << "HISIS1: " << t__2-t__1 << endl;
@@ -514,7 +492,6 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         #ifdef ENABLE_TIMING_PROVE
         double t__3 = GetWallTime();
         #endif
-
         for (i = 0; i < 256; ++i)
         {
             ternary_sigma_dot_raw_coeffs(
@@ -538,8 +515,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         #endif
 
         // 22. b3 ← Rej (z_3, R_goth * s_1, s3_goth, M_3),    b3 ∈ {0, 1}
-        b3 = BimodalRej_v_zzp(Pi.z_3, coeffs_R_goth_mult_s1, q2_hat, s3_goth, M_3);
-
+        b3 = BimodalRej_v_zzp(Pi.z_3, coeffs_R_goth_mult_s1, q2_hat, s3_goth, log_M_3);
     } // End of while loop (row 11)
 
     #ifdef ENABLE_TIMING_PROVE
@@ -611,58 +587,55 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     #ifdef ENABLE_TIMING_PROVE
     double t_4 = GetWallTime();
     #endif
+
+    R_hat.SetDims(tau_ISIS, m1);
+
+    vector<zz_p*> r_reps(m1);
+
+     for (i = 0; i < tau_ISIS; ++i)
+    {
+        for (k = 0; k < m1; ++k)
+        {
+            clear(R_hat[i][k]);
+            R_hat[i][k].SetLength(d_hat);
+
+            r_reps[k] = R_hat[i][k].rep.elts();
+        }
+
+        for (j = 0; j < 256; ++j)
+        {
+            ternary_sigma_accumulate_gamma(
+                R_goth[j],
+                gamma[i][j],
+                r_reps,
+                m1
+            );
+        }
+    }
+
     A_hat.SetDims(tau_ISIS, m2ddd);
     B_hat.SetDims(tau_ISIS, idxhlrddd);
     C_hat.SetDims(tau_ISIS, t_d);
-    L_hat.SetDims(tau_ISIS, n256);  
-    //const ulong offset_C = m2ddd+idxhlrddd;
-    // Build a unique view over the A, B and C coefficient addresses.
-    vector<zz_p*> abc_reps(m1);
+    L_hat.SetDims(tau_ISIS, n256);
 
-    for (i = 0; i < tau_ISIS; ++i)
+   for (i = 0; i < tau_ISIS; ++i)
     {
-
-        ulong p = 0;
-
-        // reps[blk] points directly to the coefficient storage of one polynomial:
-        //
-        //   reps[0 .. m2ddd-1]                       -> A_hat[i][*]
-        //   reps[m2ddd .. m2ddd+idxhlrddd-1]         -> B_hat[i][*]
-        //   reps[m2ddd+idxhlrddd .. m1-1]            -> C_hat[i][*]
-
-        // Initialize all polynomials in A_hat[i][*] and store raw pointers
         for (k = 0; k < m2ddd; ++k)
         {
+            clear(A_hat[i][k]);
             A_hat[i][k].SetLength(d_hat);
-            abc_reps[p++] = A_hat[i][k].rep.elts();
         }
 
-        // Initialize all polynomials in B_hat[i][*] and store raw pointers
         for (k = 0; k < idxhlrddd; ++k)
         {
+            clear(B_hat[i][k]);
             B_hat[i][k].SetLength(d_hat);
-            abc_reps[p++] = B_hat[i][k].rep.elts();
         }
 
-        // Initialize all polynomials in C_hat[i][*] and store raw pointers
         for (k = 0; k < t_d; ++k)
         {
+            clear(C_hat[i][k]);
             C_hat[i][k].SetLength(d_hat);
-            abc_reps[p++] = C_hat[i][k].rep.elts();
-        }
-
-        assert(p == m1);
-            
-        for (j = 0; j < 256; ++j)
-        {
-            product_scalar = beta_3 * gamma[i][j];
-
-            ternary_sigma_accumulate_gamma(
-                R_goth[j],
-                product_scalar,
-                abc_reps,
-                m1
-            );
         }
     }
 
@@ -840,8 +813,9 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     }
 
     #ifdef ENABLE_TIMING_PROVE
+    double t__5 = GetWallTime();
+    cout << "m_C: " << t__5-t__4 << endl;
     double t_5 = GetWallTime();
-    cout << "m_C: " << t_5-t__4 << endl;
     #endif 
 
     poly_mult_hat_opt_to(quad_s, sigma_s, s, scratch_poly);
@@ -850,9 +824,12 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
 
     zz_p beta_3_constraint = beta_3;
 
-    sqr(beta_3_constraint);
+    beta_3_constraint = sqr(beta_3_constraint);
 
     beta_3_constraint -= conv<zz_p>(1);
+
+    // beta_3 / 2, used by the constraints beta_3[k] = 0 (k = 1, ..., d_hat-1) in h
+    const zz_p half_beta_3 = beta_3 * inverse_two;
 
     // 27. for i ∈ [τ] do
     for(i=0; i<tau_ISIS; i++)
@@ -860,12 +837,12 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         const vec_zz_p &g_i = gamma[i];
 
         mul(sums, Pi.z_3[0], g_i[0]);
+
         for(j=1; j<256; j++)
         {
             mul(product_scalar, Pi.z_3[j], g_i[j]);
             add(sums, sums, product_scalar);
-            // sums += gamma[i][j] * Pi.z_3[j];
-        } 
+        }
 
         for(j=0; j<d0; j++)
         {
@@ -873,53 +850,79 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
             add(sums, sums, product_scalar);
         }
 
-        // sums += gamma[i][256+d0]   * B_goth_s2_p;
+        // sums += gamma[i][256+d0] * B_goth_s2_p
         mul(product_scalar, B_goth_s2_p, g_i[256+d0]);
         add(sums, sums, product_scalar);
 
-        // sums += gamma[i][256+d0+1] * B_goth_r2_p;
+        // sums += gamma[i][256+d0+1] * B_goth_r2_p
         mul(product_scalar, B_goth_r2_p, g_i[256+d0+1]);
         add(sums, sums, product_scalar);
 
         sums = -sums;
 
-        //beta_3_costraint = beta3^2 - 1;
+        // Constraint beta_3^2 - 1 = 0.
         mul(product_scalar, g_i[256+d0+3], beta_3_constraint);
         add(sums, sums, product_scalar);
 
-        // beta_k = 0 for k = 1,...,d_hat-1.
-        for (k = 1;k < d_hat;++k)
-        {
-            mul(product_scalar, g_i[256+d0+3+k], beta_3_poly[k]);
-            add(sums, sums, product_scalar);
-        }
-         
         Pi.h[i] = g[i];
-        
-        mul(product_poly, quad_s, g_i[256+d0] );
+
+        // Constraints beta_3[k] = 0, k = 1, ..., d_hat-1:
+        //
+        //   sum_{k=1}^{d_hat-1} gamma[i][256+d0+3+k] * 1/2 * ( X^(-k) beta + X^k sigma(beta) )
+        //
+        // beta = beta_3 is a constant polynomial, so sigma(beta) = beta and
+        // X^(-k) beta = -beta X^(d_hat-k). The sum is therefore the polynomial with
+        // coefficients
+        //
+        //   [X^t] = beta_3/2 * ( gamma[i][256+d0+3+t] - gamma[i][256+d0+3+(d_hat-t)] ),  t = 1, ..., d_hat-1
+        //
+        // and constant coefficient 0.
+        clear_poly_fixed_length(beta_h_term, d_hat);
+
+        for (t = 1; t < d_hat; ++t)
+        {
+            beta_h_term.rep[t] = half_beta_3 * (g_i[256 + d0 + 3 + t] - g_i[256 + d0 + 3 + d_hat - t]);
+        }
+
+        beta_h_term.normalize();
+        add(Pi.h[i], Pi.h[i], beta_h_term);
+
+        mul(product_poly, quad_s, g_i[256+d0]);
         add(Pi.h[i], Pi.h[i], product_poly);
 
-        mul(product_poly, quad_r, g_i[256+d0+1] );
+        mul(product_poly, quad_r, g_i[256+d0+1]);
         add(Pi.h[i], Pi.h[i], product_poly);
 
-        mul(product_poly, quad_u, g_i[256+d0+2] );
+        mul(product_poly, quad_u, g_i[256+d0+2]);
         add(Pi.h[i], Pi.h[i], product_poly);
-        
+
         poly_mult_hat_opt_to(product_poly, A_hat[i], s, scratch_poly);
         add(Pi.h[i], Pi.h[i], product_poly);
+
         poly_mult_hat_opt_to(product_poly, B_hat[i], r, scratch_poly);
         add(Pi.h[i], Pi.h[i], product_poly);
+
         poly_mult_hat_opt_to(product_poly, C_hat[i], u, scratch_poly);
         add(Pi.h[i], Pi.h[i], product_poly);
+
         poly_mult_hat_opt_to(product_poly, L_hat[i], y_3, scratch_poly);
         add(Pi.h[i], Pi.h[i], product_poly);
 
+        // Bilinear contribution beta_3 * (R_hat[i] * s_1).
+        poly_mult_hat_opt_to(R_hat_s1, R_hat[i], s_1, scratch_poly);
+
+        mul(product_poly, R_hat_s1, beta_3);
+        ModPhi_hat_q_inplace(product_poly);
+        add(Pi.h[i], Pi.h[i], product_poly);
+
+        // Add the scalar part so that the constant coefficient of h[i] is zero.
         Pi.h[i][0] += sums;
+        ModPhi_hat_q_inplace( Pi.h[i] );
     }
 
     #ifdef ENABLE_TIMING_PROVE
     double t5 = GetWallTime();
-    #endif
+    #endif 
 
     // 30. a_3 ← h,   a_3 ∈ R^^(τ)_(q_hat)
     serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_h, tau_ISIS, d_hat, nbits, Pi.h);
@@ -934,6 +937,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     B_hat_mu.SetLength(idxhlrddd);
     C_hat_mu.SetLength(t_d);
     L_hat_mu.SetLength(n256);
+    R_hat_mu.SetLength(m1);
 
     const zz_pX& mu_0 = mu[0];
     
@@ -957,6 +961,11 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         mul(L_hat_mu[k], mu_0, L_hat[0][k]);
     }
     
+    for (k = 0; k < m1; ++k)
+    {
+        mul(R_hat_mu[k], mu_0, R_hat[0][k]);
+    }
+
     for (i = 1; i < tau_ISIS; ++i)
     {
         const zz_pX& mu_i = mu[i];
@@ -984,6 +993,12 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
             mul(product_poly, mu_i, L_hat[i][k]);
             add(L_hat_mu[k], L_hat_mu[k], product_poly );
         }
+
+        for (k = 0; k < m1; ++k)
+        {
+            mul(product_poly, mu_i, R_hat[i][k]);
+            add(R_hat_mu[k], R_hat_mu[k], product_poly );
+        }
     }
 
     for (k = 0; k < m2ddd; ++k)
@@ -1005,6 +1020,19 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     {
         ModPhi_hat_q_inplace(L_hat_mu[k]);
     }
+
+    for (k = 0; k < m1; ++k)
+    {
+        ModPhi_hat_q_inplace(R_hat_mu[k]);
+    }
+
+    // -----------------------------------------------------------------------------
+    // R_mu_s1 = R_hat_mu * s_1
+    //
+    // Both R_hat_mu and s_1 remain constant across rejection-sampling attempts,
+    // so this product is computed only once.
+    // -----------------------------------------------------------------------------
+    poly_mult_hat_opt_to(R_mu_s1,R_hat_mu,s_1,scratch_poly);
 
     #ifdef ENABLE_TIMING_PROVE
     double t6 = GetWallTime();
@@ -1030,6 +1058,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     #ifdef ENABLE_TIMING_PROVE
     double t8 = GetWallTime();
     #endif
+    
     // 39. while (rst == 0 ∧ idx < N) do
     s3y0.SetLength(d_hat);
     s4y1.SetLength(d_hat);
@@ -1038,6 +1067,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
     y4s1.SetLength(d_hat);
     y5s2.SetLength(d_hat);
     b_y2.SetLength(d_hat);
+    bbeta_y2.SetLength(d_hat);
     acc.SetLength(d_hat);
     delta_63.SetLength(d_hat - 1);
 
@@ -1065,6 +1095,11 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         add(delta_4, delta_4, product_poly);
     }
 
+    ModPhi_hat_q_inplace(delta_1);
+    ModPhi_hat_q_inplace(delta_2);
+    ModPhi_hat_q_inplace(delta_3);
+    ModPhi_hat_q_inplace(delta_4);
+
     for (k = 1; k < d_hat; ++k)
     {
         const ulong gamma_index = 256 + d0 + 3 + k;
@@ -1080,6 +1115,8 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         ModPhi_hat_q_inplace(delta_63[k-1]);
     }
 
+    // P_neg = sum_k delta_63[k-1] X^(-k),  P_pos = sum_k delta_63[k-1] X^k  (built once, used in every f1)
+    beta_shift_polys(P_neg, P_pos, delta_63, d_hat);
 
     ternary_poly_inner_product_to(
         b_s2,
@@ -1128,6 +1165,18 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         {
             polySampler_hat(y_2[i], s2_goth_d);
         }
+
+        // b_y2 = b^T * y_2    (b = crs[4][0])
+        // NOTE: b_y2 is needed just for f0.
+        poly_mult_hat_opt_to(b_y2, crs[4][0], y_2, scratch_poly);
+
+        // bbeta_y2 = b_β^T * y_2    (b_β = crs[5][0])
+        // The implicit mask associated with beta_3 is:
+        // y_β = -bbeta_y2
+        poly_mult_hat_opt_to(bbeta_y2, crs[5][0], y_2, scratch_poly);
+
+        // R_mu_y1 = R_hat_mu * y_1
+        poly_mult_hat_opt_to(R_mu_y1, R_hat_mu, y_1, scratch_poly);
 
         // 42. y ← (y1; σ(y1); −B*y2; σ(-B*y2)),     y ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
         sigma_map_opt_no_alloc(sigma_y_1, y_1, d_hat);
@@ -1287,63 +1336,40 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         add(f1, f1, mu_y_acc);
 
         //beta_3^2-1 related constraints
-        poly_mult_hat_opt_to(b_y2, crs[4][0], y_2, product_poly);
-        mul(product_poly, b_y2, delta_4);
+        mul(product_poly, bbeta_y2, delta_4);
         mul(product_poly, product_poly, beta_3);
         product_poly += product_poly;
         product_poly = -product_poly;
         add(f1, f1, product_poly);
         ModPhi_hat_q_inplace(f1);
 
-        //63 additional costraints 
-        // sigma_b_y2 = sigma(b^T*y_2).
-        sigma_poly(sigma_b_y2,b_y2, d_hat);
-
-        // Add:
+        // 63 additional constraints (beta_3[k] = 0, k = 1, ..., d_hat-1):
         //
-        //   -sum_{k=1}^{d_hat-1}
-        //      delta_63[k-1]
-        //      * (
-        //            1/2 X^(-k) b_y2
-        //          + 1/2 X^k sigma(b_y2)
-        //        )
-        for (k = 1; k < d_hat; ++k)
-        {
-            // add_negacyclic_shift() requires an output polynomial
-            // with exactly d_hat allocated coefficients.
-            clear(beta_linear_form);
-            beta_linear_form.rep.SetLength(d_hat);
+        //   f1 -= sum_{k=1}^{d_hat-1} delta_63[k-1] * 1/2 * ( X^(-k) bbeta_y2 + X^k sigma(bbeta_y2) )
+        //       = 1/2 * ( bbeta_y2 * P_neg + sigma(bbeta_y2) * P_pos )      (see beta_shift_polys)
+        sigma_poly(sigma_bbeta_y2, bbeta_y2, d_hat);
 
-            // X^(-k) * b_y2 = -X^(d_hat-k) * b_y2.
-            add_negacyclic_shift(beta_linear_form, b_y2, static_cast<uint8_t>(d_hat - k), false, d_hat);
+        beta_linear_forms_sum(product_poly, bbeta_y2, sigma_bbeta_y2, P_neg, P_pos, inverse_two, scratch_poly);
 
-            // + X^k * sigma(b_y2).
-            add_negacyclic_shift(beta_linear_form, sigma_b_y2,static_cast<uint8_t>(k),true, d_hat);
+        sub(f1, f1, product_poly);
+        ModPhi_hat_q_inplace(f1);
 
-            // Divide the complete symmetric expression by two.
-            mul(beta_linear_form, beta_linear_form, inverse_two);
+        // f1 += -bbeta_y2 * R_mu_s1   (y_β = -bbeta_y2)
+        mul(product_poly,bbeta_y2,R_mu_s1);
+        ModPhi_hat_q_inplace(product_poly);
+        product_poly = -product_poly;
+        add(f1, f1, product_poly);
 
-            ModPhi_hat_q_inplace(beta_linear_form);
-
-            // product_poly = delta_63[k-1] * L_k(b_y2).
-            mul(product_poly, delta_63[k - 1], beta_linear_form );
-
-            ModPhi_hat_q_inplace(product_poly);
-
-            // Since:
-            //
-            //   L_k(c*beta - b_y2) = c*L_k(beta) - L_k(b_y2),
-            //
-            // this contribution enters f1 with a negative sign.
-            product_poly = -product_poly;
-
-            add(f1, f1, product_poly);
-        }
+        // f1 += beta_3 * R_mu_y1
+        mul(product_poly,R_mu_y1,beta_3);
+        ModPhi_hat_q_inplace(product_poly);
+        add(f1,f1,product_poly);
         ModPhi_hat_q_inplace(f1);
 
         // 45. t = b*s2 + f1
         Pi.t = b_s2;
         add(Pi.t, Pi.t, f1);
+        ModPhi_hat_q_inplace(Pi.t);
 
         // -----------------------------------------------------------------------------
         // Compute f0
@@ -1351,8 +1377,8 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
 
         Pi.f0 = b_y2;
 
-        squared_b_y2 = sqr(b_y2);
-        ModPhi_hat_q_inplace(squared_b_y2);
+        squared_bbeta_y2 = sqr(bbeta_y2);
+        ModPhi_hat_q_inplace(squared_bbeta_y2);
         
         mul(product_poly, delta_1, y3y0);
         add(Pi.f0, Pi.f0, product_poly);
@@ -1360,9 +1386,17 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         add(Pi.f0, Pi.f0, product_poly);
         mul(product_poly, delta_3, y5y2);
         add(Pi.f0, Pi.f0, product_poly);
-        mul(product_poly, delta_4, squared_b_y2);
+        mul(product_poly, delta_4, squared_bbeta_y2);
         add(Pi.f0, Pi.f0, product_poly);
 
+        // Constant term generated by the bilinear constraint: y_β * (R_mu * y_1)
+        // Since: y_β = -bbeta_y2,
+        // the contribution is: -bbeta_y2 * R_mu*y1.
+        
+        mul(product_poly, bbeta_y2, R_mu_y1);
+        ModPhi_hat_q_inplace(product_poly);
+        product_poly = -product_poly;
+        add(Pi.f0, Pi.f0, product_poly);
         ModPhi_hat_q_inplace(Pi.f0);
 
         // NOTE: D2_y = (D2_2_1 * y_1) was already computed in row 44 (1st addend of f1)
@@ -1491,17 +1525,11 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // NOTE: assuming that current modulus is q2_hat (not q0)
 
     ulong           poly_off, t, i, j, k;
-    Mat<zz_pX>      B, A_hat, B_hat, C_hat, L_hat;
+    Mat<zz_pX>      B, A_hat, B_hat, C_hat, L_hat, R_hat;
     vec_zz_pX       z;
-    vec_zz_pX       mu;
+    vec_zz_pX       mu, R_hat_mu, delta_63;
     zz_pX           tmp_sub;
-    // zz_p            s;
-    // vec_zz_pX       tmp_vec, t_B, r_j, p_j, Beta_j, acc_vec, coeffs_ones, sigma_ones;
-    // vec_zz_p        ones, e_tmp;
-    // Mat<zz_pX>      e_, sigma_e_, sigma_p_, sigma_Beta_, sigma_c_r_;
-    // Mat<zz_pX>      B, sigma_r_, sigma_r_s_, sigma_r_r_, sigma_r_u_;
-    // mat_zz_p        C_r;
-    // mat_zz_p        R_goth, C_m;
+    zz_pX           beta_response, beta_response_squared, sigma_beta_response, P_neg, P_pos, R_mu_z1, b_z2, bbeta_z2, delta_4;
     zz_pX           sigma_tmp, delta_1, delta_2, delta_3, product1 , product2, scratch_poly, acc, acc2, c, d_0, sum, z3z0, z4z1, z5z2;
     mat_zz_p        gamma;
     vec_zz_p        m_C;
@@ -1510,11 +1538,12 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     ZZ              norm2_z1, norm2_z2, norm2_z3;
     HASH_STATE_t    state;
     size_t          coeff_off, len_a1, len_idx_hid, len_mex, len_Bounds, len_aux, max_len;
-    size_t          len_t_A, len_t_y, len_t_g, len_w, len_z_3, len_h;
+    size_t          len_t_A, len_t_y, len_t_beta3, len_t_g, len_w, len_z_3, len_h;
     size_t          len_t, len_f0, len_z_1, len_z_2, len_valid, len_in; //len_Pi;
     uint8_t        *buffer, *Pi_bytes;
     vector<size_t>  lengths;
     PROOF_I_t       Pi;
+
     // Initialise constants
     const ulong     num_idx_hid = idx_hid.length(); // number of undisclosed attributes (hidden)
     const ulong     num_idx_pub = l0 - num_idx_hid; // number of disclosed attributes (revealed)
@@ -1553,6 +1582,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     const ZZ  B_goth2_2 = s2_goth2 * ( 2*m2*ZZ(d_hat) );
     const ZZ  B_goth2_3 = RoundToZZ( sqr(RR(1.7)) * conv<RR>(s3_goth2) * RR(256) );
     // NOTE:  B_goth2_3 is a floating point (due to 1.7 factor), rounded to nearest integer
+    const zz_p inverse_two = inv(conv<zz_p>(2));
 
     //t2-t1 TIME
 
@@ -1562,6 +1592,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // B_y     = crs[2];    // ∈ R^^(256/d^ x m2)_(q_hat)
     // B_g     = crs[3];    // ∈ R^^(tau_ISIS x m2)_(q_hat)
     // b       = crs[4][0]; // ∈ R^^(m2)_(q_hat)         NOTE: b in crs is a (1 x m_2) matrix
+    // b_β     = crs[5][0]; // ∈ R^^(m2)_(q_hat)         NOTE: b_β in crs is a (1 x m_2) matrix, used only for beta_3
 
     // 2. (P, C, mex, B_f, Bounds, aux) ← x
     // NOTE: directly provided as inputs
@@ -1611,6 +1642,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     len_valid = 1;                                                 // uint8     - 1 byte
     len_t_A = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);     // vec_zz_pX
     len_t_y = calc_ser_size_vec_poly_minbyte(n256, d_hat, nbits);  // vec_zz_pX
+    len_t_beta3 = calc_ser_size_poly_minbyte(d_hat, nbits);        // zz_p
     len_t_g = calc_ser_size_vec_poly_minbyte(tau_ISIS, d_hat, nbits);  // vec_zz_pX
     len_w   = calc_ser_size_vec_poly_minbyte(n, d_hat, nbits);     // vec_zz_pX
     len_z_3 = calc_ser_size_vec_zz_p_minbyte(256, nbits);
@@ -1632,7 +1664,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // Check if Pi contains a valid proof
     if (Pi.valid != 1)
     {
-        cout << "ERROR! Pi does not contain a valid proof" << endl;
+        cerr << "ERROR! Pi does not contain a valid proof" << endl;
         return 0;
     }
     #ifdef ENABLE_TIMING_VERIFY
@@ -1642,6 +1674,8 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     Pi_bytes += len_t_A;
     deserialize_minbyte_vec_poly_zz_pX(Pi.t_y, n256, d_hat, nbits, Pi_bytes, len_t_y);
     Pi_bytes += len_t_y;
+    deserialize_minbyte_poly_zz_pX(Pi.t_beta3, d_hat, nbits, Pi_bytes, len_t_beta3);
+    Pi_bytes += len_t_beta3;
     deserialize_minbyte_vec_zz_p(Pi.z_3, 256, nbits, Pi_bytes, len_z_3);
     Pi_bytes += len_z_3;
     deserialize_minbyte_vec_poly_zz_pX(Pi.t_g, tau_ISIS, d_hat, nbits, Pi_bytes, len_t_g);
@@ -1663,10 +1697,10 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     #ifdef ENABLE_TIMING_VERIFY
     double t4 = GetWallTime();
     #endif
-    // 6. a_1 ← (t_A, t_y)
+    // 6. a_1 <- (t_A, t_y, t_beta3)
     Pi_bytes = *Pi_ptr + len_valid;
-    len_in = len_t_A + len_t_y;
-    Hash_Update(&state, Pi_bytes, len_in);
+    len_in = len_t_A + len_t_y + len_t_beta3;
+    Hash_Update( &state, Pi_bytes, len_in);
     Pi_bytes += len_in;
     #ifdef ENABLE_TIMING_VERIFY
     double t5 = GetWallTime();
@@ -1748,6 +1782,33 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     double tHISIS4_i = GetWallTime();
     #endif
     HISIS4(c, &state);
+    // -----------------------------------------------------------------------------
+    // b_z2     = b^T * z_2      (b = crs[4][0])    used only for the final term c*t - b^T*z_2.
+    //
+    // bbeta_z2 = b_β^T * z_2    (b_β = crs[5][0])  used only for beta_response.
+    // -----------------------------------------------------------------------------
+    poly_mult_hat_opt_to(b_z2, crs[4][0], Pi.z_2,scratch_poly);
+
+    poly_mult_hat_opt_to(bbeta_z2, crs[5][0], Pi.z_2,scratch_poly);
+
+    // -----------------------------------------------------------------------------
+    // beta_response = c*t_beta3 - b_β^T*z_2
+    //
+    // Since:
+    //
+    //     t_beta3 = b_β^T*s_2 + beta_3
+    //     z_2     = y_2 + c*s_2
+    //
+    // then:
+    //
+    //     beta_response = c*beta_3 - b_β^T*y_2
+    //                   = c*beta_3 + y_β,   with y_β = -b_β^T*y_2.
+    // -----------------------------------------------------------------------------
+    mul(beta_response, c, Pi.t_beta3);
+    ModPhi_hat_q_inplace(beta_response);
+    sub(beta_response, beta_response, bbeta_z2);
+
+    ModPhi_hat_q_inplace(beta_response);
     #ifdef ENABLE_TIMING_VERIFY
     double tHISIS4_e = GetWallTime();
     cout << "HISIS4: " << tHISIS4_e-tHISIS4_i << endl;
@@ -1817,58 +1878,72 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     #ifdef ENABLE_TIMING_VERIFY
     double tA_1 = GetWallTime();
     #endif
-    
-    A_hat.SetDims(tau_ISIS, m2ddd);
-    B_hat.SetDims(tau_ISIS, idxhlrddd);
-    C_hat.SetDims(tau_ISIS, t_d);  
 
-    // Build a unique view over the A, B and C coefficient addresses.
-    vector<zz_p*> abc_reps(m1);
+    // -----------------------------------------------------------------------------
+    // Public matrix associated with the bilinear term:
+    //
+    //     beta_3 * (R_hat[i] * s_1)
+    //
+    // R_hat[i] = sum_j gamma[i][j] * R_goth[j]
+    //
+    // R_hat depends only on public transcript values and is reconstructed
+    // identically by the prover and verifier.
+    // -----------------------------------------------------------------------------
+    R_hat.SetDims(tau_ISIS, m1);
+
+    vector<zz_p*> r_reps(m1);
 
     for (i = 0; i < tau_ISIS; ++i)
     {
-
-        ulong p = 0;
-
-        // reps[blk] points directly to the coefficient storage of one polynomial:
-        //
-        //   reps[0 .. m2ddd-1]                       -> A_hat[i][*]
-        //   reps[m2ddd .. m2ddd+idxhlrddd-1]         -> B_hat[i][*]
-        //   reps[m2ddd+idxhlrddd .. m1-1]            -> C_hat[i][*]
-
-        // Initialize all polynomials in A_hat[i][*] and store raw pointers
-        for (k = 0; k < m2ddd; ++k)
+        for (k = 0; k < m1; ++k)
         {
-            A_hat[i][k].SetLength(d_hat);
-            abc_reps[p++] = A_hat[i][k].rep.elts();
-        }
+            clear(R_hat[i][k]);
 
-        // Initialize all polynomials in B_hat[i][*] and store raw pointers
-        for (k = 0; k < idxhlrddd; ++k)
-        {
-            B_hat[i][k].SetLength(d_hat);
-            abc_reps[p++] = B_hat[i][k].rep.elts();
-        }
+            R_hat[i][k].SetLength(
+                d_hat
+            );
 
-        // Initialize all polynomials in C_hat[i][*] and store raw pointers
-        for (k = 0; k < t_d; ++k)
-        {
-            C_hat[i][k].SetLength(d_hat);
-            abc_reps[p++] = C_hat[i][k].rep.elts();
+            r_reps[k] =
+                R_hat[i][k].rep.elts();
         }
-
-        assert(p == m1);
 
         for (j = 0; j < 256; ++j)
         {
             ternary_sigma_accumulate_gamma(
                 R_goth[j],
                 gamma[i][j],
-                abc_reps,
+                r_reps,
                 m1
             );
         }
     }
+
+    // Public linear matrices.
+    A_hat.SetDims(tau_ISIS, m2ddd);
+    B_hat.SetDims(tau_ISIS, idxhlrddd);
+    C_hat.SetDims(tau_ISIS, t_d);
+
+    for (i = 0; i < tau_ISIS; ++i)
+    {
+        for (k = 0; k < m2ddd; ++k)
+        {
+            clear(A_hat[i][k]);
+            A_hat[i][k].SetLength(d_hat);
+        }
+
+        for (k = 0; k < idxhlrddd; ++k)
+        {
+            clear(B_hat[i][k]);
+            B_hat[i][k].SetLength(d_hat);
+        }
+
+        for (k = 0; k < t_d; ++k)
+        {
+            clear(C_hat[i][k]);
+            C_hat[i][k].SetLength(d_hat);
+        }
+    }
+
 
     #ifdef ENABLE_TIMING_VERIFY
     double tA_2 = GetWallTime();
@@ -2027,6 +2102,38 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         }
     }
 
+    // -----------------------------------------------------------------------------
+    // Aggregate the public R_hat rows using the challenge mu:
+    //
+    //     R_hat_mu = sum_i mu[i] * R_hat[i].
+    //
+    // R_hat_mu is a vector of m1 polynomials.
+    // -----------------------------------------------------------------------------
+    R_hat_mu.SetLength(m1);
+
+    const zz_pX& mu_0 = mu[0];
+
+    for (k = 0; k < m1; ++k)
+    {
+        mul(R_hat_mu[k], mu_0, R_hat[0][k]);
+    }
+
+    for (i = 1; i < tau_ISIS; ++i)
+    {
+        const zz_pX& mu_i = mu[i];
+
+        for (k = 0; k < m1; ++k)
+        {
+            mul(product1,mu_i,R_hat[i][k]);
+            add(R_hat_mu[k],R_hat_mu[k], product1);
+        }
+    }
+
+    for (k = 0; k < m1; ++k)
+    {
+        ModPhi_hat_q_inplace( R_hat_mu[k] );
+    }
+
     
     #ifdef ENABLE_TIMING_VERIFY
     double tA_4 = GetWallTime();
@@ -2090,41 +2197,6 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         d_0 = d_0 - ModPhi_hat_q( mu[i] * ( sums + Pi.h[i] ));
     }
 
-    // for(i = 0; i < tau_ISIS / 2; i++)
-    // {
-    //     zz_pX sums;
-    //     clear(sums);
-    //     sums.SetLength(d_hat);
-
-    //     for(j = 0; j < 256; j++)
-    //     {
-    //         sums[0] += gamma[2*i][j] * Pi.z_3[j];
-    //     }
-
-    //     for(j = 0; j < d0; j++)
-    //     {
-    //         sums[0] += gamma[2*i][256 + j] * m_C[j];
-    //     }
-
-    //     sums[0] += gamma[2*i][256 + d0]     * B_goth_s2_p;
-    //     sums[0] += gamma[2*i][256 + d0 + 1] * B_goth_r2_p;
-
-
-    //     for(j = 0; j < 256; j++)
-    //     {
-    //         sums[d_hat / 2] += gamma[2*i + 1][j] * Pi.z_3[j];
-    //     }
-
-    //     for(j = 0; j < d0; j++)
-    //     {
-    //         sums[d_hat / 2] += gamma[2*i + 1][256 + j] * m_C[j];
-    //     }
-
-    //     sums[d_hat / 2] += gamma[2*i + 1][256 + d0]     * B_goth_s2_p;
-    //     sums[d_hat / 2] += gamma[2*i + 1][256 + d0 + 1] * B_goth_r2_p;
-
-    //     d_0 = d_0 - ModPhi_hat_q(mu[i] * (sums + Pi.h[i]));
-    // }
 
     #ifdef ENABLE_TIMING_VERIFY
     double tL_3 = GetWallTime();
@@ -2140,19 +2212,19 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // NOTE: equations in ZZ, with squared norms and thresholds
     if ( norm2_z1 > B_goth2_1)
     {
-        cout << "First condition failed - Invalid z_1 norm!" << endl;
+        cerr << "First condition failed - Invalid z_1 norm!" << endl;
         return 0;
     }
 
     if ( norm2_z2 > B_goth2_2)
     {
-        cout << "First condition failed - Invalid z_2 norm!" << endl;
+        cerr << "First condition failed - Invalid z_2 norm!" << endl;
         return 0;
     }
 
     if ( norm2_z3 > B_goth2_3)
     {
-        cout << "First condition failed - Invalid z_3 norm!" << endl;
+        cerr << "First condition failed - Invalid z_3 norm!" << endl;
         return 0;
     }
 
@@ -2166,7 +2238,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     {
         if ( coeff(Pi.h[i], 0) != 0 )
         {
-            cout << "Second condition failed!" << endl;
+            cerr << "Second condition failed!" << endl;
             // cout <<  "h = " << Pi.h << endl;
             return 0;
         }
@@ -2179,21 +2251,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // 21.3 Third condition: A_1*z_1 + A_2*z_2 == w + c*t_A
     // NOTE: equations in R^^(n)_(q_hat)
 
-    // for(i=0; i<n; i++)
-    // {
 
-    //     // A_1*z_1 + A_2*z_2,
-    //     acc = poly_mult_hat_opt(crs[0][i], Pi.z_1) + poly_mult_hat_opt(crs[1][i], Pi.z_2);
-        
-    //     // w + c*t_A
-    //     acc2 = Pi.w[i] + ModPhi_hat_q( c * Pi.t_A[i] );
-  
-    //     if (acc != acc2)
-    //     {
-    //         cout << "Third condition failed!" << endl;
-    //         return 0;
-    //     }
-    // }
 
     for (i = 0; i < n; ++i)
     {
@@ -2208,7 +2266,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
 
         if (acc != acc2)
         {
-            cout << "Third condition failed!" << endl;
+            cerr << "Third condition failed!" << endl;
             return 0;
         }
     }
@@ -2238,6 +2296,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     z3z0.SetLength(d_hat);
     z4z1.SetLength(d_hat);
     z5z2.SetLength(d_hat);
+    clear(sum);
     sum.SetLength(d_hat);
 
     // -----------------------------------------------------------------------------
@@ -2293,6 +2352,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     mul(delta_1, mu[0], gamma[0][256 + d0]);
     mul(delta_2, mu[0], gamma[0][256 + d0 + 1]);
     mul(delta_3, mu[0], gamma[0][256 + d0 + 2]);
+    mul(delta_4, mu[0], gamma[0][256 + d0 + 3]);
 
     for (i = 1; i < tau_ISIS; ++i)
     {
@@ -2306,7 +2366,34 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
 
         mul(product1, mu[i], g_i[256 + d0 + 2]);
         add(delta_3, delta_3, product1);
+
+        mul(product1, mu[i], g_i[256 + d0 + 3]);
+        add(delta_4, delta_4, product1);
     }
+
+    ModPhi_hat_q_inplace(delta_1);
+    ModPhi_hat_q_inplace(delta_2);
+    ModPhi_hat_q_inplace(delta_3);
+    ModPhi_hat_q_inplace(delta_4);
+
+    delta_63.SetLength(d_hat - 1);
+
+    for (k = 1; k < d_hat; ++k)
+    {
+        const ulong gamma_index = 256 + d0 + 3 + k;
+        mul( delta_63[k - 1],mu[0],gamma[0][gamma_index]);
+
+        for (i = 1; i < tau_ISIS; ++i)
+        {
+            mul(product1,mu[i],gamma[i][gamma_index]);
+            add(delta_63[k - 1],delta_63[k - 1], product1);
+        }
+
+        ModPhi_hat_q_inplace(delta_63[k - 1]);
+    }
+
+    // P_neg = sum_k delta_63[k-1] X^(-k),  P_pos = sum_k delta_63[k-1] X^k
+    beta_shift_polys(P_neg, P_pos, delta_63, d_hat);
 
     mul(product1, delta_1, z3z0);
     mul(product2, delta_2, z4z1);
@@ -2318,17 +2405,90 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     ModPhi_hat_q_inplace(product1);
     add(sum, sum, product1);
 
-    // for (i = 0; i < tau_ISIS; i++)
-    // {
-    //     sum += ModPhi_hat_q(
-    //         mu[i] *
-    //         (
-    //             gamma[i][256 + d0] * z3z0 +
-    //             gamma[i][256 + d0 + 1] * z4z1 +
-    //             gamma[i][256 + d0 + 2] * z5z2
-    //         )
-    //     );
-    // }
+
+    // -----------------------------------------------------------------------------
+    // Binary-sign constraint:
+    //
+    //     beta_3^2 - 1 = 0
+    //
+    // Its response-level evaluation is:
+    //
+    //     delta_4 * (beta_response^2 - c^2).
+    // -----------------------------------------------------------------------------
+
+    // beta_response_squared = beta_response^2
+    sqr(beta_response_squared, beta_response);
+
+    ModPhi_hat_q_inplace(beta_response_squared);
+
+    // product2 = c^2
+    sqr(product2, c);
+
+    ModPhi_hat_q_inplace(product2);
+
+    // beta_response_squared = beta_response^2 - c^2
+    sub(beta_response_squared, beta_response_squared, product2);
+
+    // product1 = delta_4 * (beta_response^2 - c^2)
+    mul(product1, delta_4, beta_response_squared);
+
+    ModPhi_hat_q_inplace(product1);
+
+    add( sum,sum,product1);
+
+    // R_mu_z1 = R_hat_mu * z_1
+    poly_mult_hat_opt_to(R_mu_z1,R_hat_mu,Pi.z_1,scratch_poly);
+
+    // -----------------------------------------------------------------------------
+    // Bilinear constraint:
+    //
+    //     beta_response * (R_hat_mu * z_1)
+    //
+    // This evaluates the response-level version of:
+    //
+    //     beta_3 * (R_hat_mu * s_1).
+    // -----------------------------------------------------------------------------
+    mul(product1, beta_response, R_mu_z1);
+
+    ModPhi_hat_q_inplace(product1);
+
+    add(sum,sum,product1);
+    
+    sigma_poly(
+        sigma_beta_response,
+        beta_response,
+        d_hat
+    );
+
+    // -----------------------------------------------------------------------------
+    // Non-constant coefficient constraints:
+    //
+    //     beta_3[k] = 0, for k = 1, ..., d_hat - 1.
+    //
+    // Let:
+    //
+    //     z_beta = beta_response
+    //            = c * beta_3 - b^T * y_2.
+    //
+    // For every k, evaluate:
+    //
+    //     L_k(z_beta)
+    //       = 1/2 * (
+    //             X^(-k) * z_beta
+    //           + X^k * sigma(z_beta)
+    //         ).
+    //
+    // The verifier adds:
+    //
+    //     sum_k c * delta_63[k - 1] * L_k(z_beta)
+    //       = c * 1/2 * ( z_beta * P_neg + sigma(z_beta) * P_pos )      (see beta_shift_polys)
+    // -----------------------------------------------------------------------------
+    beta_linear_forms_sum(product1, beta_response, sigma_beta_response, P_neg, P_pos, inverse_two, product2);
+
+    mul(product1, c, product1);
+    ModPhi_hat_q_inplace(product1);
+
+    add(sum, sum, product1);
 
     // 2nd addend Sum2 = Sum_(i=1,τ){ μ_i · c · ( a_i*z[0] + b_i*z[1] + c_i*z[2] + l_i*z[6] + z[7]_i )}
     
@@ -2383,35 +2543,6 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
         // sum += ModPhi_hat_q( mu[i] * ModPhi_hat_q( c * acc ) );
     }
 
-    // acc.SetLength(d_hat);
-    // for(i=0; i<tau_ISIS; i++)
-    // {
-    //     acc = A_hat[i][0] * Pi.z_1[0];
-
-    //     for(k=1; k<(m2ddd); k++)
-    //     {
-    //         acc += A_hat[i][k] * Pi.z_1[k]; // a_i*z[0]
-    //     }
-
-    //     for(k=0; k<(idxhlrddd); k++)
-    //     {
-    //         acc += B_hat[i][k] * Pi.z_1[m2ddd + k]; // + b_i*z[1]
-    //     }
-
-    //     for(k=0; k<(t_d); k++)
-    //     {
-    //         acc += C_hat[i][k] * Pi.z_1[m2ddd+idxhlrddd + k]; // + c_i*z[2]
-    //     }
-
-    //     for(k=0; k<(n256); k++)
-    //     {
-    //         acc += L_hat[i][k] * z[k]; // + l_i*z[6]
-    //     }
-    //     acc += z[n256+i];
-    //     acc = ModPhi_hat_q(acc);
-    //     sum += ModPhi_hat_q( mu[i] * ModPhi_hat_q( c * acc ) );
-    // }
-
 
     #ifdef ENABLE_TIMING_VERIFY
     double tl4 = GetWallTime();   
@@ -2426,15 +2557,15 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     // sum += ModPhi_hat_q( ModPhi_hat_q( sqr(c) ) * d_0 );
 
     // 4rd addend −(c*t − b^T * z_2)
-    //sum -= ( ModPhi_hat_q( c * Pi.t ) - poly_mult_hat(crs[4][0], Pi.z_2) );
 
     mul(product1, c, Pi.t);
     ModPhi_hat_q_inplace(product1);
 
-    poly_mult_hat_opt_to(product2, crs[4][0], Pi.z_2, scratch_poly);
-
-    sub(tmp_sub, product1, product2);   // tmp_sub = c*t - b^T*z_2
+    sub(tmp_sub, product1, b_z2);   // tmp_sub = c*t - b^T*z_2
     sub(sum, sum, tmp_sub); // sum -= tmp_sub
+
+    ModPhi_hat_q_inplace(sum);
+
     if (sum != Pi.f0)
     {
         cout << "Fourth condition failed!" << endl;

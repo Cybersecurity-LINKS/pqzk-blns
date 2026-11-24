@@ -173,78 +173,83 @@ long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR&
     }   
 }
 
-long BimodalRej_v_zzp( const vec_zz_p& z, const vec_zz_p& v, const long& q, const RR& s, const RR& M
-)
+//==============================================================================
+// BimodalRej_v_zzp - Bimodal rejection sampling (LNP22, Lemma 2.14(3)).
+//
+// Accepts with probability
+//      p = 2 / ( e^(y+x) + e^(y-x) ),
+//      x = <z,v> / s^2,
+//      y = log(M) - ||v||^2 / (2 s^2).
+//
+// Input:
+// - z, v:   vectors mod q (centered representatives are used internally)
+// - q:      modulus
+// - s:      standard deviation of the Gaussian mask
+// - log_M:  log(M), precomputed by the caller.
+//           For M = exp(1/(2*alpha^2)) it is exactly 1/(2*alpha^2).
+//
+// Output:
+// - 1 if the sample is accepted, 0 if it is rejected.
+//
+// NOTE: <z,v> and ||v||^2 are computed EXACTLY with 128-bit integers.
+//       The acceptance probability is still computed in RR (150-bit precision),
+//       so there is no precision loss with respect to a pure RR/ZZ version.
+//==============================================================================
+long BimodalRej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q,
+                      const RR& s, const RR& log_M)
 {
     if (z.length() != v.length())
     {
-        throw std::invalid_argument(
-            "BimodalRej_v_zzp: vector length mismatch"
-        );
+        throw std::invalid_argument("BimodalRej_v_zzp: vector length mismatch");
     }
 
     if (s <= 0)
     {
-        throw std::invalid_argument(
-            "BimodalRej_v_zzp: s must be positive"
-        );
+        throw std::invalid_argument("BimodalRej_v_zzp: s must be positive");
     }
 
-    if (M < 1)
+    if (log_M < 0)
     {
-        throw std::invalid_argument(
-            "BimodalRej_v_zzp: M must be at least one"
-        );
+        throw std::invalid_argument("BimodalRej_v_zzp: M must be at least one");
     }
 
-    const ZZ threshold = ZZ(q) / 2;
-    ZZ dot_product(0);
-    ZZ squared_norm(0);
+    const long half = q / 2;
+
+    // Temporaries declared once, outside the loop, to avoid
+    // a memory allocation for every coefficient.
+    ZZ dot(0), norm(0), z_zz, v_zz, tmp;
 
     for (long i = 0; i < z.length(); ++i)
     {
-        ZZ z_i =
-            conv<ZZ>(z[i]);
+        long z_i = rep(z[i]);      // representative in [0, q)
+        long v_i = rep(v[i]);
 
-        ZZ v_i =
-            conv<ZZ>(v[i]);
+        // Center the representatives in (-q/2, q/2]
+        if (z_i > half) z_i -= q;
+        if (v_i > half) v_i -= q;
 
-        if (z_i > threshold)
-        {
-            z_i -= q;
-        }
+        conv(z_zz, z_i);
+        conv(v_zz, v_i);
 
-        if (v_i > threshold)
-        {
-            v_i -= q;
-        }
-
-        dot_product += z_i * v_i;
-
-        squared_norm += sqr(v_i);
+        mul(tmp, z_zz, v_zz);   add(dot,  dot,  tmp);   // dot  += z_i * v_i
+        sqr(tmp, v_zz);         add(norm, norm, tmp);   // norm += v_i^2
     }
 
+    // RR (150-bit precision)
     const RR s_squared = sqr(s);
 
-    const RR x = conv<RR>(dot_product) / s_squared;
+    const RR x = conv<RR>(dot) / s_squared;
 
-    const RR y =  log(M) - conv<RR>(squared_norm) / (RR(2) * s_squared);
+    const RR y = log_M - conv<RR>(norm) / (RR(2) * s_squared);
 
     const RR acceptance_probability = RR(2) / (exp(y + x) + exp(y - x));
 
-    if (
-        acceptance_probability < 0 || acceptance_probability > 1
-    )
+    if (acceptance_probability < 0 || acceptance_probability > 1)
     {
-        throw std::logic_error(
-            "BimodalRej_v_zzp: invalid acceptance probability"
-        );
+        throw std::logic_error("BimodalRej_v_zzp: invalid acceptance probability");
     }
 
     const RR uniform = random_RR();
 
-    return uniform <= acceptance_probability
-        ? 1
-        : 0;
+    return uniform <= acceptance_probability ? 1 : 0;
 }
-

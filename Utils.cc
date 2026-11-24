@@ -800,6 +800,87 @@ void add_negacyclic_shift(
     }
 }
 
+void clear_poly_fixed_length(
+    zz_pX& polynomial,
+    const long d
+)
+{
+    polynomial.rep.SetLength(d);
+
+    for (long j = 0; j < d; ++j)
+    {
+        clear(polynomial.rep[j]);
+    }
+}
+
+
+//==============================================================================
+// beta_shift_polys - Collapse the d-1 bimodal sign constraints into two polynomials.
+//
+// The constraints beta_3[k] = 0 (k = 1, ..., d-1) are combined with weights delta[k-1]
+// through the linear forms L_k(z) = 1/2 * ( X^(-k) * z + X^k * sigma(z) ).
+// Since the ring is commutative:
+//
+//   sum_k delta[k-1] * L_k(z) = 1/2 * ( z * P_neg + sigma(z) * P_pos ),
+//
+//   P_neg = sum_{k=1}^{d-1} delta[k-1] * X^(-k),
+//   P_pos = sum_{k=1}^{d-1} delta[k-1] * X^k        (mod X^d + 1).
+//
+// P_neg and P_pos depend only on (mu, gamma), so they are built once per proof
+// (only shifts and additions), and each evaluation of the sum costs 2 products
+// instead of d-1.
+//
+// Input:
+// - delta:   d-1 polynomials (delta[k-1] is the weight of constraint k), reduced mod X^d + 1
+// - d:       ring degree (d_hat)
+//
+// Output:
+// - P_neg, P_pos: polynomials reduced mod X^d + 1
+//==============================================================================
+void beta_shift_polys(zz_pX& P_neg, zz_pX& P_pos, const vec_zz_pX& delta, const long d)
+{
+    assert(delta.length() == d - 1);
+
+    clear_poly_fixed_length(P_neg, d);
+    clear_poly_fixed_length(P_pos, d);
+
+    for (long k = 1; k < d; ++k)
+    {
+        // X^(-k) * delta = -X^(d-k) * delta   (negacyclic ring)
+        add_negacyclic_shift(P_neg, delta[k - 1], static_cast<uint8_t>(d - k), false, d);
+
+        // X^k * delta
+        add_negacyclic_shift(P_pos, delta[k - 1], static_cast<uint8_t>(k), true, d);
+    }
+
+    P_neg.normalize();
+    P_pos.normalize();
+}
+
+
+//==============================================================================
+// beta_linear_forms_sum - out = 1/2 * ( b * P_neg + sigma_b * P_pos )  mod (X^d_hat + 1, q)
+//
+// Evaluates sum_k delta[k-1] * L_k(b) with P_neg, P_pos from beta_shift_polys().
+//
+// Input:
+// - b, sigma_b:    polynomial and its automorphism sigma(b)
+// - P_neg, P_pos:  output of beta_shift_polys()
+// - inverse_two:   1/2 mod q
+// - scratch:       temporary polynomial (must be different from out)
+//==============================================================================
+void beta_linear_forms_sum(zz_pX& out, const zz_pX& b, const zz_pX& sigma_b, const zz_pX& P_neg, const zz_pX& P_pos, const zz_p& inverse_two, zz_pX& scratch)
+{
+    assert(&out != &scratch);
+
+    mul(out, b, P_neg);
+    mul(scratch, sigma_b, P_pos);
+    add(out, out, scratch);
+    mul(out, out, inverse_two);
+
+    ModPhi_hat_q_inplace(out);
+}
+
 static inline void add_mul_ternary_block(
     zz_pX& out,
     const zz_pX& polynomial,
