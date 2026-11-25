@@ -671,6 +671,67 @@ void sigma_poly_no_alloc(zz_pX& N, const zz_pX& M, const ulong& d)
     // return N;
 }
 
+
+//==============================================================================
+// sigma_vec_from_coeffs - Reads coeffs as m polynomials of d coefficients each
+//                         (as Coeffs^-1) and adds g·σ of each of them to F:
+//                         F[k] += g·σ( Σ_t coeffs[k·d + t]·X^t ),   k ∈ [m]
+//
+//      No polynomial products: one scalar multiplication per coefficient.
+//
+// Inputs:
+// - coeffs:    coefficient vector, coeffs ∈ Z^(m*d)_(q_hat)
+// - g:         scalar weight
+// - m:         number of polynomials in coeffs and F
+// - d:         number of coefficients per polynomial
+//
+// Output:
+// - F:         F ∈ R^^(m)_(q_hat), each F[k] must already have d coefficients (rep length d)
+//==============================================================================
+void sigma_vec_from_coeffs(vec_zz_pX& F, const vec_zz_p& coeffs, const zz_p& g, const ulong m, const ulong d)
+{
+    for(ulong k=0; k<m; k++)
+    {
+        zz_p*       rep = F[k].rep.elts();
+        const zz_p* src = coeffs.elts() + k*d;
+
+        rep[0] += g * src[0];
+
+        for(ulong t=1; t<d; t++)
+        {
+            rep[d - t] -= g * src[t];
+        }
+    }
+}
+
+
+//==============================================================================
+// sigma_poly_from_coeffs - Returns σ of the polynomial whose d coefficients are
+//                          coeffs[off], ..., coeffs[off + d - 1]:
+//
+//                          out = σ( Σ_t coeffs[off + t]·X^t ) = coeffs[off] - Σ_{t>=1} coeffs[off + t]·X^(d-t)
+//
+// Inputs:
+// - coeffs:    coefficient vector
+// - off:       index of the first coefficient
+// - d:         number of coefficients of the polynomial
+//
+// Output:
+// - out:       polynomial in R^_(q_hat) (overwritten)
+//==============================================================================
+void sigma_poly_from_coeffs(zz_pX& out, const vec_zz_p& coeffs, const ulong off, const ulong d)
+{
+    out.rep.SetLength(d);
+    out.rep[0] = coeffs[off];
+
+    for(ulong t=1; t<d; t++)
+    {
+        out.rep[d - t] = -coeffs[off + t];
+    }
+
+    out.normalize();
+}
+
 //=====================================================================================
 // poly_mult  -  scalar product between two vectors of polynomials of length d0.
 //=====================================================================================

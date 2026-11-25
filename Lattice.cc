@@ -579,6 +579,9 @@ void GSampler(vec_ZZ& s, vec_ZZX& w, const zz_pX& h, const vec_zz_pX& a, const m
 //
 // Output:
 // - x:     integer sampled from the discrete Gaussian distribution
+//
+// NOTE: polySampler_hat implements the same algorithm for c = 0, without ZZ/RR arithmetic
+//       and with identical outputs: keep the two functions in sync.
 // ==============================================================================
 void ZSampler(ZZ& x, const double& sigma, const double& c) 
 {
@@ -697,6 +700,48 @@ void polySampler(ZZX& s, const double& sigma)
 
 
 //==============================================================================
+// uniform_double_from_bits - Returns t·2^(-prec) rounded to the nearest double (ties to even),
+//                            i.e. the same value as conv<double>(random_RR()) when t are the
+//                            prec random bits used by random_RR() (RR::precision() = prec).
+//                            Only integer operations, no RR arithmetic.
+//
+// Inputs:
+// - t:     random integer, 0 <= t < 2^prec
+// - prec:  number of random bits (RR::precision())
+//
+// Output:
+// - u:     double in [0, 1]
+//==============================================================================
+static inline double uniform_double_from_bits(const ZZ& t, const long prec)
+{
+    const long nb = NumBits(t);
+
+    if (nb <= 53)
+    {
+        // t fits in the 53-bit mantissa: exact conversion
+        return ldexp(conv<double>(t), -prec);
+    }
+
+    // Keep the 53 most significant bits, round the remaining sh bits to nearest (ties to even)
+    const long sh = nb - 53;
+    long h = conv<long>(t >> sh);
+
+    if (bit(t, sh - 1))
+    {
+        // remainder >= half: round up, unless it is exactly half and h is already even
+        const bool exact_half = (NumTwos(t) >= sh - 1);
+
+        if (!exact_half || (h & 1))
+        {
+            h++;
+        }
+    }
+
+    return ldexp((double)h, sh - prec);
+}
+
+
+//==============================================================================
 // polySampler_hat - Generates a random polynomial with d_hat elements 
 //                   and fixed standard deviation
 //
@@ -705,17 +750,85 @@ void polySampler(ZZX& s, const double& sigma)
 //
 // Output:
 // - s:     polynomial, s ∈ R^_q
+//
+// NOTE: each coefficient is sampled as in ZSampler, with the same calls to the
+//       random generator in the same order, so the output is identical to the previous version
+//       (for each coefficient: ZSampler(x, sigma, 0); SetCoeff(s, i, conv<zz_p>(x));).
+//       Only the arithmetic is cheaper:
+//       1) the interval [left, right] and 1/(2σ^2) depend only on sigma, computed once per polynomial
+//       2) u ∈ [0, 1] is built from the same RandomBits(t, RR::precision()) used by random_RR(),
+//          rounded to the nearest double without RR arithmetic (uniform_double_from_bits)
 //==============================================================================
 void polySampler_hat(zz_pX& s, const double& sigma)
 {
     long    i;
-    ZZ      x;
+    double  val, p, u;
+    ZZ      x, t;
 
     s.SetLength(d_hat);
-   
+
+    if (sigma <= 0)
+    {
+        cout << "ERROR! Sigma must be > 0 (sigma = " << (sigma) << ")" << endl;
+        assert(sigma > 0);
+    }
+
+    // 1) interval and 1/(2σ^2), as in ZSampler with c = 0
+    const double delta = sigma * log2(lambda0);
+    const ZZ     left  = conv<ZZ>(ceil ( 0.0 - delta ));
+    const ZZ     right = conv<ZZ>(floor( 0.0 + delta ));
+    const ZZ     range = right - left + 1;
+
+    if (range < 2)
+    {
+        // NOTE: small sigma, use the general sampler (it prints a warning)
+        for(i=0; i<d_hat; i++)
+        {
+            ZSampler(x, sigma, 0);
+            SetCoeff(s, i, conv<zz_p>(x));
+        }
+        return;
+    }
+
+    const double iden = 1 / (2 * sigma * sigma);
+    const long   prec = RR::precision();
+
     for(i=0; i<d_hat; i++)
     {
-        ZSampler(x, sigma, 0);
+        for(;;)
+        {
+            // uniform candidate in [left, right]
+            RandomBnd(x, range);
+            x += left;
+
+            // p ← ρ_{σ,0}(x)
+            val = conv<double>(x);
+            val = -(val * val) * iden;
+
+            if (val > 0)
+            {
+                p = 1;
+            }
+            else if (val < -1000)
+            {
+                // NOTE: exp(-1000) = 5,076e-435
+                continue;
+            }
+            else
+            {
+                p = exp(val);
+            }
+
+            // 2) b ← Bernoulli(p), with u = conv<double>(random_RR()) computed from the same random bits
+            RandomBits(t, prec);
+            u = uniform_double_from_bits(t, prec);
+
+            if (u < p)
+            {
+                break;
+            }
+        }
+
         SetCoeff(s, i, conv<zz_p>(x));
     }
 

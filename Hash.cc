@@ -197,62 +197,6 @@ void Hash_v_zz_p_buf(
 
 
 //==============================================================================
-// Hash_R_goth - Generate a random vector for R_goth using the Custom Hash function
-// 
-// Inputs:
-// - state:     status structure
-// - n_elems:   number of elements of the random vector (i.e. m1*d_hat)
-//
-// Output:
-// - out:       random vector with n_elems elements in {-1, 0, 1} mod q_hat,
-//              equivalent to the pair (R_goth_0 - R_goth_1) in BLNS
-// - state:     updated status structure
-//==============================================================================
-void Hash_R_goth(vec_zz_p& out, HASH_STATE_t *state, const long& n_elems)
-{    
-    long            i, j, k, curr_byte, R_goth_0, R_goth_1;
-    unsigned char*  y_arr;
-    
-    // Compute the minimum number of bytes needed to fill the vector  
-    
-    //const long n_bytes = ceil(2*n_elems / 8.0);
-    const long n_bytes = (n_elems + 3) >> 2;
-
-    y_arr = new unsigned char[n_bytes];
-
-    _shake128_squeeze(state, y_arr, n_bytes);
-           
-    // out.SetLength(n_elems);
-    k = 0;
-
-    for(i=0; i < n_bytes; i++)
-    {
-        curr_byte = (long)(y_arr[i]);
-        
-        // NOTE: each byte will fill 4 elements, 2 bits per element (R_goth_0, R_goth_1)
-        for(j=0; j < 4; j++)
-        {
-            if(k < n_elems)
-            {
-                R_goth_0 = ( curr_byte & 1 );
-                curr_byte = curr_byte >> 1;
-                R_goth_1 = ( curr_byte & 1 );
-                curr_byte = curr_byte >> 1;
-                out[k] = conv<zz_p>(R_goth_0 - R_goth_1);
-                // NOTE: each element is in {-1, 0, 1} mod q_hat
-            }
-            k++;
-        }
-    } 
-    
-    delete[] y_arr;
-
-    // return out;
-}
-
-
-
-//==============================================================================
 // Hash_ZZ_xi0 - Generate a random integer modulo (xi0+1) using Custom Hash function
 // 
 // Inputs:
@@ -495,7 +439,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
 // Expand pseudorandom bytes from SHAKE128 into one sparse sigma-encoded row of
 // R_goth.
 //
-// Conceptually, the row is a concatenation of m1 polynomial blocks, each of
+// The row is a concatenation of m1 polynomial blocks, each of
 // length d_hat. Every raw coefficient belongs to {-1, 0, +1} and is derived
 // from 2 bits according to:
 //
@@ -527,7 +471,7 @@ void Hash_Sigma_R_goth_encoded(
     const ulong m1,
     unsigned char* y_arr)
 {
-    assert(d_hat > 0 && d_hat <= 128);
+    assert(d_hat > 0 && d_hat <= 128 && (d_hat % 4) == 0);
     assert((m1 * d_hat) <= 65535);
 
     const ulong n_elems = m1 * d_hat;
@@ -535,83 +479,98 @@ void Hash_Sigma_R_goth_encoded(
 
     _shake128_squeeze(state, y_arr, n_bytes);
 
-    ternary_blocks_init(out, m1, n_elems / 2 + 128);
-
-    ulong blk = 0;
-    ulong c   = 0;
-
-    for (ulong i = 0; i < n_bytes && blk < m1; i++)
+    // Packed code of the sigma-mapped coefficient +1 at raw position c.
+    // The code of -1 is obtained by flipping bit 7.
+    //   sigma position: 0 -> 0, c -> d_hat - c
+    //   sign          : +1 stays +1 for c == 0, becomes -1 for c != 0
+    static uint8_t CODE_PLUS[128];
+    static bool    code_init = false;
+    if (!code_init)
     {
-        unsigned char curr = y_arr[i];
-
-        for (int step = 0; step < 4 && blk < m1; step++)
+        for (long c = 0; c < d_hat; c++)
         {
-            // Decode one coefficient from the 2 least significant bits.
-            // Mapping:
-            //   00 ->  0
-            //   01 -> +1
-            //   10 -> -1
-            //   11 ->  0
-            const int val = (curr & 1) - ((curr >> 1) & 1);
-            curr >>= 2;
-
-            // Append this coefficient after applying sigma.
-            ternary_append_sigma(
-                out,
-                static_cast<uint8_t>(c),
-                val,
-                d_hat
-            );
-
-            c++;
-
-            if (c == d_hat)
-            {
-                c = 0;
-                blk++;
-
-                if (blk <= m1)
-                {
-                    ternary_finish_block(out, blk);
-                }
-            }
+            const uint8_t sp   = (c == 0) ? 0 : static_cast<uint8_t>(d_hat - c);
+            const bool    plus = (c == 0);
+            CODE_PLUS[c] = static_cast<uint8_t>(sp | (plus ? 0x80u : 0u));
         }
+        code_init = true;
     }
+
+    // Branch-free decoding: always write the candidate code at position n,
+    // advance n only if the coefficient is non-zero.
+    // Since n <= (number of coefficients processed) < n_elems, n_elems entries are enough.
+    out.entries.resize(n_elems);
+    out.offsets.resize(m1 + 1);
+    out.offsets[0] = 0;
+
+    uint8_t* e = out.entries.data();
+    size_t   n = 0;
+
+    for (ulong blk = 0; blk < m1; blk++)
+    {
+        const unsigned char* yb = y_arr + blk * (d_hat >> 2);
+
+        for (long c = 0; c < d_hat; c++)
+        {
+            // 00 -> 0, 01 -> +1, 10 -> -1, 11 -> 0
+            const unsigned b = (yb[c >> 2] >> ((c & 3) << 1)) & 3u;
+
+            e[n] = CODE_PLUS[c] ^ static_cast<uint8_t>((b >> 1) << 7);
+            n   += (b == 1u) | (b == 2u);
+        }
+
+        out.offsets[blk + 1] = static_cast<uint16_t>(n);
+    }
+
+    out.entries.resize(n);
 }
 
 
 //==============================================================================
-// HCom1   -    H_Com, custom Hash function needed in BLNS for commitment. 
-//              It generates the 1st challenge used in the NIZK proof system.
-// 
-// Input:
+// Hash1    -   H_Com and H_ISIS, custom Hash function needed in BLNS for both
+//              the commitment (Com) and the ISIS proof systems.
+//              It generates the 1st challenge used in the NIZK proof system:
+//              R_goth ∈ {-1, 0, 1}^(256 x m1*d_hat), equivalent to (R_goth_0 - R_goth_1) in BLNS.
+//              Com and ISIS differ only in the input state (already initialized with
+//              their own (crs, x, a1)) and in m1.
+//
+//              Each row is stored sparse and packed, with the σ mapping already applied
+//              (see Hash_Sigma_R_goth_encoded and TernaryCoeffStructure in Ternary.h).
+//              The values in {-1, 0, 1} do not depend on the modulus (q1_hat or q2_hat).
+//
+// Inputs:
 // - state0:    initial status structure
-// - m1:        m1_Com parameter
+// - m1:        number of polynomial blocks in each row of R_goth (m1_Com or m1_ISIS)
 //
 // Output:
-// - R_goth:    matrix of {-1, 0, 1} mod q1_hat values values,
-//              equivalent to (R_goth_0 - R_goth_1) in BLNS
+// - R_goth:    vector of 256 sparse packed rows (must have 256 elements)
 //==============================================================================
-void HCom1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
+void Hash1(std::vector<TernaryCoeffStructure>& R_goth, const HASH_STATE_t* state0, const ulong& m1)
 {
-    long         i;
     HASH_STATE_t state;
-
     Hash_Copy_To(state, *state0);
 
+    // Domain-separation byte for the 1st challenge.
     const uint8_t v[1] = {1};
     Hash_Update(&state, v, 1);
-    
-    // Create the R_goth matrix  
-    R_goth.SetDims(256, m1*d_hat);   
-    
-    //Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q1_hat
-    for(i=0; i<256; i++)
-    { 
-        Hash_R_goth(R_goth[i], &state, m1*d_hat);
-    }
 
-    // return R_goth;
+    // Total number of coefficients in one row of R_goth.
+    const ulong n_elems = m1 * d_hat;
+
+    // Each byte encodes 4 coefficients, since each coefficient uses 2 bits.
+    const ulong n_bytes = (n_elems + 3) >> 2;
+
+    // Temporary buffer used to receive squeezed bytes from SHAKE128.
+    std::vector<unsigned char> buf(n_bytes);
+
+    // Ensure the output vector contains exactly 256 rows.
+    //R_goth.resize(256);
+
+    // Build each row independently.
+    for (ulong r = 0; r < 256; ++r)
+    {
+        Hash_Sigma_R_goth_encoded(R_goth[r], &state, m1, buf.data());
+    }
 }
 
 
@@ -776,88 +735,6 @@ void HCom4(zz_pX& c, const HASH_STATE_t *state0)
          
     // return c;
 }
-
-
-//==============================================================================
-// HISIS1   -   H_ISIS, custom Hash function needed in BLNS for ISIS. 
-//              It generates the 1st challenge used in the NIZK proof system.
-// 
-// Input:
-// - state0:    initial status structure
-// - m1:        m1_ISIS parameter
-//
-// Output:
-// - R_goth:    matrix of {-1, 0, 1} mod q2_hat values, 
-//              equivalent to (R_goth_0 - R_goth_1) in BLNS
-//==============================================================================
-// NOTE: HISIS1 is identical to HCom1, apart m1
-void HISIS1(mat_zz_p& R_goth, const HASH_STATE_t *state0, const ulong &m1)
-{
-    long         i;
-    HASH_STATE_t state;
-
-    Hash_Copy_To(state, *state0);
-
-    const uint8_t v[1] = {1};
-    Hash_Update(&state, v, 1);
-    
-    // Create the R_goth matrix  
-    R_goth.SetDims(256, m1*d_hat);   
-    
-    // Random generation of R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) mod q2_hat
-    for(i=0; i<256; i++)
-    { 
-        Hash_R_goth(R_goth[i], &state, m1*d_hat);
-    }
-
-    // return R_goth;
-}
-
-//==============================================================================
-// HISIS1   -   H_ISIS, custom Hash function needed in BLNS for ISIS. 
-//              It generates the 1st challenge used in the NIZK proof system.
-//
-// Build the 256 sparse packed rows of R_goth used by the ISIS hash layer.
-//
-// Inputs:
-// - state0 : initial hash state
-// - m1     : number of polynomial blocks in each row of R_goth
-//
-// Output:
-// - R_goth : vector of 256 sparse packed rows
-//==============================================================================
-
-void HISIS1_optimized(std::vector<TernaryCoeffStructure>& R_goth,
-                  const HASH_STATE_t* state0,
-                  const ulong& m1)
-{
-    HASH_STATE_t state;
-    Hash_Copy_To(state, *state0);
-
-    // Domain-separation byte for the HISIS1 expansion.
-    const uint8_t v[1] = {1};
-    Hash_Update(&state, v, 1);
-
-    // Total number of coefficients in one row of R_goth.
-    const ulong n_elems = m1 * d_hat;
-
-    // Each byte encodes 4 coefficients, since each coefficient uses 2 bits.
-    const ulong n_bytes = (n_elems + 3) >> 2;
-
-    // Temporary buffer used to receive squeezed bytes from SHAKE128.
-    std::vector<unsigned char> buf(n_bytes);
-
-    // Ensure the output vector contains exactly 256 rows.
-    //R_goth.resize(256);
-
-    // Build each row independently.
-    for (ulong r = 0; r < 256; ++r)
-    {
-        Hash_Sigma_R_goth_encoded(R_goth[r], &state, m1, buf.data());
-    }
-}
-
-
 
 
 //==============================================================================

@@ -461,7 +461,7 @@ void Prove_ISIS(uint8_t** Pi_ptr, const uint8_t* nonce, const uint8_t* seed_crs,
         #ifdef ENABLE_TIMING_PROVE
         double t__1 = GetWallTime();
         #endif
-        HISIS1_optimized(R_goth, &state, m1);
+        Hash1(R_goth, &state, m1);
         // HISIS1(R_goth_old, state, m1);
         #ifdef ENABLE_TIMING_PROVE
         double t__2 = GetWallTime();
@@ -1549,7 +1549,7 @@ long Verify_ISIS(const uint8_t* nonce, const uint8_t* seed_crs, const CRS_t& crs
     double tHISIS1_i = GetWallTime();
     #endif
     std::vector<TernaryCoeffStructure> R_goth(256);
-    HISIS1_optimized(R_goth, &state, m1);
+    Hash1(R_goth, &state, m1);
     #ifdef ENABLE_TIMING_VERIFY
     double tHISIS1_e = GetWallTime();
     cout << "HISIS1 new: " << tHISIS1_e-tHISIS1_i << endl;

@@ -66,6 +66,8 @@ void        sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_map_opt(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_map_opt_no_alloc(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_poly(zz_pX& N, const zz_pX& M, const ulong& d);
+void        add_scaled_sigma_from_coeffs(vec_zz_pX& F, const vec_zz_p& coeffs, const zz_p& g, const ulong m, const ulong d);
+void        sigma_poly_from_coeffs(zz_pX& out, const vec_zz_p& coeffs, const ulong off, const ulong d);
 
 zz_pX       poly_mult(     const vec_zz_pX& f, const vec_zz_pX& g );
 zz_pX       poly_mult_hat( const vec_zz_pX& f, const vec_zz_pX& g );

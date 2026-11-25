@@ -105,20 +105,21 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
     ulong               i, j, k, idx;
     long                rst, b1, b2, b3;
-    Mat<zz_pX>          B, D2_2_1;
+    Mat<zz_pX>          B;
     vec_zz_pX           u, g;
-    vec_zz_pX           h_part1, h_part2;
-    vec_zz_pX           r_j, p_j, mu, tmp_vec, y;
-    vec_zz_pX           d_1, acc_vec, sigma_s_1, D2_y, sigma_y_1;
+    vec_zz_pX           mu, minus_B_y2, G_hat;
+    vec_zz_pX           d_1, sigma_s_1, sigma_y_1;
     vec_zz_pX           s_1, s_2, y_1, y_2, y_3;
     vec_zz_pX           c_s1, c_s2;
-    zz_pX               c, h_part3, acc, sum, f1;
+    zz_pX               c, h_part3, delta, f1, d1_y, b_s2, prod_poly, scratch_poly;
+    zz_p                sum_z3, acc_coeff;
     RR                  alpha_i;
-    Mat<zz_pX>          e_, e_prime;
-    Mat<zz_pX>          sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_;
-    mat_zz_p            R_goth, gamma;
-    vec_zz_p            s, e_tmp, coeffs_R_goth_mult_s1, coeffs_y3;
-    HASH_STATE_t       *state0, *state;
+    Mat<zz_pX>          F_hat, L_hat;
+    mat_zz_p            gamma;
+    vector<TernaryCoeffStructure> R_goth(256);
+    vector<zz_p*>       F_reps;
+    vec_zz_p            s, coeffs_R_goth_mult_s1, coeffs_y3;
+    HASH_STATE_t        state0, state;
     size_t              len_idx_hid, len_u0, len_B_goth2, max_len;
     size_t              len_t_A, len_t_y, len_t_g, len_w, len_z_3, len_h;
     size_t              len_t, len_f0, len_z_1, len_z_2, len_valid, len_Pi;
@@ -206,14 +207,14 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     max_len = *max_element(begin(lengths), end(lengths)); 
     buffer = new uint8_t[max_len]; 
 
-    state0 = Hash_Init(seed_crs, SEED_LEN);
-    Hash_Update(state0, seed_ipk, SEED_LEN);
+    Hash_Init_To(state0, seed_crs, SEED_LEN);
+    Hash_Update(&state0, seed_ipk, SEED_LEN);
     serialize_vec_UL(buffer, len_idx_hid, num_idx_hid, idx_hid);
-    Hash_Update(state0, buffer, len_idx_hid);
+    Hash_Update(&state0, buffer, len_idx_hid);
     serialize_minbyte_vec_zz_p(buffer, len_u0, d0, nbits, u0);
-    Hash_Update(state0, buffer, len_u0);
+    Hash_Update(&state0, buffer, len_u0);
     serialize_ZZ(buffer, len_B_goth2, B_goth2);
-    Hash_Update(state0, buffer, len_B_goth2);
+    Hash_Update(&state0, buffer, len_B_goth2);
          
     delete[] buffer;
 
@@ -293,7 +294,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
         // 14. a1 ← (t_A, t_y)
         Pi_bytes = *Pi_ptr;
         // NOTE: copy the initial status structure, already initialized with (crs, x) before row 8        
-        state = Hash_Copy(state0);        
+        Hash_Copy_To(state, state0);        
 
         // Initialize Pi with a flag to identify an invalid proof
         Pi.valid = 0;
@@ -302,16 +303,16 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
         // Serialize (t_A, t_y) in the proof Pi and Hash a_1 ← (t_A, t_y)
         serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_A, n, d_hat, nbits, Pi.t_A);
-        Hash_Update(state, Pi_bytes, len_t_A);
+        Hash_Update(&state, Pi_bytes, len_t_A);
         Pi_bytes += len_t_A;
         serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_y, n256, d_hat, nbits, Pi.t_y);
-        Hash_Update(state, Pi_bytes, len_t_y);
+        Hash_Update(&state, Pi_bytes, len_t_y);
         Pi_bytes += len_t_y;
 
 
         // 15. (R_goth_0, R_goth_1) = H(crs, x, a1, 1)
         // 16. R_goth = R_goth_0 - R_goth_1
-        HCom1(R_goth, state, m1);
+        Hash1(R_goth, &state, m1);
         // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
         //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
@@ -325,8 +326,9 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
         for(i=0; i<256; i++)
         {
-            coeffs_R_goth_mult_s1[i] = R_goth[i] * s;
-            // NOTE: this term corresponds to InnerProduct(result, R_goth[i], s);
+            ternary_sigma_dot_raw_coeffs(acc_coeff, R_goth[i], s, m1, d_hat);
+            coeffs_R_goth_mult_s1[i] = acc_coeff;
+            // NOTE: this term corresponds to InnerProduct(result, R_goth[i], s), with s = Coeffs(s_1)
 
             Pi.z_3[i] = coeffs_y3[i] + coeffs_R_goth_mult_s1[i];            
         }
@@ -360,126 +362,132 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     
     // 22. a2 ← (z_3, t_g)
     serialize_minbyte_vec_zz_p(Pi_bytes, len_z_3, 256, nbits, Pi.z_3);
-    Hash_Update(state, Pi_bytes, len_z_3);
+    Hash_Update(&state, Pi_bytes, len_z_3);
     Pi_bytes += len_z_3;
     serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_t_g, tau_Com, d_hat, nbits, Pi.t_g);
-    Hash_Update(state, Pi_bytes, len_t_g);
+    Hash_Update(&state, Pi_bytes, len_t_g);
     Pi_bytes += len_t_g;
 
 
     // 23. gamma ← H(crs, x, a1, a2, 2),   gamma ∈ Z^(tau_Com x 256+d0+1)_(q_hat)
-    HCom2(gamma, state);
+    HCom2(gamma, &state);
 
 
     // Initialize h ∈ R^^(tau)_(q_hat)
     Pi.h.SetLength(tau_Com);
-    
-    // Initialize e ∈ R^^(256 x 256/d_hat)_(q_hat)
-    e_.SetDims(256, n256);
-    // NOTE: defined as e_ to distinguish it from the Euler constant e 
 
-    e_tmp.SetLength(256);
+    // NOTE: gamma is folded before the inner products (as A_hat, L_hat in Prove_ISIS).
+    //       Instead of the 256 + d0 inner products
+    //           h_part1[j] = σ(r_j)·s_1 + σ(e_j)·y_3 - z_3[j]      j ∈ [256]
+    //           h_part2[j] = σ(p_j)·s_1 - σ(e'_j)·u                j ∈ [d0]
+    //       weighted afterwards by gamma, for each i ∈ [τ] we build
+    //           F_i = Σ_j gamma[i][j]·σ(r_j) + Σ_j gamma[i][256+j]·σ(p_j)      ∈ R^^(m1)_(q_hat)
+    //           L_i = Σ_j gamma[i][j]·σ(e_j)                                   ∈ R^^(256/d_hat)_(q_hat)
+    //           G_i = Σ_j gamma[i][256+j]·σ(e'_j)                              ∈ R^^(d0/d_hat)_(q_hat)
+    //       coefficient by coefficient (no polynomial products), and then
+    //           h_i = g_i + F_i·s_1 + L_i·y_3 - G_i·u - Σ_j gamma[i][j]·z_3[j] + gamma[i][256+d0]·h_part3
+    //       F_i and L_i are reused for the 1st and 3rd entries of d_1 (row 31).
+    F_hat.SetDims(tau_Com, m1);
+    L_hat.SetDims(tau_Com, n256);
+    G_hat.SetLength(d_d_hat);
 
-    for(k=0; k<256; k++)
+    for(i=0; i<tau_Com; i++)
     {
-        e_tmp[k] = 0;
+        for(k=0; k<m1; k++)
+        {
+            F_hat[i][k].rep.SetLength(d_hat);
+        }
     }
 
-    for(j=0; j<256; j++)
+    // F_i, contribution of the rows of R_goth (weights gamma[i][j], j ∈ [256])
+    // NOTE: R_goth rows are packed with σ already applied, so only ±gamma[i][j] is added
+    //       at the non-zero positions (as for A_hat in Prove_ISIS)
+    F_reps.resize(m1);
+
+    for(i=0; i<tau_Com; i++)
     {
-        // Temporary coefficient vector to create e_j: it is a unit vector with its j-th coefficient being 1
-        e_tmp[j] = 1;        
+        for(k=0; k<m1; k++)
+        {
+            F_reps[k] = F_hat[i][k].rep.elts();
+        }
 
-        // e_[j].SetLength(n256);
-        CoeffsInvHat(e_[j], e_tmp, n256);
-
-        // Reset the e_tmp coefficient vector
-        e_tmp[j] = 0;
-    }    
-
-    // Initialize e_prime ∈ R^^(d0 x d0/d_hat)_(q_hat)
-    e_prime.SetDims(d0, d_d_hat);
-    e_tmp.SetLength(d0);
-
-    for(k=0; k<d0; k++)
-    {
-        e_tmp[k] = 0;
+        for(j=0; j<256; j++)
+        {
+            ternary_sigma_accumulate_gamma(R_goth[j], gamma[i][j], F_reps, m1);
+        }
     }
 
+    // F_i, contribution of the rows of P (weights gamma[i][256+j], j ∈ [d0])
     for(j=0; j<d0; j++)
     {
-        // Temporary coefficient vector to create e_j: it is a unit vector with its j-th coefficient being 1
-        e_tmp[j] = 1;        
-
-        // e_prime[j].SetLength(d_d_hat);
-        CoeffsInvHat(e_prime[j], e_tmp, d_d_hat);
-
-        // Reset the e_tmp coefficient vector
-        e_tmp[j] = 0;
+        for(i=0; i<tau_Com; i++)
+        {
+            add_scaled_sigma_from_coeffs(F_hat[i], P[j], gamma[i][256+j], m1, d_hat);
+        }
     }
 
-    // Precompute σ(e_j), σ(p_j), σ(e′_j), σ(s_1), σ(r_j), h_part1, h_part2, h_part3
-    sigma_e_.SetDims(256, n256);
-    sigma_p_.SetDims(d0, m1);
-    sigma_e_prime_.SetDims(d0, d_d_hat);
+    for(i=0; i<tau_Com; i++)
+    {
+        for(k=0; k<m1; k++)
+        {
+            F_hat[i][k].normalize();
+        }
+    }
+
+    // h_part3 = σ(s_1)·s_1 - B_goth^2
     sigma_s_1.SetLength(m1);
-    sigma_r_.SetDims(256, m1);
-    h_part1.SetLength(256); 
-    h_part2.SetLength(d0);    
-    
-    for(j=0; j<256; j++)        
-    {
-        sigma_map(sigma_e_[j], e_[j], d_hat);  
-    }
-
-    for(j=0; j<256; j++)        
-    {
-        CoeffsInvHat(r_j, R_goth[j], m1); 
-        sigma_map(sigma_r_[j], r_j, d_hat);  
-        h_part1[j] = poly_mult_hat(sigma_r_[j], s_1) + poly_mult_hat(sigma_e_[j], y_3) - Pi.z_3[j];
-    }
-
-    for(j=0; j<d0; j++)        
-    {
-        CoeffsInvHat(p_j, P[j], m1);
-        sigma_map(sigma_p_[j], p_j, d_hat);
-        sigma_map(sigma_e_prime_[j], e_prime[j], d_hat);   
-        h_part2[j] = poly_mult_hat(sigma_p_[j], s_1) - poly_mult_hat(sigma_e_prime_[j], u);
-    }  
-
     sigma_map(sigma_s_1, s_1, d_hat);
     h_part3   = poly_mult_hat(sigma_s_1, s_1) + conv<zz_p>(-B_goth2);
-    
 
     // 24. for i ∈ [τ] do
     for(i=0; i<tau_Com; i++) 
     {
-        // 25. Compute h_i,   h_i ∈ R^_(q_hat)
-        acc = g[i];
+        const vec_zz_p& gamma_i = gamma[i];
 
-        for(j=0; j<256; j++)        
+        // L_i (unit vectors e_j, j ∈ [256]) and G_i (unit vectors e'_j, j ∈ [d0])
+        for(k=0; k<n256; k++)
         {
-            acc += gamma[i][j] * h_part1[j];
+            sigma_poly_from_coeffs(L_hat[i][k], gamma_i, k*d_hat, d_hat);
         }
-                    
-        for(j=0; j<d0; j++)        
+
+        for(k=0; k<d_d_hat; k++)
         {
-            acc += gamma[i][256+j] * h_part2[j];
+            sigma_poly_from_coeffs(G_hat[k], gamma_i, 256 + k*d_hat, d_hat);
         }
-        
-        acc += gamma[i][256+d0] * h_part3;
-                
+
+        // Σ_j gamma[i][j]·z_3[j]
+        sum_z3 = 0;
+
+        for(j=0; j<256; j++)
+        {
+            sum_z3 += gamma_i[j] * Pi.z_3[j];
+        }
+
+        // 25. Compute h_i,   h_i ∈ R^_(q_hat)
+        poly_mult_hat_opt_to(Pi.h[i], F_hat[i], s_1, scratch_poly);
+
+        poly_mult_hat_opt_to(prod_poly, L_hat[i], y_3, scratch_poly);
+        add(Pi.h[i], Pi.h[i], prod_poly);
+
+        poly_mult_hat_opt_to(prod_poly, G_hat, u, scratch_poly);
+        sub(Pi.h[i], Pi.h[i], prod_poly);
+
+        mul(prod_poly, h_part3, gamma_i[256+d0]);
+        add(Pi.h[i], Pi.h[i], prod_poly);
+
+        add(Pi.h[i], Pi.h[i], g[i]);
+        sub(Pi.h[i], Pi.h[i], sum_z3);
+
         // 26. h ← (h_1, . . . , h_τ),   h ∈ R^^(tau)_(q_hat)
-        Pi.h[i] = acc;
     }
 
     // 27. a3 ← h,   a3 ∈ R^^(tau)_(q_hat)
     serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_h, tau_Com, d_hat, nbits, Pi.h);
-    Hash_Update(state, Pi_bytes, len_h);
+    Hash_Update(&state, Pi_bytes, len_h);
     Pi_bytes += len_h;
 
     // 28. μ ← H(crs, x, a1, a2, a3, 3),   μ ∈ R^^(tau)_(q_hat)        
-    HCom3(mu, state);
+    HCom3(mu, &state);
 
     // 29. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)
     B.SetDims((n256 + tau_Com), m2);
@@ -496,20 +504,14 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
 
     // 30. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat) 
-    D2_2_1.SetDims(m1, m1);        
-    // sum = 0;
-    clear(sum);
+    // NOTE: D_2_(2,1) = δ·I_m1 is diagonal, with δ = Σ_i μ_i·gamma[i][256+d0] on the diagonal.
+    //       Only δ is stored, since (D_2_(2,1)·v)[k] = δ·v[k] (as delta_1 in Prove_ISIS).
+    clear(delta);
             
     for(i=0; i<tau_Com; i++)
     {
-        sum += ( mu[i] * gamma[i][256+d0] );           
+        delta += ( mu[i] * gamma[i][256+d0] );           
     }
-    
-    for(i=0; i<m1; i++)
-    {
-        D2_2_1[i][i] = sum;
-    }
-    // NOTE: sum in the diagonal of D2_2_1, zeros in the rest
 
 
     // 31. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
@@ -520,67 +522,25 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
         clear(d_1[i]);
     }
 
-    // 1st entry of d_1 (m1 polynomials)
-    acc_vec.SetLength(m1);
-    
+    // 1st entry of d_1 (m1 polynomials):  Σ_i μ_i·F_i
+    // NOTE: F_i = Σ_j gamma[i][j]·σ(r_j) + Σ_j gamma[i][256+j]·σ(p_j), already computed for h
     for(i=0; i<tau_Com; i++)
     {
-        // Reset acc_vec
-        for(j=0; j<m1; j++)
-        {        
-            // acc_vec[j] = 0;
-            clear(acc_vec[j]);
-        }               
-                
-        for(j=0; j<256; j++)        
-        {
-            for(k=0; k<m1; k++)        
-            {
-                acc_vec[k] += gamma[i][j] * sigma_r_[j][k];  
-            }
-        }
-
-        for(j=0; j<d0; j++)        
-        {
-            for(k=0; k<m1; k++)        
-            {                
-                acc_vec[k] += gamma[i][256+j] * sigma_p_[j][k];  
-            }     
-        }  
-                    
         for(k=0; k<m1; k++)        
         {
-            // Fill d_1 (first m1 polynomials) by accumulating mu[i]*(...sums...) 
-            d_1[k] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
+            d_1[k] += ModPhi_hat_q( mu[i] * F_hat[i][k] ); 
         }               
     }
 
     // NOTE: skip 2nd entry of d_1 (m1 zeros)
 
-    // 3rd entry of d_1 (256/d_hat polynomials)    
-    acc_vec.SetLength(n256);
-    
+    // 3rd entry of d_1 (256/d_hat polynomials):  Σ_i μ_i·L_i
+    // NOTE: L_i = Σ_j gamma[i][j]·σ(e_j), already computed for h
     for(i=0; i<tau_Com; i++)
     {
-        // Reset acc_vec
-        for(j=0; j<n256; j++)
-        {        
-            // acc_vec[j] = 0;
-            clear(acc_vec[j]);
-        }                     
-                
-        for(j=0; j<256; j++)        
-        {
-            for(k=0; k<n256; k++)        
-            {
-                acc_vec[k] += gamma[i][j] * sigma_e_[j][k];  
-            }          
-        }        
-            
         for(k=0; k<n256; k++)        
         {
-            // Fill d_1 (256/d_hat polynomials) by accumulating mu[i]*(...sums...) 
-            d_1[(2*m1)+k] += ModPhi_hat_q( mu[i] * acc_vec[k]);             
+            d_1[(2*m1)+k] += ModPhi_hat_q( mu[i] * L_hat[i][k] );             
         }
     } 
     
@@ -599,7 +559,12 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     Pi_bytes0 = Pi_bytes;
 
     // NOTE: save the current status structure of the Hash function, already updated in previous steps       
-    state0 = Hash_Copy(state);
+    Hash_Copy_To(state0, state);
+
+    // NOTE: b^T*s_2 (1st addend of t, row 38) does not depend on y, computed once
+    poly_mult_hat_opt_to(b_s2, crs[4][0], s_2, scratch_poly);
+
+    minus_B_y2.SetLength(n256 + tau_Com);
 
 
     // 32. while (rst == 0 ∧ idx < N) do
@@ -607,7 +572,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     {
         // NOTE: restore the pointer to Pi and the status structure of the Hash function
         Pi_bytes = Pi_bytes0;         
-        state = Hash_Copy(state0);
+        Hash_Copy_To(state, state0);
         
         b1 = 0; b2 = 0;
        
@@ -634,45 +599,14 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
 
         // 35. y ← (y1; σ(y1); −B*y2; σ(-B*y2)),     y ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
-        y.SetLength( m1_n256_tau );
-
-        for(i=0; i<m1; i++) 
-        {
-            y[i] = y_1[i];        
-        }
-
+        // NOTE: y is not built explicitly. Only y_1, σ(y_1) and −B*y2 are needed:
+        //       the entries of d_1 that multiply σ(y_1) and σ(−B*y2) are zero (2nd and 5th entries of d_1)
         sigma_map(sigma_y_1, y_1, d_hat);
-        k = 0;
-
-        for(i=m1; i<(2*m1); i++) 
-        {
-            y[i] = sigma_y_1[k];  
-            k++;      
-        }
-            
-        // Compute -B*y2 in a temporary vector
-        tmp_vec.SetLength(n256 + tau_Com);
 
         for(i=0; i<(n256 + tau_Com); i++)
         {
-            tmp_vec[i] = -poly_mult_hat(B[i], y_2);
-        }
-        
-        k = 0;
-
-        for(i=(2*m1); i<(2*m1 + n256 + tau_Com); i++) 
-        {
-            y[i] = tmp_vec[k]; // -B*y2
-            k++; 
-        }
-
-        sigma_map(tmp_vec, tmp_vec, d_hat);
-        k = 0;
-
-        for(i=(2*m1 + n256 + tau_Com); i<( m1_n256_tau ); i++) 
-        {
-            y[i] = tmp_vec[k]; // σ(-B*y2)
-            k++;    
+            poly_mult_hat_opt_to(minus_B_y2[i], B[i], y_2, scratch_poly);
+            NTL::negate(minus_B_y2[i], minus_B_y2[i]);
         }
 
 
@@ -682,59 +616,64 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
         
         for(i=0; i<n; i++)
         {
-            Pi.w[i] = poly_mult_hat(crs[0][i], y_1) + poly_mult_hat(crs[1][i], y_2);
+            poly_mult_hat_opt_to(Pi.w[i], crs[0][i], y_1, scratch_poly);
+            poly_mult_hat_opt_to(prod_poly, crs[1][i], y_2, scratch_poly);
+            add(Pi.w[i], Pi.w[i], prod_poly);
         }
 
                         
         // 37. Definition of f1 ∈ R^_(q_hat)
-        // 1st addend of f1, (σ(s_1)^T * D2_2_1 * y_1)
-        D2_y.SetLength(m1);
+        //     f1 = σ(s_1)^T*D2_2_1*y_1 + σ(y_1)^T*D2_2_1*s_1 + d_1^T*y
+        //        = δ*(σ(s_1)^T*y_1 + σ(y_1)^T*s_1) + Σ_k d_1[k]*y_1[k] + Σ_k d_1[2*m1+k]*(−B*y2)[k]
+        // 1st and 2nd addends of f1
+        poly_mult_hat_opt_to(f1, sigma_s_1, y_1, scratch_poly);
+        poly_mult_hat_opt_to(prod_poly, sigma_y_1, s_1, scratch_poly);
+        add(f1, f1, prod_poly);
+        mul(f1, f1, delta);
 
-        // Compute  (D2_2_1 * y_1),  m1 polynomials
-        for(i=0; i<m1; i++)    
+        // 3rd addend of f1, d_1^T*y on the non-zero entries of d_1 (1st, 3rd and 4th entries)
+        clear(d1_y);
+
+        for(k=0; k<m1; k++)
         {
-            D2_y[i] = poly_mult_hat(D2_2_1[i], y_1);
+            mul(prod_poly, d_1[k], y_1[k]);
+            add(d1_y, d1_y, prod_poly);
         }
 
-        // Accumulate  σ(s_1)^T * (D2_2_1 * y_1)
-        f1 = poly_mult_hat(sigma_s_1, D2_y);
-
-        // 2nd addend of f1,  (σ(y_1)^T * D2_2_1 * s_1)
-        acc_vec.SetLength(m1);
-
-        // Compute  (D2_2_1 * s_1),  m1 polynomials
-        for(i=0; i<m1; i++)    
+        for(k=0; k<(n256 + tau_Com); k++)
         {
-            acc_vec[i] = poly_mult_hat(D2_2_1[i], s_1);
+            mul(prod_poly, d_1[2*m1 + k], minus_B_y2[k]);
+            add(d1_y, d1_y, prod_poly);
         }
 
-        // Accumulate  σ(y_1)^T * (D2_2_1 * s_1)    
-        f1 += poly_mult_hat(sigma_y_1, acc_vec);
-
-        // 3rd addend of f1,   (d_1^T * y)
-        f1 += poly_mult_hat(d_1, y);
+        add(f1, f1, d1_y);
+        ModPhi_hat_q_inplace(f1);
 
         
         // 38. Definition of t ∈ R^_(q_hat)
-        Pi.t = poly_mult_hat(crs[4][0], s_2) + f1;
+        add(Pi.t, b_s2, f1);
 
         // 39. Definition of f0 ∈ R^_(q_hat)
-        Pi.f0 = poly_mult_hat(sigma_y_1, D2_y) + poly_mult_hat(crs[4][0], y_2);
-        // NOTE: D2_y = (D2_2_1 * y_1) was already computed in row 37 (1st addend of f1)
+        //     f0 = σ(y_1)^T*D2_2_1*y_1 + b^T*y_2 = δ*σ(y_1)^T*y_1 + b^T*y_2
+        poly_mult_hat_opt_to(Pi.f0, sigma_y_1, y_1, scratch_poly);
+        mul(Pi.f0, Pi.f0, delta);
+        poly_mult_hat_opt_to(prod_poly, crs[4][0], y_2, scratch_poly);
+        add(Pi.f0, Pi.f0, prod_poly);
+        ModPhi_hat_q_inplace(Pi.f0);
 
         // 40. a4 ← (t, w, f0)
         serialize_minbyte_poly_zz_pX(Pi_bytes, len_t, d_hat, nbits, Pi.t);
-        Hash_Update(state, Pi_bytes, len_t);
+        Hash_Update(&state, Pi_bytes, len_t);
         Pi_bytes += len_t;
         serialize_minbyte_vec_poly_zz_pX(Pi_bytes, len_w, n, d_hat, nbits, Pi.w);
-        Hash_Update(state, Pi_bytes, len_w);
+        Hash_Update(&state, Pi_bytes, len_w);
         Pi_bytes += len_w;
         serialize_minbyte_poly_zz_pX(Pi_bytes, len_f0, d_hat, nbits, Pi.f0);
-        Hash_Update(state, Pi_bytes, len_f0);
+        Hash_Update(&state, Pi_bytes, len_f0);
         Pi_bytes += len_f0;
 
         // 41. c ← H(crs, x, a1, a2, a3, a4, 4),   c ∈ C ⊂ R^_(q_hat)
-        HCom4(c, state);
+        HCom4(c, &state);
 
         // 42. for i ∈ {1, 2} do
         // NOTE: for simplicity, next operations are duplicated with suffixes _1 and _2
@@ -776,8 +715,6 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     
     } // End of while loop (row 32)
 
-    delete  state0;
-    delete  state;
 
     // 46. if rst = 1 then
     if (rst == 1)
@@ -830,14 +767,14 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
     // NOTE: assuming that current modulus is q1_hat (not q0)
 
     ulong               i, j, k;
-    Mat<zz_pX>          B, D2_2_1;
-    vec_zz_pX           u, t_B, mu, z, tmp_vec, tmp_vec2, r_j, p_j;
-    vec_zz_pX           d_1, acc_vec, sigma_z_1;
-    zz_pX               c, acc, sum, d_0, sum_sigma_e_u;
-    Mat<zz_pX>          e_, e_prime;
-    Mat<zz_pX>          sigma_r_, sigma_p_, sigma_e_, sigma_e_prime_;
-    mat_zz_p            R_goth, gamma;
-    vec_zz_p            e_tmp;
+    Mat<zz_pX>          B;
+    vec_zz_pX           u, t_B, mu, z_B, tmp_vec, tmp_vec2;
+    vec_zz_pX           d_1, sigma_z_1;
+    zz_pX               c, acc, delta, d1_z, d_0, sum_sigma_e_u, g, prod_poly, scratch_poly;
+    Mat<zz_pX>          F_hat, L_hat;
+    mat_zz_p            gamma;
+    vector<TernaryCoeffStructure> R_goth(256);
+    vector<zz_p*>       F_reps;
     zz_p                sum_z3, B_goth_p;
     ZZ                  norm2_z1, norm2_z2, norm2_z3;
     HASH_STATE_t*       state;
@@ -974,7 +911,7 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
 
     // 9. (R_goth_0, R_goth_1) = H(crs, x, a1, 1)    
     // 10. R_goth = R_goth_0 - R_goth_1
-    HCom1(R_goth, state, m1);
+    Hash1(R_goth, state, m1);
     // NOTE: R_goth ∈ {-1, 0, 1}^(256 x m_1*d_hat) ⊂ Z^(256 x m_1*d_hat)_(q_hat)
     //       equivalent to (R_goth_0 - R_goth_1) in BLNS
 
@@ -1020,131 +957,86 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
     
 
     // 16. z ← (z_1; σ(z_1); (c*t_B − B*z_2); σ(c*t_B − B*z_2)),     z ∈ R^^(2*m1 + 2*(256/d_hat + tau))_(q_hat)
-    z.SetLength( m1_n256_tau ); 
-
-    for(i=0; i<m1; i++) 
-    {
-        z[i] = Pi.z_1[i]; // z_1
-    }
-
+    // NOTE: z is not built explicitly. Only z_1, σ(z_1) and z_B = (c*t_B − B*z_2) are needed:
+    //       the entries of d_1 that multiply σ(z_1) and σ(z_B) are zero (2nd and 5th entries of d_1)
     sigma_map(sigma_z_1, Pi.z_1, d_hat);
-    k = 0;
 
-    for(i=m1; i<(2*m1); i++) 
-    {
-        z[i] = sigma_z_1[k]; // σ(z_1)
-        k++;      
-    }
+    z_B.SetLength(n256 + tau_Com);
 
-    // Compute (c*t_B − B*z_2) in a temporary vector
-    tmp_vec.SetLength(n256 + tau_Com);
-    
     for(i=0; i<(n256 + tau_Com); i++)
     {
-        tmp_vec[i] = ModPhi_hat_q( c * t_B[i] ) - poly_mult_hat(B[i], Pi.z_2);
-    }
-    
-    k = 0;
-
-    for(i=(2*m1); i<(2*m1 + n256 + tau_Com); i++) 
-    {
-        z[i] = tmp_vec[k]; // (c*t_B − B*z_2)
-        k++; 
-    }
-
-    // Compute σ(c*t_B − B*z_2) in a temporary vector
-    sigma_map(tmp_vec2, tmp_vec, d_hat); 
-    k = 0;
-
-    for(i=(2*m1 + n256 + tau_Com); i<(m1_n256_tau); i++)  
-    {
-        z[i] = tmp_vec2[k]; // σ(c*t_B − B*z_2)   
-        k++;    
+        z_B[i] = ModPhi_hat_q( c * t_B[i] ) - poly_mult_hat(B[i], Pi.z_2);
     }
 
 
     // 17. Definition of D_2_(2,1) ∈ R^^(m1 x m1)_(q_hat) 
-    D2_2_1.SetDims(m1, m1);        
-    // sum = 0;
-    clear(sum);
+    // NOTE: D_2_(2,1) = δ·I_m1 is diagonal, with δ = Σ_i μ_i·gamma[i][256+d0] on the diagonal.
+    //       Only δ is stored, since (D_2_(2,1)·v)[k] = δ·v[k].
+    clear(delta);
             
     for(i=0; i<tau_Com; i++)
     {
-        sum += ( mu[i] * gamma[i][256+d0] );           
+        delta += ( mu[i] * gamma[i][256+d0] );           
     }
-
-    for(i=0; i<m1; i++)
-    {
-        D2_2_1[i][i] = sum;
-    }
-    // NOTE: sum in the diagonal of D2_2_1, zeros in the rest
 
     
-    // Initialize e ∈ R^^(256 x 256/d_hat)_(q_hat)
-    e_.SetDims(256, n256);
-    // NOTE: defined as e_ to distinguish it from the Euler constant e 
+    // NOTE: gamma is folded first, as in Prove_Com. For each i ∈ [τ]:
+    //           F_i = Σ_j gamma[i][j]·σ(r_j) + Σ_j gamma[i][256+j]·σ(p_j)      ∈ R^^(m1)_(q_hat)
+    //           L_i = Σ_j gamma[i][j]·σ(e_j)                                   ∈ R^^(256/d_hat)_(q_hat)
+    //       built coefficient by coefficient (no polynomial products, no σ(r_j), σ(p_j), σ(e_j) matrices).
+    //       They give the 1st and 3rd entries of d_1.
+    F_hat.SetDims(tau_Com, m1);
+    L_hat.SetDims(tau_Com, n256);
 
-    e_tmp.SetLength(256);
-
-    for(k=0; k<256; k++)
+    for(i=0; i<tau_Com; i++)
     {
-        e_tmp[k] = 0;
+        for(k=0; k<m1; k++)
+        {
+            F_hat[i][k].rep.SetLength(d_hat);
+        }
     }
 
-    for(j=0; j<256; j++)
+    // F_i, contribution of the rows of R_goth (weights gamma[i][j], j ∈ [256])
+    // NOTE: R_goth rows are packed with σ already applied, so only ±gamma[i][j] is added
+    //       at the non-zero positions (as for A_hat in Prove_ISIS)
+    F_reps.resize(m1);
+
+    for(i=0; i<tau_Com; i++)
     {
-        // Temporary coefficient vector to create e_j: it is a unit vector with its j-th coefficient being 1
-        e_tmp[j] = 1;        
+        for(k=0; k<m1; k++)
+        {
+            F_reps[k] = F_hat[i][k].rep.elts();
+        }
 
-        // e_[j].SetLength(n256);
-        CoeffsInvHat(e_[j], e_tmp, n256);
-
-        // Reset the e_tmp coefficient vector
-        e_tmp[j] = 0;
-    }    
-
-    // Initialize e_prime ∈ R^^(d0 x d0/d_hat)_(q_hat)
-    e_prime.SetDims(d0, d_d_hat);
-    e_tmp.SetLength(d0);
-
-    for(k=0; k<d0; k++)
-    {
-        e_tmp[k] = 0;
+        for(j=0; j<256; j++)
+        {
+            ternary_sigma_accumulate_gamma(R_goth[j], gamma[i][j], F_reps, m1);
+        }
     }
 
+    // F_i, contribution of the rows of P (weights gamma[i][256+j], j ∈ [d0])
     for(j=0; j<d0; j++)
     {
-        // Temporary coefficient vector to create e_j: it is a unit vector with its j-th coefficient being 1
-        e_tmp[j] = 1;        
-
-        // e_prime[j].SetLength(d_d_hat);
-        CoeffsInvHat(e_prime[j], e_tmp, d_d_hat);
-
-        // Reset the e_tmp coefficient vector
-        e_tmp[j] = 0;
+        for(i=0; i<tau_Com; i++)
+        {
+            add_scaled_sigma_from_coeffs(F_hat[i], P[j], gamma[i][256+j], m1, d_hat);
+        }
     }
-    
-    // Precompute σ(r_j), σ(p_j), σ(e_j), σ(e′_j) 
-    sigma_r_.SetDims(256, m1);          
-    sigma_e_.SetDims(256, n256);
-    sigma_p_.SetDims(d0, m1);
-    sigma_e_prime_.SetDims(d0, d_d_hat);
-    
-    for(j=0; j<256; j++)        
+
+    for(i=0; i<tau_Com; i++)
     {
-        CoeffsInvHat(r_j,  R_goth[j], m1);
-        sigma_map(sigma_r_[j], r_j, d_hat);
-        sigma_map(sigma_e_[j], e_[j], d_hat);  
+        for(k=0; k<m1; k++)
+        {
+            F_hat[i][k].normalize();
+        }
+
+        for(k=0; k<n256; k++)
+        {
+            sigma_poly_from_coeffs(L_hat[i][k], gamma[i], k*d_hat, d_hat);
+        }
     }
 
-    for(j=0; j<d0; j++)        
-    {
-        CoeffsInvHat(p_j, P[j], m1);
-        sigma_map(sigma_p_[j], p_j, d_hat);
-        sigma_map(sigma_e_prime_[j], e_prime[j], d_hat);            
-    }
 
-    
     // 18. Construction of d_1 ∈ R^^(2*m1+2(256/d_hat+τ))_(q_hat)
     d_1.SetLength(m1_n256_tau);
 
@@ -1153,70 +1045,26 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
         clear(d_1[i]);
     }    
 
-    // 1st entry of d_1 (m1 polynomials)
-    acc_vec.SetLength(m1);
-    
+    // 1st entry of d_1 (m1 polynomials):  Σ_i μ_i·F_i
     for(i=0; i<tau_Com; i++)
     {
-        // Reset acc_vec
-        for(j=0; j<m1; j++)
-        {        
-            // acc_vec[j] = 0;
-            clear(acc_vec[j]);
-        }               
-                
-        for(j=0; j<256; j++)        
-        {
-            for(k=0; k<m1; k++)        
-            {
-                acc_vec[k] += gamma[i][j] * sigma_r_[j][k];  
-            }
-        }
-
-        for(j=0; j<d0; j++)        
-        {
-            for(k=0; k<m1; k++)        
-            {                
-                acc_vec[k] += gamma[i][256+j] * sigma_p_[j][k];  
-            }     
-        }  
-                    
         for(k=0; k<m1; k++)        
         {
-            // Fill d_1 (first m1 polynomials) by accumulating mu[i]*(...sums...) 
-            d_1[k] += ModPhi_hat_q( mu[i] * acc_vec[k]); 
+            d_1[k] += ModPhi_hat_q( mu[i] * F_hat[i][k] ); 
         }               
     }
 
     // NOTE: skip 2nd entry of d_1 (m1 zeros)
 
-    // 3rd entry of d_1 (256/d_hat polynomials)    
-    acc_vec.SetLength(n256);
-  
+    // 3rd entry of d_1 (256/d_hat polynomials):  Σ_i μ_i·L_i
     for(i=0; i<tau_Com; i++)
     {
-        // Reset acc_vec
-        for(j=0; j<n256; j++)
-        {        
-            // acc_vec[j] = 0;
-            clear(acc_vec[j]);
-        }                     
-                
-        for(j=0; j<256; j++)        
-        {
-            for(k=0; k<n256; k++)        
-            {
-                acc_vec[k] += gamma[i][j] * sigma_e_[j][k];  
-            }          
-        }        
-            
         for(k=0; k<n256; k++)        
         {
-            // Fill d_1 (256/d_hat polynomials) by accumulating mu[i]*(...sums...) 
-            d_1[(2*m1)+k] += ModPhi_hat_q( mu[i] * acc_vec[k]);             
+            d_1[(2*m1)+k] += ModPhi_hat_q( mu[i] * L_hat[i][k] );             
         }
     }
-    
+
     // 4th entry of d_1 (tau_Com polynomials)    
     k = 0;
 
@@ -1245,11 +1093,21 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
             
         clear(sum_sigma_e_u);
         
-        for(j=0; j<d0; j++)
+        // NOTE: σ(e'_l) is a monomial that lies only in block j = l / d_hat, with position l mod d_hat = k:
+        // Hence the sum equals sum_j g_j * u[j], where g_j is a polynomial built directly from the
+        // d_hat gamma values of block j (no polynomial products needed to form it):
+        //   g_j = gamma[i][off] - sum_{k=1}^{d_hat-1} gamma[i][off+k] * X^(d_hat-k),  off = 256 + j*d_hat
+        for(j=0; j<d_d_hat; j++)
         {
-            sum_sigma_e_u += gamma[i][256+j] * poly_mult_hat(sigma_e_prime_[j], u);        
+            sigma_poly_from_coeffs(g, gamma[i], 256 + j*d_hat, d_hat);
+
+            mul(prod_poly, g, u[j]);
+            add(sum_sigma_e_u, sum_sigma_e_u, prod_poly);
         }
-    
+        // NOTE: the block products have degree up to 2*d_hat-2, reduce mod X^d_hat + 1 before multiplying by mu[i]
+        //       (ModPhi_hat_q below is a single-fold reduction, valid only for degree < 2*d_hat)
+        ModPhi_hat_q_inplace(sum_sigma_e_u);
+
         d_0 = d_0 - ModPhi_hat_q( mu[i] * ( sum_z3 + sum_sigma_e_u + gamma[i][256+d0] * B_goth_p + Pi.h[i] )); 
     }
 
@@ -1321,29 +1179,31 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
     // 20.4 Fourth condition: σ(z_1)^T*D2_2_1*z_1 + c*d_1^T*z + c^2*d_0 − (c*t − b^T*z_2) == f0 
     // NOTE: equations in R^^_(q_hat)
     
-    // 1st addend σ(z_1)^T * (D2_2_1 * z_1)
-    // Compute  (D2_2_1 * z_1),  m1 polynomials
-    acc_vec.SetLength(m1);
-    
-    for(i=0; i<m1; i++)    
+    // 1st addend σ(z_1)^T * (D2_2_1 * z_1) = δ * σ(z_1)^T * z_1
+    poly_mult_hat_opt_to(acc, sigma_z_1, Pi.z_1, scratch_poly);
+    mul(acc, acc, delta);
+    ModPhi_hat_q_inplace(acc);
+
+    // 2nd addend (c * d_1^T * z), with d_1^T * z on the non-zero entries of d_1 (1st, 3rd and 4th entries)
+    clear(d1_z);
+
+    for(k=0; k<m1; k++)
     {
-        acc_vec[i] = poly_mult_hat(D2_2_1[i], Pi.z_1);
+        mul(prod_poly, d_1[k], Pi.z_1[k]);
+        add(d1_z, d1_z, prod_poly);
     }
 
-    // Accumulate  σ(z_1)^T * (D2_2_1 * z_1)    
-    acc = poly_mult_hat(sigma_z_1, acc_vec);
-    
-    // 2nd addend (c * d_1^T * z)
-    acc_vec.SetLength(m1_n256_tau);
-    // Compute  (c * d_1^T),  (2*m1 + 2*(256/d_hat + tau_Com)) polynomials
-    for(i=0; i<m1_n256_tau; i++)    
+    for(k=0; k<(n256 + tau_Com); k++)
     {
-        acc_vec[i] = ModPhi_hat_q( c * d_1[i] );
+        mul(prod_poly, d_1[2*m1 + k], z_B[k]);
+        add(d1_z, d1_z, prod_poly);
     }
 
-    // Accumulate  (c * d_1^T) * z 
-    acc += poly_mult_hat(acc_vec, z);   
-    
+    ModPhi_hat_q_inplace(d1_z);
+    mul(prod_poly, c, d1_z);
+    ModPhi_hat_q_inplace(prod_poly);
+    add(acc, acc, prod_poly);
+
     // 3rd addend (c^2 * d_0)
     acc += ModPhi_hat_q( ModPhi_hat_q( sqr(c) ) * d_0 );
       
