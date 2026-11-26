@@ -147,13 +147,23 @@ int main()
 
     uint8_t* ipk = nullptr;
     uint8_t* u = nullptr;
-    idx_pub = conv<vec_UL>("[4 5 6 7]");    // Indexes of disclosed attributes (revealed, i.e. idx)
-    idx_hid = Compute_idx_hid(idx_pub);     // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
+
+    if (l0 == 8)
+    {
+        idx_pub = conv<vec_UL>("[0 5 6 7]");        // Indexes of disclosed attributes (revealed, i.e. idx)
+    }
+    else //(l0 >= 16)
+    {
+        idx_pub = conv<vec_UL>("[0 5 6 13 14 15]"); // Indexes of disclosed attributes (revealed, i.e. idx)
+        idx_pub[5] = IDX_TIMESTAMP;                 // NOTE: Index of timestamp (last attribute), must be a disclosed attribute (revealed)
+    }
+
+    idx_hid = Compute_idx_hid(idx_pub);             // Indexes of undisclosed attributes (hidden, i.e. \overline{\idx})
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    W = 10;  //100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
-    N = 100; //1000; // Number of iterations, for benchmarking purposes
+    W = 100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
+    N = 1000; // Number of iterations, for benchmarking purposes
 
     Perfo.SetDims(13, N);
 

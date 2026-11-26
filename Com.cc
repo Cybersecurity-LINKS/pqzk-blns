@@ -200,7 +200,7 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
     len_idx_hid  = calc_ser_size_vec_UL(num_idx_hid);               // uint8*    - |idx_hid| bytes
     len_u0       = calc_ser_size_vec_zz_p_minbyte(d0, nbits);       // vec_zz_p
     len_B_goth2  = calc_ser_size_ZZ();                              // ZZ (long) - 8 bytes
-    // cout << "  Size Hash_Init: " << (SEED_LEN + SEED_LEN + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Hash_Init: " << (SEED_LEN + SEED_LEN + len_idx_hid + len_u0 + len_B_goth2) << " Bytes" << endl; 
 
     lengths = {len_idx_hid, len_u0, len_B_goth2};
     max_len = *max_element(begin(lengths), end(lengths)); 
@@ -232,11 +232,11 @@ void Prove_Com(uint8_t** Pi_ptr, const uint8_t* seed_crs, const CRS_t& crs, cons
 
     len_Pi =    len_valid + len_t_A + len_t_y + len_t_g + len_w +
                 len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2;
-    // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Pi:  " << len_Pi << " Bytes" << endl; 
     
     #ifdef VERBOSE
     size_t len_u = calc_ser_size_poly_minbyte(d0, nbits0);    
-    cout << "  Size Rho1: " << (len_u + len_Pi)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size Rho1: " << (len_u + len_Pi) << " Bytes" << endl; 
     #endif
         
     // Allocate a vector of bytes to store the proof Pi
@@ -888,7 +888,7 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
     len_idx_hid  = calc_ser_size_vec_UL(num_idx_hid);               // uint8*    - |idx_hid| bytes
     len_u0       = calc_ser_size_vec_zz_p_minbyte(d0, nbits);       // vec_zz_p
     len_B_goth2  = calc_ser_size_ZZ();                              // ZZ (long) - 8 bytes
-    // cout << "  Size Hash_Init: " << (SEED_LEN + SEED_LEN + len_idx_hid + len_u0 + len_B_goth2)/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Hash_Init: " << (SEED_LEN + SEED_LEN + len_idx_hid + len_u0 + len_B_goth2) << " Bytes" << endl; 
 
     lengths = {len_idx_hid, len_u0, len_B_goth2};
     max_len = *max_element(begin(lengths), end(lengths)); 
@@ -925,7 +925,7 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
     len_z_2 = calc_ser_size_vec_poly_minbyte(m2, d_hat, nbits);     // vec_zz_pX
 
     // len_Pi =    len_valid + len_t_A + len_t_y + len_t_g + len_w + len_z_3 + len_h + len_t + len_f0 + len_z_1 + len_z_2;
-    // cout << "  Size Pi:  " << len_Pi/1024.0 << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Pi:  " << len_Pi << " Bytes" << endl; 
 
     // Deserialize the proof Pi
     Pi_bytes = *Pi_ptr;

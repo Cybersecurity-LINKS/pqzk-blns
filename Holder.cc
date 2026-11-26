@@ -31,7 +31,8 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, uint8_t* seed_crs, Vec<string>& attrs, c
 {
     // NOTE: assuming that current modulus is q0 (not q_hat)
     ulong       i;
-    string      randomStr;
+    // string   randomStr;
+    Vec<string> templ;
 
     // Initialize a 32 byte (256 bit) public seed for common random string (crs) structure,
     // using the cryptographically strong pseudo-random number generator from NTL
@@ -42,15 +43,46 @@ void H_Init(CRS2_t& crs, mat_zz_p& B_f, uint8_t* seed_crs, Vec<string>& attrs, c
     // NOTE: crs contains 3D uniformly random matrices mod q_hat,
     //       B_f is also generated from seed_crs
 
-    // Initialize dummy attributes
-    attrs.SetLength(l0);
-    randomStr = to_string( RandomBnd(12345678) );
+    
+    // Initialize attributes from a template, for testing purposes
+    templ.SetLength(18);
+    templ[0]  = "did:web:docker%3a49000:.well-known:did_zk.json";
+    templ[1]  = "did:jwk:eyJrdHkiOiJPS1AiLCJhbGciOiJFZERTQSIsImNydiI6IkVkMjU1MTkiLCJ4IjoiZEZpbXVrZUo5LTAwS19xaTQ5eDhZeGdKcmZJWXRsMUtkaFJZcjNhdXRMdyJ9";
+    templ[2]  = "1804772082";
+    templ[3]  = "1773149682";
+    templ[4]  = "did:web:docker%3a49000:.well-known:did_zk.json/vc/4186";
+    templ[5]  = "https://www.w3.org/2018/credentials/v1";
+    templ[6]  = "VerifiableCredential";
+    templ[7]  = "1990-09-22";
+    templ[8]  = "Master";
+    templ[9]  = "Male";
+    templ[10] = "John";
+    templ[11] = "Engineer";
+    templ[12] = "Doe";
+    templ[13] = "did:web:docker%3a49000:.well-known:did_zk.json#my-revocation-service";
+    templ[14] = "RevocationTimeframe2024";
+    templ[15] = "2026-03-11T13:35:42Z";
+    templ[16] = "4186";
+    templ[17] = "2026-03-11T13:34:42Z";
 
+    attrs.SetLength(l0);
+    
     for(i=0; i<l0; i++)
     {
-        attrs[i] = to_string(i+1) + "-" + randomStr;
-        // NOTE: dummy attributes (l0 = 8)
+        if (i < 18)
+        {
+            attrs[i] = templ[i];
+        }
+        else
+        {
+            attrs[i] = to_string( RandomBnd(1999999999) );
+        }
     }
+
+    attrs[2]  = to_string( RandomBnd(1999999999) );
+    attrs[3]  = to_string( RandomBnd(1999999999) );
+    attrs[IDX_TIMESTAMP] = Get_timestamp(0);
+    // cout << attrs << endl;
 
     // return(crs, B_f, seed_crs, attrs)        
 }
@@ -267,7 +299,7 @@ void H_VerCred1(RHO1_t& Rho1, STATE_t& state, const uint8_t* seed_crs, const CRS
     // Allocate a vector of bytes to store u
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
     Rho1.u = new uint8_t[len_u];
-    // cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size u: " << (len_u) << " Bytes" << endl; 
     
     // Serialize u in Rho1.u
     serialize_minbyte_poly_zz_pX(Rho1.u, len_u, d0, nbits, u);
@@ -346,7 +378,7 @@ void H_VerCred2(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f, uin
     len_w  = calc_ser_size_vec_ZZX(m0, d0); // vec_ZZX (m0*d0*long)   - 12288 bytes
     len_x  = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes
     // size_t len_Rho2 = len_s0 + len_w + len_x; //                     20544 bytes
-    // cout << "  Size Rho2: " << (len_Rho2/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Rho2: " << (len_Rho2) << " Bytes" << endl; 
   
     // Deserialize the structure ρ_2
     Rho2_bytes = *Rho2_ptr;
@@ -769,7 +801,7 @@ void H_VerCred_Plain(CRED_t& cred, const uint8_t* ipk_bytes, const mat_zz_p& B_f
     len_x   = calc_ser_size_big_ZZ(t0);      // big ZZ (t0 = 512 bits) -    64 bytes
     len_r   = calc_ser_size_vec_ZZX(lr0, d0);// vec_ZZX (lr0*d0*long)  -  8192 bytes
     // size_t len_Rho = len_s0 + len_w + len_x + len_r;//                28736 bytes
-    // cout << "  Size Rho: " << (len_Rho/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    // cout << "  Size Rho: " << (len_Rho) << " Bytes" << endl; 
   
     // Deserialize the structure ρ
     Rho_bytes = *Rho_ptr;
@@ -965,7 +997,7 @@ void H_ReqUpdate(uint8_t** u_ptr, string& old_timestamp, string& new_timestamp, 
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
     *u_ptr = new uint8_t[len_u];
     #ifdef VERBOSE
-    cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size u: " << (len_u) << " Bytes" << endl; 
     #endif
     
     // Serialize u
@@ -1076,7 +1108,7 @@ void H_ReqUpd_Plain(uint8_t** u_ptr, string& old_timestamp, string& new_timestam
     len_u = calc_ser_size_poly_minbyte(d0, nbits);
     *u_ptr = new uint8_t[len_u];
     #ifdef VERBOSE
-    cout << "  Size u: " << (len_u/1024.0) << " KiB" << endl; // 1 KiB kibibyte = 1024 bytes
+    cout << "  Size u: " << (len_u) << " Bytes" << endl; 
     #endif
     
     // Serialize u
