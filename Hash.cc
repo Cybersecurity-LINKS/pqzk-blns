@@ -652,7 +652,7 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);    
     
     n257 = 256 + d0 + 1; 
-    // NOTE: gamma has 256+d+1 columns in Com, while 256+d+3 in ISIS   
+    // NOTE: gamma has 256+d+1 columns in Com, while 256+d+3+d_hat in ISIS
 
     // Random generation of gamma ∈ Z^(tau_Com x 256+d0+1)_q1_hat
     gamma.SetDims(tau_Com, n257);
@@ -885,7 +885,7 @@ void HISIS1_optimized(std::vector<TernaryCoeffStructure>& R_goth,
 void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
-    long         i, n259;       
+    long         i, n_cols;       
     HASH_STATE_t state; 
     
     Hash_Copy_To(state, *state0);
@@ -896,17 +896,17 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);    
     
-    n259 = 256 + d0 + 3 + d_hat;
+    n_cols = 256 + d0 + 3 + d_hat;
     // NOTE: gamma has 256+d+3+d_hat columns in ISIS, while 256+d+1 in Com 
 
     // Random generation of gamma ∈ R^(tau_ISIS x 256+d+3+d_hat)_q2_hat
-    gamma.SetDims(tau_ISIS, n259);
+    gamma.SetDims(tau_ISIS, n_cols);
 
     vector<unsigned char> buf(b_coeffs);
 
     for (i = 0; i < tau_ISIS; i++)
     {
-        Hash_v_zz_p_buf(gamma[i], &state, n259, b_coeffs, buf.data());
+        Hash_v_zz_p_buf(gamma[i], &state, n_cols, b_coeffs, buf.data());
     }
     // return gamma;
 }

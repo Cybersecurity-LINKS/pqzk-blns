@@ -46,7 +46,7 @@ void  Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2, const 
     if (diff < 0)
     {
         cout << "ERROR! (B_goth^2 - ||s||^2) must be positive: " << diff << endl;
-        assert(diff >= 0);
+        throw std::runtime_error("(B_goth^2 - ||s||^2) must be non-negative");
     }
     else if (diff == 0)
     {

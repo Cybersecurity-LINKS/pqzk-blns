@@ -191,10 +191,34 @@ long Rej_v_zzpX(const vec_zz_pX& z, const vec_zz_pX& v, const long& q, const RR&
 // Output:
 // - 1 if the sample is accepted, 0 if it is rejected.
 //
-// NOTE: <z,v> and ||v||^2 are computed EXACTLY with 128-bit integers.
+// NOTE: <z,v> and ||v||^2 are computed EXACTLY with 128-bit integers (__int128),
+//       which is valid as long as  n * (q/2)^2 < 2^127  (checked below);
+//       e.g. q2_hat ≈ 2^50, n = 256  ->  < 2^106.
+//       The result is identical to a ZZ computation (exact integer arithmetic).
 //       The acceptance probability is still computed in RR (150-bit precision),
 //       so there is no precision loss with respect to a pure RR/ZZ version.
 //==============================================================================
+
+// Exact conversion of a signed 128-bit integer into ZZ
+static void conv_int128_to_ZZ(ZZ& out, const __int128 x)
+{
+    const bool               negative  = (x < 0);
+    const unsigned __int128  magnitude = negative ? -static_cast<unsigned __int128>(x)
+                                                  :  static_cast<unsigned __int128>(x);
+
+    const unsigned long hi = static_cast<unsigned long>(magnitude >> 64);
+    const unsigned long lo = static_cast<unsigned long>(magnitude);
+
+    conv(out, hi);
+    out <<= 64;
+    out += conv<ZZ>(lo);
+
+    if (negative)
+    {
+        NTL::negate(out, out);
+    }
+}
+
 long BimodalRej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q,
                       const RR& s, const RR& log_M)
 {
@@ -214,12 +238,18 @@ long BimodalRej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q,
     }
 
     const long half = q / 2;
+    const long n    = z.length();
 
-    // Temporaries declared once, outside the loop, to avoid
-    // a memory allocation for every coefficient.
-    ZZ dot(0), norm(0), z_zz, v_zz, tmp;
+    // No overflow in the 128-bit accumulators: n * half^2 < 2^127
+    if (2 * NumBits(half) + NumBits(n) > 127)
+    {
+        throw std::invalid_argument("BimodalRej_v_zzp: q or vector length too large (128-bit overflow)");
+    }
 
-    for (long i = 0; i < z.length(); ++i)
+    __int128 dot  = 0;
+    __int128 norm = 0;
+
+    for (long i = 0; i < n; ++i)
     {
         long z_i = rep(z[i]);      // representative in [0, q)
         long v_i = rep(v[i]);
@@ -228,19 +258,20 @@ long BimodalRej_v_zzp(const vec_zz_p& z, const vec_zz_p& v, const long& q,
         if (z_i > half) z_i -= q;
         if (v_i > half) v_i -= q;
 
-        conv(z_zz, z_i);
-        conv(v_zz, v_i);
-
-        mul(tmp, z_zz, v_zz);   add(dot,  dot,  tmp);   // dot  += z_i * v_i
-        sqr(tmp, v_zz);         add(norm, norm, tmp);   // norm += v_i^2
+        dot  += static_cast<__int128>(z_i) * v_i;      // dot  += z_i * v_i
+        norm += static_cast<__int128>(v_i) * v_i;      // norm += v_i^2
     }
+
+    ZZ dot_zz, norm_zz;
+    conv_int128_to_ZZ(dot_zz,  dot);
+    conv_int128_to_ZZ(norm_zz, norm);
 
     // RR (150-bit precision)
     const RR s_squared = sqr(s);
 
-    const RR x = conv<RR>(dot) / s_squared;
+    const RR x = conv<RR>(dot_zz) / s_squared;
 
-    const RR y = log_M - conv<RR>(norm) / (RR(2) * s_squared);
+    const RR y = log_M - conv<RR>(norm_zz) / (RR(2) * s_squared);
 
     const RR acceptance_probability = RR(2) / (exp(y + x) + exp(y - x));
 

@@ -111,7 +111,9 @@ typedef Mat<long>   mat_L;
 #define m0          3               // \textit{m}, length of a2
 #define alpha_1     44              // α_1 ∈ O(√λ)
 #define alpha_2     44              // α_2 ∈ O(√λ)
-#define alpha_3     6               // α_3 ∈ O(√λ)
+#define alpha_3     44              // α_3 ∈ O(√λ)   for Π^Com_NIZK  (unimodal rejection on z_3)
+#define alpha_3_ISIS 6              // α_3           for Π^ISIS_NIZK (bimodal rejection on z_3, M_3 = exp(1/(2α_3^2)))
+                                    // NOTE: when the bimodal rejection is ported to Com, use a small α_3 there too
 #define alpha_bar_1 44              // \overline{α}_1 ∈ O(√λ)
 #define alpha_bar_2 44              // \overline{α}_2 ∈ O(√λ)
 #define N1          lambda0         // \textsf{N} ∈ O(λ)            NOTE: it is different from N0, domain size of the function f
