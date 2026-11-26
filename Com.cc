@@ -46,7 +46,7 @@ void  Preprocessing_Com(vec_zz_p& s, const vec_ZZ& s0, const ZZ& B_goth2, const 
     if (diff < 0)
     {
         cout << "ERROR! (B_goth^2 - ||s||^2) must be positive: " << diff << endl;
-        assert(diff >= 0);
+        throw std::runtime_error("(B_goth^2 - ||s||^2) must be non-negative");
     }
     else if (diff == 0)
     {
@@ -997,7 +997,7 @@ long Verify_Com(const uint8_t* seed_crs, const CRS_t& crs, const uint8_t* seed_i
 
     // Free the Hash state and the vector with serialized proof Pi
     delete  state;
-    delete[] (*Pi_ptr);
+    // delete[] (*Pi_ptr);
 
 
     // 14. B   ← [B_y; B_g],   B ∈ R^^((256/d_hat + tau) x m2)_(q_hat)

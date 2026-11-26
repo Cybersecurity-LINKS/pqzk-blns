@@ -186,7 +186,10 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
 
     #ifdef USE_REVOCATION
         // Check if the attribute with the timestamp contains the current date/time
-        assert( attrs_prime[IDX_TIMESTAMP] == Get_timestamp(1) );
+        if ( attrs_prime[IDX_TIMESTAMP] != Get_timestamp(1) )
+        {
+            throw std::runtime_error("The timestamp attribute does not match the current date/time");
+        }
     #endif
     
     // 2. (a1, a2, c0, c1) ← ipk,   ipk ∈ R_q × R^m_q × R^ℓm_q × R^ℓr_q
@@ -310,7 +313,7 @@ void I_VerCred(uint8_t** Rho2_ptr, const uint8_t* seed_crs, const CRS2_t& crs, c
         // NOTE: Verify_Com deserializes the proof π in Rho1.Pi
     }
 
-    // delete[] Rho1.Pi;
+    delete[] Rho1.Pi;
     Rho1.Pi = nullptr;
 
     P.kill();
@@ -657,7 +660,10 @@ void I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_by
 
     #ifdef USE_REVOCATION
         // Check if new_timestamp corresponds to the current time
-        assert( new_timestamp == Get_timestamp(1) );
+        if ( new_timestamp != Get_timestamp(1) )
+        {
+            throw std::runtime_error("new_timestamp does not match the current date/time");
+        }
         // NOTE: Issuer must also check that u and old_timestamp correspond to a previously issued credential (not revoked)
     #endif
         
@@ -670,8 +676,8 @@ void I_UpdateSign(uint8_t** Rho2_ptr, const mat_zz_p& B_f, const uint8_t* ipk_by
     
     deserialize_minbyte_poly_zz_pX(u, d0, nbits, u_bytes, len_u);
     
-    // Free the vector with serialized u
-    delete[] u_bytes;
+    // // Free the vector with serialized u
+    // delete[] u_bytes;
    
     
     // Use the old_timestamp instead of the corresponding attribute

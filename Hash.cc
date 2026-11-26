@@ -311,7 +311,7 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
 
     // Create the crs structure  
     crs.SetLength(2); 
-    crs[0].SetLength(5); // crs_ISIS
+    crs[0].SetLength(6); // crs_ISIS
     crs[1].SetLength(5); // crs_Com
 
     // ###########################  crs_ISIS  #########################################
@@ -339,8 +339,9 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
         // crs[0][1] = A_2;
         // crs[0][2] = B_y;
         // crs[0][3] = B_g;
-        // crs[0][4] = b;
-            
+        // crs[0][4] = b      (1 x m_2) used for t, f_0 and the final check c*t - b^T*z_2
+        // crs[0][5] = b_beta (1 x m_2) used only for the bimodal sign beta_3 (t_beta3, y_beta)
+
         // Random generation of A_1 ∈ R^(n x m_1)_(q_hat)   
         //                      A_2 ∈ R^(n x m_2)_(q_hat)      
         crs[0][0].SetDims(n, m1);    
@@ -382,14 +383,25 @@ void Hcrs(CRS2_t& crs, mat_zz_p& B_f, const uint8_t* seed_crs, const long &num_i
             }
         }
 
-        // Random generation of b ∈ R^(m_2)_(q_hat)
+        // Random generation of b, b_beta ∈ R^(m_2)_(q_hat)
+        // NOTE: b and b_beta are independent uniform rows, each stored as its own (1 x m_2) matrix
+        //       (crs[0][4] and crs[0][5]); MLWE hiding instance: B_ext = [B_y; B_g; b; b_beta].
+        //       b      is used for t and f_0;
+        //       b_beta is used only for the bimodal sign beta_3 (t_beta3).
         crs[0][4].SetDims(1, m2);
-        // NOTE: b is (1 x m_2) matrix, not a vector!
 
+        // b = crs[0][4][0]
         for(i=0; i<m2; i++)
         {
             Hash_zz_pX_buf(crs[0][4][0][i], &state, d_hat, b_coeffs, buf.data());
-        }        
+        }       
+        
+        crs[0][5].SetDims(1, m2);
+        // b_beta = crs[0][5][0]
+        for(i=0; i<m2; i++)
+        {
+            Hash_zz_pX_buf(crs[0][5][0][i], &state, d_hat, b_coeffs, buf.data());
+        } 
     }
 
       
@@ -640,7 +652,7 @@ void HCom2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     const size_t b_coeffs = ceil(log2( conv<double>(q1_hat-1) ) / 8.0);    
     
     n257 = 256 + d0 + 1; 
-    // NOTE: gamma has 256+d+1 columns in Com, while 256+d+3 in ISIS   
+    // NOTE: gamma has 256+d+1 columns in Com, while 256+d+3+d_hat in ISIS
 
     // Random generation of gamma ∈ Z^(tau_Com x 256+d0+1)_q1_hat
     gamma.SetDims(tau_Com, n257);
@@ -873,7 +885,7 @@ void HISIS1_optimized(std::vector<TernaryCoeffStructure>& R_goth,
 void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
 {
     // NOTE: assuming that current modulus is q2_hat (not q0)
-    long         i, n259;       
+    long         i, n_cols;       
     HASH_STATE_t state; 
     
     Hash_Copy_To(state, *state0);
@@ -884,17 +896,17 @@ void HISIS2(mat_zz_p& gamma, const HASH_STATE_t *state0)
     // Compute the minimum number of bytes to represent each coefficient
     const size_t b_coeffs = ceil(log2( conv<double>(q2_hat-1) ) / 8.0);    
     
-    n259 = 256 + d0 + 3;
-    // NOTE: gamma has 256+d+3 columns in ISIS, while 256+d+1 in Com 
+    n_cols = 256 + d0 + 3 + d_hat;
+    // NOTE: gamma has 256+d+3+d_hat columns in ISIS, while 256+d+1 in Com 
 
-    // Random generation of gamma ∈ R^(tau_ISIS x 256+d+3)_q2_hat
-    gamma.SetDims(tau_ISIS, n259);
+    // Random generation of gamma ∈ R^(tau_ISIS x 256+d+3+d_hat)_q2_hat
+    gamma.SetDims(tau_ISIS, n_cols);
 
     vector<unsigned char> buf(b_coeffs);
 
     for (i = 0; i < tau_ISIS; i++)
     {
-        Hash_v_zz_p_buf(gamma[i], &state, n259, b_coeffs, buf.data());
+        Hash_v_zz_p_buf(gamma[i], &state, n_cols, b_coeffs, buf.data());
     }
     // return gamma;
 }

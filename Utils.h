@@ -62,6 +62,13 @@ void ternary_poly_mul_to(
     const long block,
     const long d);
 
+void clear_poly_fixed_length(
+    zz_pX& polynomial,
+    const long d
+);
+void add_negacyclic_shift(zz_pX& out,const zz_pX& a,const uint8_t shift,const bool plus,const long d);
+void beta_shift_polys(zz_pX& P_neg, zz_pX& P_pos, const vec_zz_pX& delta, const long d);
+void beta_linear_forms_sum(zz_pX& out, const zz_pX& b, const zz_pX& sigma_b, const zz_pX& P_neg, const zz_pX& P_pos, const zz_p& inverse_two, zz_pX& scratch);
 void        sigma_map(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_map_opt(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
 void        sigma_map_opt_no_alloc(vec_zz_pX& N, const vec_zz_pX& M, const ulong& d);
