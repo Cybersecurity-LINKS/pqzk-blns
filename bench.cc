@@ -171,8 +171,8 @@ int main()
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    W = 2; //100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
-    N = 100; //1000; // Number of iterations, for benchmarking purposes
+    W = 100;  // Number of warm-up iterations, to be executed before the actual benchmarking iterations
+    N = 1000; //100; // Number of iterations, for benchmarking purposes
 
     Perfo.SetDims(13, N);
 
@@ -416,6 +416,8 @@ int main()
         ta = GetWallTime();
         I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
         tb = GetWallTime();
+        // delete[] u; // TODO: check if needed
+        u = nullptr;
         #ifdef VERBOSE
         cout << "  CPU time: " << (tb - ta) << " s" << endl;
         #endif

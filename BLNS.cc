@@ -62,7 +62,7 @@ int main()
     // NOTE: both are vectors of non-negative integers in ascending order (one could be the empty array)
     // NOTE: in principle, Holder can use different indexes during Issuing and Presentation protocols
  
-    N = 1; //100; //1000;  // Number of iterations, for demonstration purposes
+    N = 1000; //100;  // Number of iterations, for demonstration purposes
     
     for(iter=1; iter<=N; iter++)
     {
@@ -237,6 +237,8 @@ int main()
                 
             cout << "\n- Issuer.UpdateSign     (update signature)" << endl;
             I_UpdateSign(&Rho2, B_f, ipk, isk, u, old_timestamp, new_timestamp);
+            // delete[] u; // TODO: check if needed
+            u = nullptr;
 
             cout << "\n- Holder.VerCred2       (check signature and store credential)" << endl;
             H_VerCred2(cred, ipk, B_f, &Rho2, state);
